@@ -1,0 +1,9 @@
+{
+  "trend_alignment": 25,
+  "vwap_position": 15,
+  "structure_hh_hl": 15,
+  "trendline_confluence": 10,
+  "sr_proximity": 10,
+  "breakout_confirmation": 10,
+  "institutional_bias": 15
+}

@@ -1,0 +1,21 @@
+import mplfinance as mpf
+
+MPF_STYLE = mpf.make_mpf_style(
+    base_mpf_style="charles",
+    rc={"font.size": 9},
+)
+
+COLOR_VWAP = "#ff8c00"
+COLOR_POC = "#1f4fd8"
+COLOR_PRIOR_POC = "#8e44ad"
+COLOR_VALUE_AREA = "#1f77b4"
+VALUE_AREA_ALPHA = 0.08
+COLOR_VOLUME_PROFILE_BAR = "#4c78a8"
+COLOR_SWING_HIGH = "#d62728"
+COLOR_SWING_LOW = "#2ca02c"
+COLOR_TRENDLINE_UP = "#2ca02c"
+COLOR_TRENDLINE_DOWN = "#d62728"
+COLOR_SUPPORT_ZONE = "#2ca02c"
+COLOR_RESISTANCE_ZONE = "#d62728"
+COLOR_BREAKOUT_BOX = "#7f7f7f"
+COLOR_BREAKOUT_CONFIRMED = "#e6a817"

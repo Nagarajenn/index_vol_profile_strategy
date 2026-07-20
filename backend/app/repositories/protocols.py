@@ -1,0 +1,24 @@
+"""Repository interfaces services depend on, not concrete SQLAlchemy classes.
+
+This is what actually buys testable services -- a test can hand a
+DashboardService a fake implementing these Protocols and assert behavior
+without a real Postgres connection. Concrete implementations below just need
+to satisfy the shape (structural typing), no explicit inheritance required.
+"""
+
+from datetime import datetime
+from typing import Protocol
+
+from app.models import LevelsSnapshot, OptionChainSummary, RawCandle
+
+
+class LevelsSnapshotRepositoryProtocol(Protocol):
+    async def get_latest(self, symbol: str, mode: str = "live") -> LevelsSnapshot | None: ...
+
+
+class CandleRepositoryProtocol(Protocol):
+    async def list_since(self, symbol: str, since: datetime) -> list[RawCandle]: ...
+
+
+class OptionChainRepositoryProtocol(Protocol):
+    async def get_latest_summary(self, symbol: str) -> OptionChainSummary | None: ...

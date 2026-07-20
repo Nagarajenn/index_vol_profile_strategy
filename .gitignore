@@ -1,0 +1,31 @@
+# Local tool settings (machine/session-specific, not shared project config)
+.claude/
+
+# Secrets
+.env
+backend/.env
+
+# Python
+venv/
+backend/venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+*.egg
+
+# Node / frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Logs
+logs/*
+!logs/.gitkeep
+
+# Generated/derived data (large, regenerable from Postgres + Dhan API)
+vol_pro_snapshot_training/*
+!vol_pro_snapshot_training/.gitkeep
+data/cache/*
+!data/cache/.gitkeep

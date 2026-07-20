@@ -1,0 +1,13 @@
+dhanhq==2.2.0
+pandas
+numpy
+mplfinance
+matplotlib
+python-dotenv
+requests
+scipy
+pyarrow
+schedule
+pytest
+truststore
+psycopg[binary]

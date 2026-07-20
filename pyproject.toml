@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vol-profile-core"
+version = "0.1.0"
+description = "Shared analytics/config core, reused by the ingestion pipeline (Python 3.13) and the dashboard backend (Python 3.14) as an editable install."
+requires-python = ">=3.11"
+dependencies = [
+    "pandas",
+    "numpy",
+    "python-dotenv",
+    "truststore",
+]
+
+[tool.setuptools]
+packages = ["analytics", "config"]
