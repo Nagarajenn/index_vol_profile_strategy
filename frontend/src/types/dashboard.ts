@@ -32,6 +32,7 @@ export interface LevelsSummaryDTO {
   institutional_bias_label: string | null;
   confidence_score: number | null;
   action_text: string | null;
+  interpretation: string | null;
 }
 
 export type DashboardStatus = "live" | "stale" | "no_data";

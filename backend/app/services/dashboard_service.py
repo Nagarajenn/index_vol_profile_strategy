@@ -15,6 +15,7 @@ from app.schemas.candle import CandleDTO
 from app.schemas.dashboard import DashboardResponseDTO, LevelsSummaryDTO
 from app.schemas.levels_detail import BreakoutBoxDTO, LevelsDetailDTO, SwingPointDTO, TrendlineDTO
 from app.schemas.option_chain import OptionChainSummaryDTO
+from app.services.interpretation import build_interpretation
 from config.instruments import INSTRUMENTS
 
 CHART_RESAMPLE_MINUTES = 5
@@ -142,6 +143,7 @@ class DashboardService:
             institutional_bias_label=row.institutional_bias_label,
             confidence_score=row.confidence_score,
             action_text=row.action_text,
+            interpretation=build_interpretation(row),
         )
 
     @staticmethod

@@ -22,6 +22,7 @@ class LevelsSummaryDTO(BaseModel):
     institutional_bias_label: str | None
     confidence_score: int | None
     action_text: str | None
+    interpretation: str | None
 
 
 class DashboardResponseDTO(BaseModel):
