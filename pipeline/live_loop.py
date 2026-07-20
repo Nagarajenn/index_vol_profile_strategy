@@ -32,11 +32,18 @@ def run_live_loop(
     symbols: list[str] | None = None,
     interval_min: int = LIVE_LOOP_INTERVAL_MIN,
     max_iterations: int | None = None,
+    run_single_session: bool = False,
 ) -> None:
     """Blocks forever (or until `max_iterations`), firing a live snapshot for
     every symbol on each `interval_min`-spaced wall-clock boundary during
     market hours (09:15-15:30 IST on trading days), and sleeping through
     nights/weekends/holidays and outside session hours in between.
+
+    `run_single_session=True` makes it exit as soon as today's session is
+    over (or immediately, on a non-trading day) instead of sleeping through
+    the night to the next open -- for use with an external daily scheduler
+    (Windows Task Scheduler) that starts a fresh process every trading
+    morning, rather than one process staying alive for days/weeks.
     """
     symbols = symbols or list(INSTRUMENTS.keys())
     session_open_t = datetime.strptime(SESSION_OPEN, "%H:%M").time()
@@ -48,6 +55,9 @@ def run_live_loop(
         today = now.date()
 
         if not is_trading_day(today):
+            if run_single_session:
+                logger.info("%s is not a trading day - nothing to do, exiting", today)
+                return
             nxt = today + timedelta(days=1)
             while not is_trading_day(nxt):
                 nxt += timedelta(days=1)
@@ -63,6 +73,9 @@ def run_live_loop(
             continue
 
         if now.time() > session_close_t:
+            if run_single_session:
+                logger.info("After market close - today's session is done, exiting")
+                return
             nxt = today + timedelta(days=1)
             while not is_trading_day(nxt):
                 nxt += timedelta(days=1)
