@@ -213,20 +213,109 @@ working end-to-end against real live and historical data — the current
 layout is functional but not yet the target information-density layout (see
 §7, first item).
 
-## 6. What's running right now
+## 6. V2 "AI Trading Terminal" roadmap — progress
 
-- **Backend**: `uvicorn app.main:app --reload` on `:8000`
-- **Frontend**: `vite` dev server on `:5173` → http://localhost:5173
-- **Live loop**: `pipeline/live_loop.py` running in the background, ticking
-  every 1 minute for both symbols through today's session (started after the
-  one-time catch-up described in §2)
+V1 (§1–5, tagged `v1.0.0`) is the working baseline. The V2 direction is an
+explicit philosophy shift: every panel should answer one trading question
+and present four layers — **Raw Values → AI Interpretation → Confidence →
+Trading Implication** — rather than dumping numbers and leaving the trader
+to interpret them. This is a 10-item priority-ordered roadmap, built
+**one item at a time**, each followed by validate/test/commit/tag and a
+stop-and-wait for review before the next.
 
-None of these auto-start on their own — they were started manually this
-session and would need to be started again (or scheduled) on a future day.
+| # | Item | Status |
+|---|---|---|
+| 1 | **AI Decision Card** | ✅ Shipped, tagged `v2.1.0` |
+| 2 | Institutional Activity Card | Not started |
+| 3 | 7-Strike Option Ladder (ATM ±3 ITM/OTM) | Not started (overlaps with §9 item 2 below) |
+| 4 | AI Reasoning Panel | Not started |
+| 5 | Volume Profile Interpretation | Not started |
+| 6 | Market Structure Card | Not started |
+| 7 | Risk Assessment Card | Not started |
+| 8 | Historical Replay | Not started |
+| 9 | AI Watchlist | Not started |
+| 10 | Trade Journal | Not started |
 
-## 7. Planned enhancements (next round — not yet built)
+**Item 1 — AI Decision Card (done):** added a synthesized narrative sentence
+(`backend/app/services/interpretation.py::build_interpretation`) that reads
+price vs VWAP, price vs today's POC, trend label, and institutional bias
+into one interpretive sentence — the one layer the existing card was
+missing (Raw Values/Confidence/Action already existed, just unlabeled).
+Wired into the existing `/api/v1/dashboard/{symbol}/latest` response as a
+new `interpretation` field — no new endpoint, no migration. Frontend gained
+a reusable `AnalysisCard` component implementing the generic 4-layer shell
+(title, trading question, raw-values grid, interpretation text, confidence
+gauge, highlighted implication block); `DecisionCardPanel` is now a thin
+adapter onto it. 7 backend unit tests cover the interpretation logic
+(normal case, missing VWAP/POC, neutral trend, excluded backfill-bias
+label). This component is deliberately reusable — items 2, 5, 6, 7 above
+will each plug into the same `AnalysisCard` shell rather than
+re-implementing the 4-section layout.
 
-Captured from review feedback on the V1 dashboard, to be scoped/built next:
+Items 2–10 are intentionally **not scoped yet** — each gets its own design
+pass when its turn comes, per the stated one-at-a-time process.
+
+## 7. What's running right now
+
+- **Backend**: `uvicorn app.main:app --reload` on `:8000` — started manually,
+  not yet scheduled to auto-start (see §9 for that as a flagged opportunity).
+- **Frontend**: `vite` dev server on `:5173` → http://localhost:5173 —
+  started manually, same caveat.
+- **Live loop**: `pipeline/live_loop.py`, ticking every 1 minute for both
+  symbols during market hours — **now starts itself automatically** via a
+  Windows Task Scheduler task, `SensexNifty-LiveLoop` (see §8). No manual
+  start needed on future trading days.
+
+## 8. Live pipeline outage (2026-07-20) — root cause, fix, and automation
+
+**What happened:** the live loop silently stopped writing new rows for both
+symbols starting ~14:04 IST, though the process itself never crashed —
+`Get-Process` showed it still running, still "trying" every minute.
+
+**Root cause:** `pipeline/live_loop.py` is a single long-running process
+that reuses one `requests.Session` (via the `dhanhq` client) for its entire
+multi-hour lifetime. Around 14:04, this machine's antivirus (Norton, which
+does real-time HTTPS interception — the same class of interference seen
+earlier in this project with git object writes) reset the underlying TCP
+connection. The session's connection pool kept trying to reuse that now-dead
+connection on every subsequent tick, failing identically each time
+(`PermissionError(13, 'Permission denied')` wrapped in `ConnectionAborted`),
+and the loop's broad `except Exception: logger.exception(...)` just logged
+and moved on — no retry-with-fresh-connection, no alerting. A brand-new
+process reached Dhan instantly, confirming the fix was a fresh session, not
+a Dhan-side outage.
+
+**Fix applied:**
+1. Killed the two stuck processes, started a clean `live_loop` process —
+   confirmed writing again within one tick.
+2. Backfilled the missed window with `pipeline/catch_up_today.py` — verified
+   every minute from 14:04 through the restart is now present for both
+   symbols in `levels_snapshots` (idempotent upsert, safe to re-run).
+
+**Hardening — daily-scoped process instead of one long-lived process:**
+`run_live_loop()` gained a `run_single_session: bool` param
+(`scripts/run_live_loop.py --single-session`): it now exits cleanly once
+today's session closes (or immediately on a non-trading day) instead of
+sleeping through the night in the same process. A new Windows Task
+Scheduler task, **`SensexNifty-LiveLoop`**, starts a fresh process every
+weekday at **09:10 IST** (5-min buffer before the 09:15 open) and lets it
+exit itself at close — no manual daily start, and a much smaller window for
+a connection to go stale before the process naturally recycles. Configured
+"run only when logged on" (no Windows password stored) and
+`MultipleInstancesPolicy=IgnoreNew` (won't double-start if a prior run is
+still alive). First automatic run: the next trading day after this was set
+up.
+
+**Not yet addressed — flagged for review, see §9:** the loop still has no
+alerting if it fails repeatedly, and no automatic retry-with-fresh-session
+mid-day if this exact failure mode recurs during market hours (today's
+recovery was a manual restart). The daily process recycle *reduces* the
+odds (a fresh connection every morning vs. one connection surviving weeks)
+but doesn't eliminate the possibility of it happening again mid-session.
+
+## 9. Opportunities to consider for the next round
+
+Existing backlog (unchanged from before, still not built):
 
 1. **Layout rework.** Reposition the decision-card summary and the
    option-chain summary side by side (roughly half-width each) instead of
@@ -240,9 +329,29 @@ Captured from review feedback on the V1 dashboard, to be scoped/built next:
    option-chain payload already has every strike's data in
    `option_chain_raw`/`option_chain/summary.py`'s near-ATM window logic; a
    new DTO + endpoint or an extension of the existing option-chain summary
-   would expose it) plus a new frontend strike-ladder component.
+   would expose it) plus a new frontend strike-ladder component. This is
+   the same work as V2 roadmap item 3 (§6).
 3. **Chart overlays (already scoped, not yet built)**: swings, trendlines,
    breakout boxes, and the volume-profile side panel — the backend detail
    endpoint (§5) already serves this data, it just isn't rendered yet.
 4. **Historical/timeline browsing** — deferred from V1 scope by design (see
    original V1 plan); still not built.
+
+New, surfaced by today's outage (§8) — operational/reliability gaps rather
+than trading-analysis features, worth a look regardless of where V2 roadmap
+attention goes next:
+
+5. **Pipeline health alerting.** Today's gap was discovered by you noticing
+   the dashboard, not by any automated signal. A cheap addition: a small
+   watchdog (could live in the existing backend, or a separate scheduled
+   check) that alerts (even just a Windows notification or a log written
+   somewhere visible) if `now() - max(as_of)` exceeds a threshold during
+   market hours.
+6. **Mid-session self-healing.** The daily process-recycle (§8) shrinks the
+   blast radius of the stuck-connection bug but doesn't prevent it
+   happening again mid-day. A bounded fix: after N consecutive failures for
+   a symbol, tear down and rebuild the `dhanhq` client's session before
+   retrying, instead of retrying forever against the same broken one.
+7. **Backend/frontend auto-start.** Only the data pipeline is scheduled now
+   (§7/§8) — `uvicorn`/`vite` still need a manual start each session if you
+   want the dashboard itself up automatically too.
