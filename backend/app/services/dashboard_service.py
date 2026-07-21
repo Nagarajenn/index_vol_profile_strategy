@@ -1,4 +1,4 @@
-from datetime import datetime, time
+from datetime import date, datetime, time, timedelta
 
 import pandas as pd
 
@@ -19,6 +19,10 @@ from app.services.interpretation import build_interpretation
 from config.instruments import INSTRUMENTS
 
 CHART_RESAMPLE_MINUTES = 5
+# How far back to look for "the previous session" -- wide enough to cross a
+# weekend or a short holiday cluster, trimmed down to exactly one prior
+# session's worth of candles in _trim_to_prev_and_current_session below.
+PREVIOUS_SESSION_LOOKBACK_DAYS = 6
 
 
 class DashboardService:
@@ -63,8 +67,12 @@ class DashboardService:
         stale_threshold_seconds = 2 * settings.live_loop_interval_min * 60
         status = "stale" if staleness_seconds > stale_threshold_seconds else "live"
 
-        session_start = datetime.combine(levels_row.as_of.date(), time.min, tzinfo=settings.ist)
-        candle_rows = await self._candle_repo.list_since(symbol, session_start)
+        today = levels_row.as_of.date()
+        lookback_start = datetime.combine(
+            today - timedelta(days=PREVIOUS_SESSION_LOOKBACK_DAYS), time.min, tzinfo=settings.ist
+        )
+        candle_rows = await self._candle_repo.list_since(symbol, lookback_start)
+        candle_rows = self._trim_to_prev_and_current_session(candle_rows, today)
         option_chain_row = await self._option_chain_repo.get_latest_summary(symbol)
 
         return DashboardResponseDTO(
@@ -103,6 +111,21 @@ class DashboardService:
         open_t = datetime.strptime(settings.session_open, "%H:%M").time()
         close_t = datetime.strptime(settings.session_close, "%H:%M").time()
         return now.weekday() < 5 and open_t <= now.time() <= close_t
+
+    @staticmethod
+    def _trim_to_prev_and_current_session(rows: list[RawCandle], today: date) -> list[RawCandle]:
+        """Keep only today's candles plus the single most recent prior
+        session that actually has data -- so the chart shows yesterday's
+        session in continuation with today's live one, without needing a
+        holiday calendar here: whatever the most recent date with candles
+        before today is, that's "the previous session", weekend/holiday
+        gaps included automatically.
+        """
+        prior_dates = {r.timestamp.date() for r in rows if r.timestamp.date() < today}
+        if not prior_dates:
+            return [r for r in rows if r.timestamp.date() == today]
+        prev_session_date = max(prior_dates)
+        return [r for r in rows if r.timestamp.date() in (prev_session_date, today)]
 
     @staticmethod
     def _resample_candles(candle_rows: list[RawCandle]) -> list[CandleDTO]:
