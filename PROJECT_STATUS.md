@@ -1,6 +1,6 @@
 # Project Status — Sensex/Nifty Options Decision-Support Tool
 
-_Last updated: 2026-07-20_
+_Last updated: 2026-07-21_
 
 ## 1. Intent of this strategy
 
@@ -308,10 +308,39 @@ up.
 
 **Not yet addressed — flagged for review, see §9:** the loop still has no
 alerting if it fails repeatedly, and no automatic retry-with-fresh-session
-mid-day if this exact failure mode recurs during market hours (today's
+mid-day if this exact failure mode recurs during market hours (that day's
 recovery was a manual restart). The daily process recycle *reduces* the
 odds (a fresh connection every morning vs. one connection surviving weeks)
 but doesn't eliminate the possibility of it happening again mid-session.
+
+**Follow-up (2026-07-21, next trading morning) — two more issues found and
+fixed:**
+1. The Task Scheduler task fired at 09:10 as scheduled but its process was
+   killed almost immediately (exit code `0xC000013A`,
+   `STATUS_CONTROL_C_EXIT`) before it ever reached the 09:15 open — a
+   scheduled batch file launched under an interactive Windows session opens
+   a visible console window, and anything that closes that window (a stray
+   click, another process, session churn) sends a close signal to the whole
+   process group, killing it. Fixed by adding a hidden-window VBScript
+   launcher (`scripts/run_live_loop_daily.vbs`, using `WshShell.Run` with
+   window style `0`) and pointing the Task Scheduler action at
+   `wscript.exe //B run_live_loop_daily.vbs` instead of the `.bat` directly
+   — there is now no visible window for anything to close. Verified live by
+   manually re-triggering the task (`schtasks /Run`) and confirming it kept
+   ticking normally.
+2. Separately — and more importantly — the process manually restarted the
+   previous afternoon (§8's fix) had been started **without**
+   `--single-session` (it predated that flag being added), so it stayed
+   alive overnight, went back to sleep at close, then woke up at today's
+   open and **hit the exact same stuck-connection bug again**, silently
+   writing zero rows all morning until this was caught and the stale
+   process was killed. This is exactly the failure mode `--single-session` +
+   Task Scheduler was built to prevent, and confirms the fix is worth
+   having — the gap this time was ~09 minutes (09:15→09:24), backfilled the
+   same way as before. Going forward, every process is either
+   `--single-session` (Task Scheduler) or freshly started, so this
+   particular "old process silently survives into the next day" path
+   shouldn't recur.
 
 ## 9. Opportunities to consider for the next round
 
