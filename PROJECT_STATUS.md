@@ -1,6 +1,6 @@
 # Project Status — Sensex/Nifty Options Decision-Support Tool
 
-_Last updated: 2026-07-21_
+_Last updated: 2026-07-22_
 
 ## 1. Intent of this strategy
 
@@ -341,6 +341,29 @@ fixed:**
    `--single-session` (Task Scheduler) or freshly started, so this
    particular "old process silently survives into the next day" path
    shouldn't recur.
+
+**Follow-up (2026-07-22, third trading morning) — root cause found for a
+third failure mode:** the pipeline hadn't started at all by 09:23 that
+morning — no live_loop process running, zero rows for the day. This time
+Task Scheduler's own history showed the 09:10 trigger simply never fired
+(`Last Run Time` still showed the previous day's manual trigger). Root
+cause: `schtasks /Create` silently defaults new tasks to
+`DisallowStartIfOnBatteries=true` / `StopIfGoingOnBatteries=true` — this
+machine is a laptop, and it was running on battery at 09:10, so Windows
+refused to start the task at all (no error logged anywhere, it just quietly
+doesn't fire). Fixed by clearing both settings on the existing task via
+`Set-ScheduledTask` (`Get-ScheduledTask` → mutate `.Settings` → re-apply) so
+it now runs regardless of AC/battery state. Manually triggered the task,
+confirmed it started ticking, and backfilled the ~09:15→09:26 gap the same
+way as before.
+
+**Net effect of all three fixes**: the pipeline has now failed to
+self-recover on its own three mornings in a row for three unrelated
+reasons (stuck connection, console-window kill, battery restriction) —
+none of them a bug in the trading logic itself, all operational/Windows
+scheduling quirks. Worth treating §9 item 5 (health alerting) as higher
+priority than originally framed, precisely because each of these was only
+caught by manually checking rather than being surfaced automatically.
 
 ## 9. Opportunities to consider for the next round
 
