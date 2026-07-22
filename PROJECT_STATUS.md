@@ -365,6 +365,19 @@ scheduling quirks. Worth treating §9 item 5 (health alerting) as higher
 priority than originally framed, precisely because each of these was only
 caught by manually checking rather than being surfaced automatically.
 
+**Follow-up (2026-07-22, later that same day) — a fourth, genuinely
+external outage:** an actual power shutdown broke the live loop after
+09:59 (machine rebooted at 11:13, but nothing auto-restarted the pipeline
+since the only Task Scheduler trigger was 09:10, already passed). By the
+time this was reported the market had closed for the day, so no live
+recovery was needed or possible -- `catch_up_today.py` was run once to
+replay the full session from historical candle data; verified zero missing
+minutes 09:15-15:29 in both `levels_snapshots` and `raw_candles` for both
+symbols. Unlike the three above, this one has no code-level fix -- it's a
+real power event, not a bug -- and reinforces the same §9 item 5 point:
+every one of these four outages was caught by someone manually checking,
+not by any automated signal.
+
 ## 9. Opportunities to consider for the next round
 
 Existing backlog (unchanged from before, still not built):
