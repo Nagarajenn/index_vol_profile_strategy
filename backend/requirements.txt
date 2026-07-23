@@ -7,3 +7,4 @@ pydantic-settings
 alembic
 psycopg[binary]
 pytest
+pytest-asyncio

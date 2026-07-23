@@ -1,6 +1,6 @@
 # Project Status — Sensex/Nifty Options Decision-Support Tool
 
-_Last updated: 2026-07-22_
+_Last updated: 2026-07-23_
 
 ## 1. Intent of this strategy
 
@@ -229,7 +229,7 @@ stop-and-wait for review before the next.
 | 2 | Institutional Activity Card | Not started |
 | 3 | 7-Strike Option Ladder (ATM ±3 ITM/OTM) | Not started (overlaps with §9 item 2 below) |
 | 4 | AI Reasoning Panel | Not started |
-| 5 | Volume Profile Interpretation | Not started |
+| 5 | Volume Profile Interpretation | ✅ Shipped as "Volume Profile Intelligence" (see below) |
 | 6 | Market Structure Card | Not started |
 | 7 | Risk Assessment Card | Not started |
 | 8 | Historical Replay | Not started |
@@ -252,8 +252,72 @@ label). This component is deliberately reusable — items 2, 5, 6, 7 above
 will each plug into the same `AnalysisCard` shell rather than
 re-implementing the 4-section layout.
 
-Items 2–10 are intentionally **not scoped yet** — each gets its own design
-pass when its turn comes, per the stated one-at-a-time process.
+**Item 5 — Volume Profile Intelligence (done, 2026-07-23):** delivered as a
+dedicated panel rather than the 4-layer `AnalysisCard` shell, per its own
+explicit spec ("reusable service", "keep the strategy engine unchanged") —
+this is raw multi-metric analysis by design, not a single
+interpretation/confidence/implication read.
+
+New `analytics/volume_profile_intelligence.py` — pure functions, built on
+the existing `compute_volume_profile()`, zero dependency on the DB/pipeline:
+- **Developing POC/VAH/VAL**: the value area recomputed from only the
+  candles available at each checkpoint through the session, showing how it
+  has migrated so far (not just the final end-of-day figure).
+- **HVN/LVN**: local-maxima/minima bins in the volume-by-price distribution
+  (consolidation magnets vs. "air" the market moves through fast).
+- **Value Migration**: today's POC/VAH/VAL vs. the prior session's, plus
+  intraday drift since the first checkpoint.
+- **Acceptance/Rejection**: for VAH/VAL/POC/prior-POC, whether price dwelt
+  and closed inside a band around the level (accepted) or touched and
+  moved away (rejected) or never reached it (untested).
+- **Profile Shape (P/b/D/B)**: P/b when volume concentrates near the
+  highs/lows with a thin opposite tail (fast markup/markdown); B when two
+  separated high-volume clusters exist (double distribution); D otherwise
+  (normal balanced auction).
+- **Initial Balance**: high/low range of the first 60 minutes, flagged
+  `is_complete` while the session hasn't reached that window yet.
+- **Opening Type**: a heuristic approximation of Steidlmayer's taxonomy
+  (Open-Drive / Open-Test-Drive / Open-Rejection-Reverse / Open-Auction)
+  from the first 30 minutes' range and close-vs-open behavior.
+- **Rotation Factor**: counts directional sign-flips between successive
+  30-min high/low periods — frequent flips read "Rotational" (choppy,
+  two-sided), few flips read "Trending" (one-sided).
+- **Volume Pace**: today's cumulative volume vs. the average cumulative
+  volume at the same elapsed session time over the last 10 calendar days —
+  tells you if today is unusually busy or quiet, independent of direction.
+
+Several of these (Profile Shape, Opening Type, Rotation Factor) are
+inherently fuzzy/discretionary in classic Market Profile literature — the
+implementations are reasonable, deterministic, clearly-documented
+heuristics, not a claim of matching one canonical textbook definition.
+22 unit tests cover each metric with hand-constructed synthetic candles.
+
+Backend: `VolumeProfileIntelligenceService` fetches the last 10 days of
+`raw_candles` via the existing `CandleRepository` (no new repository
+method), groups by date, and calls the analytics module fresh on every
+request — no new DB tables, no migration, no pipeline changes. New
+endpoint `GET /api/v1/volume-profile/{symbol}/intelligence`, separate from
+the hot-polled dashboard endpoint since it's meaningfully heavier (full
+multi-day profile recomputation vs. one row lookup); the frontend polls it
+every 60s instead of 20s. 5 backend unit tests (date-grouping, unknown
+symbol, no data, populated result) using a fake in-memory candle repo.
+
+Frontend: new `VolumeProfileIntelligencePanel`, added below the price
+chart on `TerminalPage`. Verified end-to-end against real live data —
+every metric renders coherently (e.g. a "down" Value Migration and
+"Open-Drive lower" lined up with the existing Decision Card's independent
+"Strong Bearish" read, two separate computations agreeing).
+
+**Explicitly not done, by design**: nothing here feeds
+`analytics/confidence_score.py`, `analytics/trend_classifier.py`, or
+`decision/decision_card.py` — verified zero diff on all three files plus
+`analytics/institutional_bias.py`. This is informational-only for now, per
+the "keep the strategy engine unchanged" instruction; wiring any of it into
+the actual trend/confidence/action logic would be a separate, explicit
+future decision.
+
+Items 2, 4, 6–10 are intentionally **not scoped yet** — each gets its own
+design pass when its turn comes, per the stated one-at-a-time process.
 
 ## 7. What's running right now
 

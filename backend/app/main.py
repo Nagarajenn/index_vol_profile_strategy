@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.routers import dashboard, levels_detail, symbols
+from app.api.v1.routers import dashboard, levels_detail, symbols, volume_profile
 from app.core.config import settings
 from app.exceptions import register_exception_handlers
 
@@ -22,6 +22,7 @@ def create_app() -> FastAPI:
     app.include_router(symbols.router, prefix="/api/v1", tags=["symbols"])
     app.include_router(dashboard.router, prefix="/api/v1", tags=["dashboard"])
     app.include_router(levels_detail.router, prefix="/api/v1", tags=["levels"])
+    app.include_router(volume_profile.router, prefix="/api/v1", tags=["volume-profile"])
 
     return app
 

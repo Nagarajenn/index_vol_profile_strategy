@@ -3,6 +3,7 @@ import { Alert, Box, CircularProgress, Stack } from "@mui/material";
 import { CandlestickChart } from "../components/chart/CandlestickChart";
 import { DecisionCardPanel } from "../components/decision-card/DecisionCardPanel";
 import { OptionChainPanel } from "../components/option-chain/OptionChainPanel";
+import { VolumeProfileIntelligencePanel } from "../components/volume-profile/VolumeProfileIntelligencePanel";
 import { useDashboardData } from "../hooks/useDashboardData";
 import { useSymbolStore } from "../store/useSymbolStore";
 
@@ -30,6 +31,7 @@ export function TerminalPage() {
     <Stack spacing={2} sx={{ width: "100%", maxWidth: 1400, mx: "auto" }}>
       <DecisionCardPanel data={data} />
       <CandlestickChart candles={data.candles} levels={data.levels} />
+      <VolumeProfileIntelligencePanel symbol={selectedSymbol} />
       <OptionChainPanel data={data.option_chain} />
     </Stack>
   );

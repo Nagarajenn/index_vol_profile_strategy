@@ -6,6 +6,7 @@ from app.repositories.candle_repository import CandleRepository
 from app.repositories.levels_snapshot_repository import LevelsSnapshotRepository
 from app.repositories.option_chain_repository import OptionChainRepository
 from app.services.dashboard_service import DashboardService
+from app.services.volume_profile_intelligence_service import VolumeProfileIntelligenceService
 
 
 def get_levels_repository(session: AsyncSession = Depends(get_db_session)) -> LevelsSnapshotRepository:
@@ -26,3 +27,9 @@ def get_dashboard_service(
     option_chain_repo: OptionChainRepository = Depends(get_option_chain_repository),
 ) -> DashboardService:
     return DashboardService(levels_repo, candle_repo, option_chain_repo)
+
+
+def get_volume_profile_intelligence_service(
+    candle_repo: CandleRepository = Depends(get_candle_repository),
+) -> VolumeProfileIntelligenceService:
+    return VolumeProfileIntelligenceService(candle_repo)
