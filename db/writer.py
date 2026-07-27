@@ -8,7 +8,7 @@ from psycopg.types.json import Jsonb
 
 from analytics.levels import LevelsResult
 from db import reader
-from db.connection import execute, executemany
+from db.connection import execute, executemany, fetch_one
 from option_chain.summary import OptionChainSummary
 
 RAW_CANDLE_OVERLAP_MINUTES = 5  # re-upsert a small trailing window in case Dhan revises the still-forming last bar
@@ -205,3 +205,21 @@ def record_chart(symbol: str, as_of: datetime, chart_path: str, trigger: str) ->
         "UPDATE levels_snapshots SET chart_path = %s, chart_triggered_by = %s WHERE symbol = %s AND as_of = %s",
         (chart_path, trigger, symbol, as_of),
     )
+
+
+def insert_product_requirement(
+    title: str, requirement_text: str, status: str = "submitted", notes: str | None = None
+) -> int:
+    """Durable audit-trail record of a feature requirement as submitted --
+    not part of the trading data model, purely history-maintenance so "what
+    was asked for and when" survives independent of chat history.
+    """
+    row = fetch_one(
+        """
+        INSERT INTO product_requirements (title, requirement_text, status, notes)
+        VALUES (%s, %s, %s, %s)
+        RETURNING id
+        """,
+        (title, requirement_text, status, notes),
+    )
+    return row[0]

@@ -30,6 +30,20 @@ def get_last_chart_row(symbol: str, mode: str, session_date: date) -> dict | Non
     return {"as_of": row[0], "trend_label": row[1], "today_poc": row[2]}
 
 
+def list_product_requirements(limit: int = 50) -> list[dict]:
+    rows = fetch_all(
+        """
+        SELECT id, title, submitted_at, requirement_text, status, notes, updated_at
+        FROM product_requirements
+        ORDER BY submitted_at DESC
+        LIMIT %s
+        """,
+        (limit,),
+    )
+    columns = ["id", "title", "submitted_at", "requirement_text", "status", "notes", "updated_at"]
+    return [dict(zip(columns, row)) for row in rows]
+
+
 _BACKTEST_COLUMNS = [
     "symbol", "as_of", "mode", "close", "trend_label", "trend_score", "confidence_score",
     "confidence_partial_data", "today_poc", "vwap_now", "support_low", "support_high",

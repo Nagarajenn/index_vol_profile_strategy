@@ -111,3 +111,18 @@ CREATE INDEX IF NOT EXISTS idx_levels_symbol_mode_asof ON levels_snapshots (symb
 -- Not worth an IMMUTABLE wrapper function for this data volume (low
 -- thousands of rows) -- the composite index above is enough for Postgres to
 -- narrow by symbol+mode efficiently before filtering the date client-side.
+
+-- Project/requirements audit trail -- NOT part of the trading data model,
+-- purely a durable record of feature requirements as they're submitted, so
+-- "what was asked for and when" survives independent of chat history or
+-- PROJECT_STATUS.md edits.
+CREATE TABLE IF NOT EXISTS product_requirements (
+    id BIGSERIAL PRIMARY KEY,
+    title TEXT NOT NULL,
+    submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    requirement_text TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'submitted' CHECK (status IN ('submitted', 'planned', 'in_progress', 'shipped', 'deferred')),
+    notes TEXT,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_product_requirements_submitted ON product_requirements (submitted_at DESC);
