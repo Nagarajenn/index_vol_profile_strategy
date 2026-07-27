@@ -29,14 +29,20 @@ export interface AnalysisCardProps {
   implicationLabel?: string;
 }
 
-function SectionLabel({ children }: { children: ReactNode }) {
+function MicroLabel({ children }: { children: ReactNode }) {
   return (
-    <Typography variant="overline" sx={{ color: "text.secondary", letterSpacing: 1, fontSize: "0.7rem", display: "block" }}>
+    <Typography
+      variant="overline"
+      sx={{ color: "text.secondary", letterSpacing: 0.5, fontSize: "0.65rem", lineHeight: 1.4, display: "block" }}
+    >
       {children}
     </Typography>
   );
 }
 
+// Compact "top status strip" shell: everything a trader needs for a 5-second
+// read -- metrics ticker, interpretation, confidence, implication -- packed
+// into one dense card instead of four separately-labeled sections.
 export function AnalysisCard({
   title,
   question,
@@ -48,54 +54,64 @@ export function AnalysisCard({
   implicationLabel = "Trading Implication",
 }: AnalysisCardProps) {
   return (
-    <Paper sx={{ p: 2 }}>
-      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", mb: 0.5 }}>
-        <Box>
-          <Typography variant="h6">{title}</Typography>
+    <Paper sx={{ p: 1.5 }}>
+      <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "center", mb: 0.75 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: "baseline" }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+            {title}
+          </Typography>
           <Typography variant="caption" color="text.secondary">
             {question}
           </Typography>
-        </Box>
+        </Stack>
         {headerRight}
       </Stack>
 
-      <Divider sx={{ my: 1.5 }} />
+      {rawValues.length > 0 && (
+        <Stack
+          direction="row"
+          divider={<Divider orientation="vertical" flexItem />}
+          sx={{ overflowX: "auto", flexWrap: "wrap", rowGap: 0.75, py: 0.5, mb: 0.75 }}
+        >
+          {rawValues.map((rv) => (
+            <Box key={rv.label} sx={{ px: 1.25, minWidth: "fit-content" }}>
+              <Typography variant="caption" color="text.secondary" sx={{ display: "block", lineHeight: 1.2, fontSize: "0.68rem" }}>
+                {rv.label}
+              </Typography>
+              <Box sx={{ fontWeight: 700, fontSize: "0.9rem", lineHeight: 1.3 }}>{rv.value}</Box>
+            </Box>
+          ))}
+        </Stack>
+      )}
 
-      <SectionLabel>Raw Values</SectionLabel>
-      <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap", rowGap: 1, mb: 1.5, mt: 0.5 }}>
-        {rawValues.map((rv) => (
-          <Box key={rv.label} sx={{ minWidth: 90 }}>
-            <Typography variant="body2" color="text.secondary">
-              {rv.label}
-            </Typography>
-            <Box sx={{ fontWeight: 600, fontSize: "1rem", mt: 0.25 }}>{rv.value}</Box>
-          </Box>
-        ))}
-      </Stack>
+      <Divider sx={{ mb: 0.75 }} />
 
-      <SectionLabel>AI Interpretation</SectionLabel>
-      <Typography variant="body2" sx={{ mb: 1.5, mt: 0.5 }}>
+      <MicroLabel>AI Interpretation</MicroLabel>
+      <Typography variant="body2" sx={{ mb: 1 }}>
         {interpretation ?? "Not enough data yet to interpret."}
       </Typography>
 
-      <SectionLabel>Confidence</SectionLabel>
-      <Box sx={{ mb: 1.5, mt: 0.5 }}>
-        <ConfidenceGauge score={confidence} />
-      </Box>
-
-      <SectionLabel>{implicationLabel}</SectionLabel>
-      <Typography
-        variant="body2"
-        sx={{
-          mt: 0.5,
-          p: 1,
-          borderLeft: "3px solid",
-          borderColor: "primary.main",
-          bgcolor: "rgba(77,163,255,0.06)",
-        }}
-      >
-        {implication ?? "No actionable read yet."}
-      </Typography>
+      <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} sx={{ alignItems: { sm: "center" } }}>
+        <Box sx={{ minWidth: { sm: 190 } }}>
+          <MicroLabel>Confidence</MicroLabel>
+          <ConfidenceGauge score={confidence} />
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <MicroLabel>{implicationLabel}</MicroLabel>
+          <Typography
+            variant="body2"
+            sx={{
+              py: 0.5,
+              px: 1,
+              borderLeft: "3px solid",
+              borderColor: "primary.main",
+              bgcolor: "rgba(77,163,255,0.06)",
+            }}
+          >
+            {implication ?? "No actionable read yet."}
+          </Typography>
+        </Box>
+      </Stack>
     </Paper>
   );
 }

@@ -31,11 +31,11 @@ export function TerminalPage() {
   return (
     <Stack spacing={2} sx={{ width: "100%" }}>
       <DecisionCardPanel data={data} />
-      <Box sx={{ display: "flex", gap: 2, flexDirection: { xs: "column", md: "row" }, alignItems: "flex-start" }}>
-        <Box sx={{ width: { xs: "100%", md: 360 }, flexShrink: 0 }}>
+      <Box sx={{ display: "flex", gap: 1.5, flexDirection: { xs: "column", md: "row" }, alignItems: "flex-start" }}>
+        <Box sx={{ width: { xs: "100%", md: "30%" }, flexShrink: 0, minWidth: 0 }}>
           <VolumeProfileIntelligencePanel symbol={selectedSymbol} />
         </Box>
-        <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+        <Box sx={{ width: { xs: "100%", md: "70%" }, minWidth: 0 }}>
           <CandlestickChart candles={data.candles} levels={data.levels} />
         </Box>
       </Box>

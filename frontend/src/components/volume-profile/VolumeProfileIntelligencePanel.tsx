@@ -161,21 +161,25 @@ export function VolumeProfileIntelligencePanel({ symbol }: { symbol: string }) {
   const { data, isLoading, isError } = useVolumeProfileIntelligence(symbol);
 
   return (
-    <Paper sx={{ p: 2 }}>
-      <Typography variant="h6" sx={{ mb: 1.5 }}>
+    <Paper sx={{ p: 1.5 }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
         Volume Profile Intelligence
       </Typography>
 
       {isLoading && (
-        <Typography color="text.secondary">Loading...</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Loading...
+        </Typography>
       )}
       {isError && !isLoading && (
-        <Typography color="text.secondary">Not enough data yet for this symbol.</Typography>
+        <Typography variant="body2" color="text.secondary">
+          Not enough data yet for this symbol.
+        </Typography>
       )}
 
       {data && (
-        <Stack spacing={2}>
-          <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap", rowGap: 2 }}>
+        <Stack spacing={1.5}>
+          <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", rowGap: 1.5 }}>
             <ShapeSection shape={data.profile_shape} />
             <OpeningSection opening={data.opening_type} />
             <RotationSection rotation={data.rotation_factor} />
@@ -185,7 +189,7 @@ export function VolumeProfileIntelligencePanel({ symbol }: { symbol: string }) {
 
           <MigrationSection migration={data.migration} />
 
-          <Stack direction="row" spacing={4} sx={{ flexWrap: "wrap", rowGap: 2 }}>
+          <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", rowGap: 1.5 }}>
             <NodeList title="High Volume Nodes" nodes={data.hvns} color="success.main" />
             <NodeList title="Low Volume Nodes" nodes={data.lvns} color="warning.main" />
           </Stack>

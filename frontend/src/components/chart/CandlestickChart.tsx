@@ -6,7 +6,10 @@ import { ChartTooltip } from "./ChartTooltip";
 import { LevelBandOverlay } from "./LevelBandOverlay";
 import { useCandlestickChart } from "./useCandlestickChart";
 
-const CHART_HEIGHT = 480;
+// Occupies ~45-50% of viewport height on tall screens (bounded so it stays
+// usable on short laptop screens); the chart itself auto-resizes via
+// ResizeObserver in useCandlestickChart, so this is layout-only.
+const CHART_HEIGHT = { xs: 420, md: "clamp(440px, 48vh, 680px)" };
 
 export function CandlestickChart({
   candles,
@@ -19,8 +22,8 @@ export function CandlestickChart({
 
   if (candles.length === 0) {
     return (
-      <Paper sx={{ p: 2, bgcolor: CHART_BG, border: `1px solid ${CHART_BORDER}` }}>
-        <Typography variant="h6" sx={{ mb: 1, color: CHART_TEXT }}>
+      <Paper sx={{ p: 1.5, bgcolor: CHART_BG, border: `1px solid ${CHART_BORDER}` }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: CHART_TEXT }}>
           Price Chart
         </Typography>
         <Typography sx={{ color: CHART_AXIS }}>No candle data available yet.</Typography>
@@ -29,8 +32,8 @@ export function CandlestickChart({
   }
 
   return (
-    <Paper sx={{ p: 2, bgcolor: CHART_BG, border: `1px solid ${CHART_BORDER}` }}>
-      <Typography variant="h6" sx={{ mb: 1.5, color: CHART_TEXT }}>
+    <Paper sx={{ p: 1.5, bgcolor: CHART_BG, border: `1px solid ${CHART_BORDER}` }}>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1, color: CHART_TEXT }}>
         Price Chart — previous session + today
       </Typography>
       <Box sx={{ position: "relative", width: "100%", height: CHART_HEIGHT }}>
