@@ -28,7 +28,7 @@ export function TerminalPage() {
   }
 
   return (
-    <Stack spacing={2} sx={{ width: "100%", maxWidth: 1400, mx: "auto" }}>
+    <Stack spacing={2} sx={{ width: "100%" }}>
       <DecisionCardPanel data={data} />
       <Box sx={{ display: "flex", gap: 2, flexDirection: { xs: "column", md: "row" }, alignItems: "flex-start" }}>
         <Box sx={{ width: { xs: "100%", md: 360 }, flexShrink: 0 }}>
