@@ -30,8 +30,14 @@ export function TerminalPage() {
   return (
     <Stack spacing={2} sx={{ width: "100%", maxWidth: 1400, mx: "auto" }}>
       <DecisionCardPanel data={data} />
-      <CandlestickChart candles={data.candles} levels={data.levels} />
-      <VolumeProfileIntelligencePanel symbol={selectedSymbol} />
+      <Box sx={{ display: "flex", gap: 2, flexDirection: { xs: "column", md: "row" }, alignItems: "flex-start" }}>
+        <Box sx={{ width: { xs: "100%", md: 360 }, flexShrink: 0 }}>
+          <VolumeProfileIntelligencePanel symbol={selectedSymbol} />
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+          <CandlestickChart candles={data.candles} levels={data.levels} />
+        </Box>
+      </Box>
       <OptionChainPanel data={data.option_chain} />
     </Stack>
   );
