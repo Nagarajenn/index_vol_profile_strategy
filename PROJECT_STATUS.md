@@ -1,6 +1,6 @@
 # Project Status — Sensex/Nifty Options Decision-Support Tool
 
-_Last updated: 2026-07-23_
+_Last updated: 2026-07-27_
 
 ## 1. Intent of this strategy
 
@@ -442,6 +442,35 @@ real power event, not a bug -- and reinforces the same §9 item 5 point:
 every one of these four outages was caught by someone manually checking,
 not by any automated signal.
 
+**Follow-up (2026-07-24 → 2026-07-27) — expired Dhan token, plus a new
+scheduler quirk, plus a genuine backfill-tooling gap:** the Dhan access
+token expired again sometime after Wednesday 2026-07-23 (these tokens
+appear to need regenerating every couple of days, not just once) — every
+fetch failed with `DH-901 Invalid_Authentication` for the *entire* Friday
+session (one stray SENSEX row, zero for NIFTY) and continued failing into
+Monday morning. Separately, Monday's 09:10 scheduled trigger never fired at
+all (Task Scheduler's own history still showed Friday's run) — the leading
+theory is a Windows quirk in how `ScheduleByWeek`'s weekly recurrence
+counts from an anchor date on a different weekday (the task was created on
+a Tuesday; Monday 2026-07-27 was the first Monday encountered since);
+recreating the task fresh with today as the anchor is the fix in place now,
+unconfirmed until it's observed firing correctly on its own tomorrow.
+
+This was also the first time a *fully missed past day* (Friday, not just a
+same-day gap) needed recovering, and the existing `catch_up_today.py` only
+knew how to replay "today." Generalized it: `pipeline/catch_up_today.py`
+now exposes `catch_up_date(symbol, target_date, interval_min)`, with
+`catch_up_today()` reduced to a thin wrapper calling it with today's date.
+For a past date it skips the live option-chain fetch entirely (there's no
+way to know a prior day's actual intraday OI from a live-only endpoint) and
+leaves institutional bias "Unavailable (historical)", matching how the
+original 60-day backfill already handles that. New CLI:
+`scripts/run_catch_up_date.py YYYY-MM-DD [SYMBOLS...]`. Used it to replay
+all of Friday (376 checkpoints/symbol) once the new token was in place,
+then `catch_up_today.py` for Monday's gap, then restarted the live loop --
+verified zero missing minutes across Wed/Fri/Mon (weekend correctly absent)
+in `levels_snapshots` for both symbols.
+
 ## 9. Opportunities to consider for the next round
 
 Existing backlog (unchanged from before, still not built):
@@ -484,3 +513,12 @@ attention goes next:
 7. **Backend/frontend auto-start.** Only the data pipeline is scheduled now
    (§7/§8) — `uvicorn`/`vite` still need a manual start each session if you
    want the dashboard itself up automatically too.
+8. **Dhan token freshness.** The access token has now expired twice in a
+   week (§8), each time silently failing every fetch for hours before
+   anyone noticed. Since regenerating it is a manual step only you can do
+   (Dhan account access), the realistic fix isn't automation -- it's an
+   early, specific warning: item 5's health check could distinguish "no
+   data because the token expired" (the log already has the exact
+   `DH-901 Invalid_Authentication` signature to match on) from other
+   causes, so the alert says "go regenerate the token" instead of just
+   "something's wrong."
