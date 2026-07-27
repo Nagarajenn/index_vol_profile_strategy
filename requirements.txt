@@ -11,3 +11,5 @@ schedule
 pytest
 truststore
 psycopg[binary]
+feedparser
+anthropic

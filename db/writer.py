@@ -207,6 +207,63 @@ def record_chart(symbol: str, as_of: datetime, chart_path: str, trigger: str) ->
     )
 
 
+def insert_news_item(item) -> int:
+    """Upserts on (source, guid) -- returns the row id either way, so the
+    caller can insert-or-fetch without a separate lookup. `item` is a
+    market_intelligence.models.NewsItem.
+    """
+    row = fetch_one(
+        """
+        INSERT INTO news_items (source, title, link, guid, published_at, summary)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON CONFLICT (source, guid) DO UPDATE SET title = EXCLUDED.title
+        RETURNING id
+        """,
+        (item.source, item.title, item.link, item.guid or item.link, item.published_at, item.summary),
+    )
+    return row[0]
+
+
+def news_item_exists(source: str, guid: str) -> bool:
+    row = fetch_one("SELECT 1 FROM news_items WHERE source = %s AND guid = %s", (source, guid))
+    return row is not None
+
+
+def insert_classified_event(news_item_id: int, event) -> None:
+    """`event` is a market_intelligence.models.ClassifiedEvent."""
+    execute(
+        """
+        INSERT INTO classified_events (
+            news_item_id, is_relevant, category, severity, confidence, sentiment,
+            expected_duration, volatility_impact, reversal_probability,
+            affected_sectors, affected_indices,
+            expected_direction_nifty, expected_direction_sensex, expected_direction_banknifty,
+            recommended_action, risk_level, rationale, model, classified_at
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (news_item_id) DO UPDATE SET
+            is_relevant = EXCLUDED.is_relevant, category = EXCLUDED.category,
+            severity = EXCLUDED.severity, confidence = EXCLUDED.confidence,
+            sentiment = EXCLUDED.sentiment, expected_duration = EXCLUDED.expected_duration,
+            volatility_impact = EXCLUDED.volatility_impact,
+            reversal_probability = EXCLUDED.reversal_probability,
+            affected_sectors = EXCLUDED.affected_sectors, affected_indices = EXCLUDED.affected_indices,
+            expected_direction_nifty = EXCLUDED.expected_direction_nifty,
+            expected_direction_sensex = EXCLUDED.expected_direction_sensex,
+            expected_direction_banknifty = EXCLUDED.expected_direction_banknifty,
+            recommended_action = EXCLUDED.recommended_action, risk_level = EXCLUDED.risk_level,
+            rationale = EXCLUDED.rationale, model = EXCLUDED.model, classified_at = EXCLUDED.classified_at
+        """,
+        (
+            news_item_id, event.is_relevant, event.category.value, event.severity, event.confidence,
+            event.sentiment.value, event.expected_duration.value, event.volatility_impact.value,
+            event.reversal_probability, _jsonb(event.affected_sectors), _jsonb(event.affected_indices),
+            event.expected_direction_nifty.value, event.expected_direction_sensex.value,
+            event.expected_direction_banknifty.value, event.recommended_action, event.risk_level.value,
+            event.rationale, event.model, event.classified_at,
+        ),
+    )
+
+
 def insert_product_requirement(
     title: str, requirement_text: str, status: str = "submitted", notes: str | None = None
 ) -> int:

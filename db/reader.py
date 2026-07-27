@@ -30,6 +30,41 @@ def get_last_chart_row(symbol: str, mode: str, session_date: date) -> dict | Non
     return {"as_of": row[0], "trend_label": row[1], "today_poc": row[2]}
 
 
+def has_classified_event(news_item_id: int) -> bool:
+    row = fetch_one("SELECT 1 FROM classified_events WHERE news_item_id = %s", (news_item_id,))
+    return row is not None
+
+
+def list_recent_classified_events(limit: int = 20, relevant_only: bool = True) -> list[dict]:
+    condition = "WHERE ce.is_relevant = true" if relevant_only else ""
+    rows = fetch_all(
+        f"""
+        SELECT
+            n.source, n.title, n.link, n.published_at,
+            ce.is_relevant, ce.category, ce.severity, ce.confidence, ce.sentiment,
+            ce.expected_duration, ce.volatility_impact, ce.reversal_probability,
+            ce.affected_sectors, ce.affected_indices,
+            ce.expected_direction_nifty, ce.expected_direction_sensex, ce.expected_direction_banknifty,
+            ce.recommended_action, ce.risk_level, ce.rationale, ce.classified_at
+        FROM classified_events ce
+        JOIN news_items n ON n.id = ce.news_item_id
+        {condition}
+        ORDER BY ce.classified_at DESC
+        LIMIT %s
+        """,
+        (limit,),
+    )
+    columns = [
+        "source", "title", "link", "published_at",
+        "is_relevant", "category", "severity", "confidence", "sentiment",
+        "expected_duration", "volatility_impact", "reversal_probability",
+        "affected_sectors", "affected_indices",
+        "expected_direction_nifty", "expected_direction_sensex", "expected_direction_banknifty",
+        "recommended_action", "risk_level", "rationale", "classified_at",
+    ]
+    return [dict(zip(columns, row)) for row in rows]
+
+
 def list_product_requirements(limit: int = 50) -> list[dict]:
     rows = fetch_all(
         """

@@ -116,6 +116,48 @@ CREATE INDEX IF NOT EXISTS idx_levels_symbol_mode_asof ON levels_snapshots (symb
 -- purely a durable record of feature requirements as they're submitted, so
 -- "what was asked for and when" survives independent of chat history or
 -- PROJECT_STATUS.md edits.
+-- Market Intelligence Engine: raw collected news + AI classification.
+-- Independent of the trading data model (raw_candles/levels_snapshots) --
+-- purely additive, informational, does not feed the strategy engine.
+CREATE TABLE IF NOT EXISTS news_items (
+    id BIGSERIAL PRIMARY KEY,
+    source TEXT NOT NULL,
+    title TEXT NOT NULL,
+    link TEXT NOT NULL,
+    guid TEXT NOT NULL,
+    published_at TIMESTAMPTZ,
+    summary TEXT,
+    collected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (source, guid)
+);
+CREATE INDEX IF NOT EXISTS idx_news_items_collected ON news_items (collected_at DESC);
+
+CREATE TABLE IF NOT EXISTS classified_events (
+    id BIGSERIAL PRIMARY KEY,
+    news_item_id BIGINT NOT NULL REFERENCES news_items (id),
+    is_relevant BOOLEAN NOT NULL,
+    category TEXT NOT NULL,
+    severity SMALLINT NOT NULL CHECK (severity BETWEEN 1 AND 5),
+    confidence DOUBLE PRECISION NOT NULL,
+    sentiment TEXT NOT NULL,
+    expected_duration TEXT NOT NULL,
+    volatility_impact TEXT NOT NULL,
+    reversal_probability DOUBLE PRECISION NOT NULL,
+    affected_sectors JSONB NOT NULL,
+    affected_indices JSONB NOT NULL,
+    expected_direction_nifty TEXT NOT NULL,
+    expected_direction_sensex TEXT NOT NULL,
+    expected_direction_banknifty TEXT NOT NULL,
+    recommended_action TEXT NOT NULL,
+    risk_level TEXT NOT NULL,
+    rationale TEXT NOT NULL,
+    model TEXT NOT NULL,
+    classified_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (news_item_id)
+);
+CREATE INDEX IF NOT EXISTS idx_classified_events_classified_at ON classified_events (classified_at DESC);
+CREATE INDEX IF NOT EXISTS idx_classified_events_relevant_at ON classified_events (is_relevant, classified_at DESC);
+
 CREATE TABLE IF NOT EXISTS product_requirements (
     id BIGSERIAL PRIMARY KEY,
     title TEXT NOT NULL,
