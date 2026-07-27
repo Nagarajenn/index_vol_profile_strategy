@@ -2,6 +2,7 @@ import { Alert, Box, CircularProgress, Stack } from "@mui/material";
 
 import { CandlestickChart } from "../components/chart/CandlestickChart";
 import { DecisionCardPanel } from "../components/decision-card/DecisionCardPanel";
+import { MarketIntelligencePanel } from "../components/market-intelligence/MarketIntelligencePanel";
 import { OptionChainPanel } from "../components/option-chain/OptionChainPanel";
 import { VolumeProfileIntelligencePanel } from "../components/volume-profile/VolumeProfileIntelligencePanel";
 import { useDashboardData } from "../hooks/useDashboardData";
@@ -39,6 +40,7 @@ export function TerminalPage() {
         </Box>
       </Box>
       <OptionChainPanel data={data.option_chain} />
+      <MarketIntelligencePanel />
     </Stack>
   );
 }

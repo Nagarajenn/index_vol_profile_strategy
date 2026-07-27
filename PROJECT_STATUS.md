@@ -522,3 +522,120 @@ attention goes next:
    `DH-901 Invalid_Authentication` signature to match on) from other
    causes, so the alert says "go regenerate the token" instead of just
    "something's wrong."
+
+## 10. Market Intelligence Engine (Phase 1, 2026-07-27)
+
+**Origin:** a new, large requirement submitted 2026-07-27 — full text stored
+verbatim in the `product_requirements` table (`db/writer.py::insert_product_requirement`,
+CLI: `scripts/store_requirement.py`) for history/audit purposes, independent
+of the trading data model. The full spec described an 8-service "AI-powered
+Market Intelligence Engine" (News Collector, Event Classifier, AI
+Correlation Engine, Historical Knowledge Base, Sentiment Engine, Market
+Impact Engine, Alert Engine, Dashboard Service) that converts real-world
+news (RBI policy, geopolitics, Fed/US data, earnings, etc.) into structured,
+per-event trading intelligence — not a news feed, an inference layer.
+
+**Scoping decisions made before building (all explicit, all mine to ask,
+not mine to decide):**
+- **News source**: free RSS feeds, not a paid news API.
+- **AI provider**: Claude API, cheap model (`claude-haiku-4-5`) — the user
+  adds `ANTHROPIC_API_KEY` to `.env` themselves; never handled by me.
+- **Confidence integration**: **advisory only** — news risk is surfaced to
+  the trader but never mutates the stored `confidence_score` or any other
+  trading-engine field. The spec's literal ask ("automatically reduce trade
+  confidence") was explicitly declined at this stage.
+- **Build approach**: phased. Phase 1 = collect + classify + a "latest
+  updates" dashboard panel. Correlation Engine, Historical Knowledge Base,
+  Sentiment Engine (as a distinct service), Market Impact Engine (sector
+  heat map beyond the lightweight client-side aggregate built below), Alert
+  Engine, any wiring into the confidence score, scheduling/automation of
+  the collector, and a full event-history page are all **explicitly
+  deferred**, not forgotten.
+
+**What Phase 1 actually built:**
+
+New top-level `market_intelligence/` package (sibling to `analytics/`, same
+"reusable, provider-independent" pattern):
+- `models.py` — pure dataclasses `NewsItem`/`ClassifiedEvent` + enums
+  (24-category `EventCategory`, `Sentiment`, `Duration`, `ImpactLevel`,
+  `Direction`).
+- `collectors/rss_collector.py` — `RSSCollector`, 5 verified-working free
+  feeds (Economic Times Markets, Moneycontrol Markets, Moneycontrol
+  Business, LiveMint Markets, CNBC-TV18 Markets). Business Standard (HTTP
+  403) and Reuters India (DNS failure, feed likely discontinued) were
+  tested and dropped from the original candidate list.
+- `classifiers/claude_classifier.py` — `ClaudeEventClassifier`, Anthropic
+  structured outputs (`output_config.format.json_schema`) against
+  `claude-haiku-4-5`, inferring all 16 fields the spec asked for (category,
+  severity 1-5, confidence, sentiment, duration, volatility impact,
+  reversal probability, affected sectors/indices, expected direction for
+  NIFTY/SENSEX/BANKNIFTY, recommended action, risk level, rationale) in one
+  call per news item; sets `is_relevant=false` for routine non-market news.
+- `pipeline.py::collect_and_classify()` — orchestrator: upserts every news
+  item seen (cheap, makes reruns resumable), classifies only unclassified
+  items, capped at `max_new_classifications` per run as an API-cost safety
+  valve.
+- `scripts/run_market_intelligence.py` — one-shot manual CLI (`--max-new`).
+  **Not scheduled/automated yet**, matching the same "don't auto-schedule a
+  new pipeline until reviewed" caution applied to Volume Profile
+  Intelligence.
+
+New DB tables (`db/schema.sql`): `news_items` (unique on
+`source, guid`), `classified_events` (FK to `news_items`, one row per
+classified item, all 16 inferred fields, `CHECK(severity BETWEEN 1 AND 5)`).
+
+Backend (Repository → Service → Router, same pattern as every other
+panel): `MarketIntelligenceRepository.list_recent()` (query-only, joined
+load on the news item), `MarketIntelligenceService.get_latest()` computing
+two **derived, advisory-only** aggregates —
+`overall_sentiment` (severity × confidence-weighted majority vote) and
+`news_risk_score` 0-100 (`mean(severity × confidence) / 5 × 100`) — neither
+of which touches `confidence_score.py`, `trend_classifier.py`,
+`decision_card.py`, or `institutional_bias.py` (verified zero diff on all
+four). New endpoint `GET /api/v1/market-intelligence/latest`
+(symbol-independent — news isn't per-index).
+
+Frontend: new `MarketIntelligencePanel`, added to `TerminalPage` **below
+the Option Chain panel**, per the spec's explicit placement instruction.
+Polls every 60s (slower than the 15-20s dashboard/volume-profile polls,
+since news changes slowly and doesn't depend on the selected symbol).
+Shows, per the spec's panel-content list but scoped to "latest updates
+only" (full history/timeline explicitly deferred to a later phase): overall
+sentiment, news risk score, last-updated timestamp, a lightweight
+client-side **sector heat map** (aggregated from each event's
+`affected_sectors`, weighted by severity × confidence × sentiment-sign — no
+new backend endpoint, computed from the same events list already
+returned), and a card per high-impact event showing category, severity,
+sentiment, the AI's rationale ("AI Interpretation"), duration/volatility/
+reversal-probability ("Expected Market Impact"), per-index direction calls,
+recommended action ("Trading Recommendation"), risk level, confidence, and
+the event's own published timestamp ("Event Timeline" per-event, rather
+than a separate aggregate timeline view).
+
+**Tests**: 11 new pipeline-side tests (`tests/test_market_intelligence.py`
+— RSS collector against monkeypatched `feedparser`, classifier response
+parsing as a pure function independent of the live API, pipeline
+skip/cap/empty-collection logic) + 3 new backend tests
+(`backend/tests/test_market_intelligence_service.py` — empty state,
+dominant-sentiment selection, risk-score scaling), all passing. All 65
+existing pipeline tests and 19 existing backend tests unaffected.
+
+**Verified live** (2026-07-27): RSS collection tested against real feeds
+(304 items across 5 sources), DB round-trip tested, and
+`GET /api/v1/market-intelligence/latest` curl-tested and browser-verified
+end-to-end — correctly returns
+`{"overall_sentiment": "Neutral", "news_risk_score": 0, "events": []}`
+since `ANTHROPIC_API_KEY` is not yet in `.env`, so no classification has
+run. **The `ANTHROPIC_API_KEY` env var must be added before real events
+will appear** — collection/DB/service/panel are all wired and tested, only
+the API key is outstanding, and that's the user's to add, not mine to
+handle.
+
+**Deferred, not forgotten** (do not start without a review/go-ahead):
+Correlation Engine + Historical Knowledge Base (comparing new events
+against historical reactions), a dedicated Sentiment/Market-Impact service
+beyond the simple derived aggregates above, a real Sector Heat Map backed
+by historical sector-reaction data (today's is a same-request client-side
+aggregate, not a learned/historical one), Alert Engine, wiring news risk
+into the actual `confidence_score`, scheduling `run_market_intelligence.py`
+to run automatically, and a full event-history/timeline page.
