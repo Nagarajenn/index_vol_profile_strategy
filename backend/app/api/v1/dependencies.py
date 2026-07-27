@@ -4,8 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db_session
 from app.repositories.candle_repository import CandleRepository
 from app.repositories.levels_snapshot_repository import LevelsSnapshotRepository
+from app.repositories.market_intelligence_repository import MarketIntelligenceRepository
 from app.repositories.option_chain_repository import OptionChainRepository
 from app.services.dashboard_service import DashboardService
+from app.services.market_intelligence_service import MarketIntelligenceService
 from app.services.volume_profile_intelligence_service import VolumeProfileIntelligenceService
 
 
@@ -33,3 +35,15 @@ def get_volume_profile_intelligence_service(
     candle_repo: CandleRepository = Depends(get_candle_repository),
 ) -> VolumeProfileIntelligenceService:
     return VolumeProfileIntelligenceService(candle_repo)
+
+
+def get_market_intelligence_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> MarketIntelligenceRepository:
+    return MarketIntelligenceRepository(session)
+
+
+def get_market_intelligence_service(
+    repo: MarketIntelligenceRepository = Depends(get_market_intelligence_repository),
+) -> MarketIntelligenceService:
+    return MarketIntelligenceService(repo)
