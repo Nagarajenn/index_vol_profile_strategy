@@ -5,7 +5,7 @@ from app.models import ClassifiedEvent
 from app.repositories.protocols import MarketIntelligenceRepositoryProtocol
 from app.schemas.market_intelligence import MarketIntelligenceEventDTO, MarketIntelligenceSummaryDTO
 
-DEFAULT_LIMIT = 15
+DEFAULT_LIMIT = 5
 
 
 class MarketIntelligenceService:
