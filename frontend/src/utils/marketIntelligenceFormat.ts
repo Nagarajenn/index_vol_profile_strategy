@@ -1,4 +1,13 @@
-import type { Sentiment } from "../types/marketIntelligence";
+import type { MarketIntelligenceEventDTO, Sentiment } from "../types/marketIntelligence";
+
+const TRUMP_PATTERN = /trump/i;
+
+// Client-side keyword flag, not a classifier field -- Trump/US-Iran
+// commentary is currently the dominant global driver, so surface it without
+// needing a schema change or reclassifying already-stored events.
+export function mentionsTrump(event: Pick<MarketIntelligenceEventDTO, "title" | "rationale">): boolean {
+  return TRUMP_PATTERN.test(event.title) || TRUMP_PATTERN.test(event.rationale);
+}
 
 export function sentimentColor(sentiment: Sentiment): "success" | "error" | "default" {
   if (sentiment === "Bullish") return "success";

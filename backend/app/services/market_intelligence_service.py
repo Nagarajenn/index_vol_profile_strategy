@@ -1,4 +1,5 @@
 from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 
 from app.models import ClassifiedEvent
@@ -6,6 +7,11 @@ from app.repositories.protocols import MarketIntelligenceRepositoryProtocol
 from app.schemas.market_intelligence import MarketIntelligenceEventDTO, MarketIntelligenceSummaryDTO
 
 DEFAULT_LIMIT = 5
+
+# Only surface news from roughly the last two calendar days -- older items
+# (e.g. classified late by a backlog catch-up run) would otherwise clutter
+# the "current" read with stale context.
+RECENCY_WINDOW = timedelta(days=2)
 
 
 class MarketIntelligenceService:
@@ -20,13 +26,14 @@ class MarketIntelligenceService:
         self._repo = repo
 
     async def get_latest(self, limit: int = DEFAULT_LIMIT) -> MarketIntelligenceSummaryDTO:
-        rows = await self._repo.list_recent(limit, relevant_only=True)
+        since = datetime.now(timezone.utc) - RECENCY_WINDOW
+        rows = await self._repo.list_recent(limit, relevant_only=True, published_since=since)
         events = [self._to_dto(r) for r in rows]
 
         return MarketIntelligenceSummaryDTO(
             overall_sentiment=self._overall_sentiment(rows),
             news_risk_score=self._news_risk_score(rows),
-            last_updated=events[0].classified_at if events else None,
+            last_updated=max((r.classified_at for r in rows), default=None),
             events=events,
         )
 

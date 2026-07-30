@@ -3,7 +3,9 @@ import { useMemo } from "react";
 
 import { useMarketIntelligence } from "../../hooks/useMarketIntelligence";
 import type { MarketIntelligenceEventDTO } from "../../types/marketIntelligence";
-import { formatTime, riskColor, sentimentColor } from "../../utils/marketIntelligenceFormat";
+import { formatTime, mentionsTrump, riskColor, sentimentColor } from "../../utils/marketIntelligenceFormat";
+
+const TRUMP_HIGHLIGHT_COLOR = "#c2760a";
 
 interface SectorHeat {
   sector: string;
@@ -68,8 +70,20 @@ function SectorHeatMap({ events }: { events: MarketIntelligenceEventDTO[] }) {
 }
 
 function EventCard({ event }: { event: MarketIntelligenceEventDTO }) {
+  const flagged = mentionsTrump(event);
   return (
-    <Paper variant="outlined" sx={{ p: 1, bgcolor: "background.default" }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 1,
+        bgcolor: "background.default",
+        ...(flagged && {
+          borderColor: TRUMP_HIGHLIGHT_COLOR,
+          borderWidth: 2,
+          bgcolor: "rgba(194,118,10,0.06)",
+        }),
+      }}
+    >
       <Stack direction="row" sx={{ justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 0.75 }}>
         <Box sx={{ minWidth: 0 }}>
           <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.3 }}>
@@ -80,6 +94,13 @@ function EventCard({ event }: { event: MarketIntelligenceEventDTO }) {
           </Typography>
         </Box>
         <Stack direction="row" spacing={0.5}>
+          {flagged && (
+            <Chip
+              size="small"
+              label="TRUMP"
+              sx={{ bgcolor: TRUMP_HIGHLIGHT_COLOR, color: "#fff", fontWeight: 700 }}
+            />
+          )}
           <Chip size="small" label={`Sev ${event.severity}`} variant="outlined" />
           <Chip size="small" label={event.sentiment} color={sentimentColor(event.sentiment)} />
         </Stack>

@@ -1,5 +1,5 @@
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pytest
 
 from app.models import ClassifiedEvent, NewsItem
-from app.services.market_intelligence_service import MarketIntelligenceService
+from app.services.market_intelligence_service import RECENCY_WINDOW, MarketIntelligenceService
 
 
 def _event(sentiment: str, severity: int, confidence: float, source: str = "Test") -> ClassifiedEvent:
@@ -42,8 +42,12 @@ def _event(sentiment: str, severity: int, confidence: float, source: str = "Test
 class _FakeRepo:
     def __init__(self, rows: list[ClassifiedEvent]) -> None:
         self._rows = rows
+        self.last_published_since: datetime | None = None
 
-    async def list_recent(self, limit: int, relevant_only: bool = True) -> list[ClassifiedEvent]:
+    async def list_recent(
+        self, limit: int, relevant_only: bool = True, published_since=None
+    ) -> list[ClassifiedEvent]:
+        self.last_published_since = published_since
         return self._rows[:limit]
 
 
@@ -67,6 +71,17 @@ async def test_get_latest_maps_events_and_picks_dominant_sentiment():
     assert len(result.events) == 2
     assert result.events[0].source == "Test"
     assert result.last_updated is not None
+
+
+@pytest.mark.asyncio
+async def test_get_latest_restricts_to_recency_window():
+    repo = _FakeRepo([])
+    before_call = datetime.now(timezone.utc)
+    await MarketIntelligenceService(repo).get_latest()
+
+    assert repo.last_published_since is not None
+    expected_floor = before_call - RECENCY_WINDOW
+    assert abs((repo.last_published_since - expected_floor).total_seconds()) < 5
 
 
 @pytest.mark.asyncio

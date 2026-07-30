@@ -25,4 +25,6 @@ class OptionChainRepositoryProtocol(Protocol):
 
 
 class MarketIntelligenceRepositoryProtocol(Protocol):
-    async def list_recent(self, limit: int, relevant_only: bool = True) -> list[ClassifiedEvent]: ...
+    async def list_recent(
+        self, limit: int, relevant_only: bool = True, published_since: datetime | None = None
+    ) -> list[ClassifiedEvent]: ...
