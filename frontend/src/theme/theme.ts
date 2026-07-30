@@ -1,16 +1,17 @@
 import { createTheme } from "@mui/material/styles";
 
-// Bloomberg-terminal-inspired: near-black background, blue accents, high
-// information density. Dark mode only for V1 -- no light-mode variant.
-export const darkTheme = createTheme({
+// Bloomberg-terminal-inspired density, pale/light backdrop: black text on a
+// half-white page with white cards for subtle elevation. Red/green (error /
+// success) are left as the app's existing semantic colors.
+export const appTheme = createTheme({
   palette: {
-    mode: "dark",
+    mode: "light",
     background: {
-      default: "#0a0e14",
-      paper: "#11161f",
+      default: "#f1efea",
+      paper: "#ffffff",
     },
     primary: {
-      main: "#4da3ff",
+      main: "#2f6fb3",
     },
     secondary: {
       main: "#7fd858",
@@ -19,10 +20,10 @@ export const darkTheme = createTheme({
       main: "#ff5c5c",
     },
     text: {
-      primary: "#e6edf3",
-      secondary: "#8b98a9",
+      primary: "#1a1a1a",
+      secondary: "#5c6470",
     },
-    divider: "#1f2733",
+    divider: "#dedad0",
   },
   typography: {
     fontFamily: '"Inter", "Segoe UI", Roboto, sans-serif',
@@ -38,15 +39,16 @@ export const darkTheme = createTheme({
       styleOverrides: {
         root: {
           backgroundImage: "none",
-          border: "1px solid #1f2733",
+          border: "1px solid #dedad0",
         },
       },
     },
     MuiAppBar: {
       styleOverrides: {
         root: {
-          backgroundColor: "#0d1117",
-          borderBottom: "1px solid #1f2733",
+          backgroundColor: "#ffffff",
+          borderBottom: "1px solid #dedad0",
+          color: "#1a1a1a",
         },
       },
     },

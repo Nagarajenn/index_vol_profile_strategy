@@ -2,7 +2,7 @@ import { Alert, Box, CircularProgress, Stack } from "@mui/material";
 
 import { CandlestickChart } from "../components/chart/CandlestickChart";
 import { DecisionCardPanel } from "../components/decision-card/DecisionCardPanel";
-import { MarketIntelligencePanel } from "../components/market-intelligence/MarketIntelligencePanel";
+import { MarketIntelligenceSummaryBar } from "../components/market-intelligence/MarketIntelligenceSummaryBar";
 import { OptionChainPanel } from "../components/option-chain/OptionChainPanel";
 import { VolumeProfileIntelligencePanel } from "../components/volume-profile/VolumeProfileIntelligencePanel";
 import { useDashboardData } from "../hooks/useDashboardData";
@@ -31,6 +31,8 @@ export function TerminalPage() {
   return (
     <Stack spacing={2} sx={{ width: "100%" }}>
       <DecisionCardPanel data={data} />
+      <Box sx={{ height: 3, bgcolor: "divider", borderRadius: 1 }} />
+      <MarketIntelligenceSummaryBar />
       <Box sx={{ display: "flex", gap: 1.5, flexDirection: { xs: "column", md: "row" }, alignItems: "flex-start" }}>
         <Box sx={{ width: { xs: "100%", md: "30%" }, flexShrink: 0, minWidth: 0 }}>
           <VolumeProfileIntelligencePanel symbol={selectedSymbol} />
@@ -40,7 +42,6 @@ export function TerminalPage() {
         </Box>
       </Box>
       <OptionChainPanel data={data.option_chain} />
-      <MarketIntelligencePanel />
     </Stack>
   );
 }

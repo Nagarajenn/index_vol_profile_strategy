@@ -15,7 +15,7 @@ export function ConfidenceGauge({ score }: { score: number | null }) {
           variant="determinate"
           value={value}
           color={colorFor(value)}
-          sx={{ height: 8, borderRadius: 1, bgcolor: "#1f2733" }}
+          sx={{ height: 8, borderRadius: 1, bgcolor: "#e2e0d8" }}
         />
       </Box>
       <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 42 }}>
