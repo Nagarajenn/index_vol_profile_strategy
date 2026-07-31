@@ -35,6 +35,12 @@ function outcomeColor(outcome: MtiDailyResultDTO["outcome"]): "success" | "error
   return "default";
 }
 
+function matchLabel(day: MtiDailyResultDTO): { label: string; color: "success" | "error" | "default" } {
+  if (day.forecast_correct === true) return { label: "Hit", color: "success" };
+  if (day.forecast_correct === false) return { label: "Miss", color: "error" };
+  return { label: "N/A", color: "default" };
+}
+
 function fmtPct(v: number | null): string {
   return v === null ? "N/A" : `${Math.round(v * 100)}%`;
 }
@@ -102,6 +108,10 @@ function DailyRow({ day }: { day: MtiDailyResultDTO }) {
         <TableCell>
           <Chip size="small" label={day.outcome} color={outcomeColor(day.outcome)} />
         </TableCell>
+        <TableCell sx={{ textTransform: "capitalize" }}>{day.predicted_outcome ?? "N/A"}</TableCell>
+        <TableCell>
+          <Chip size="small" label={matchLabel(day).label} color={matchLabel(day).color} variant="outlined" />
+        </TableCell>
         <TableCell align="right">{day.transition_risk_score !== null ? Math.round(day.transition_risk_score) : "N/A"}</TableCell>
         <TableCell align="right">{fmtPct(day.probability_reversal)}</TableCell>
         <TableCell align="right">{fmtPct(day.probability_continuation)}</TableCell>
@@ -114,7 +124,7 @@ function DailyRow({ day }: { day: MtiDailyResultDTO }) {
       </TableRow>
       {open && (
         <TableRow>
-          <TableCell colSpan={10} sx={{ bgcolor: "background.default", py: 1.5 }}>
+          <TableCell colSpan={12} sx={{ bgcolor: "background.default", py: 1.5 }}>
             <Stack spacing={1}>
               <Typography variant="body2">{day.explanation}</Typography>
               <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", rowGap: 0.5 }}>
@@ -156,15 +166,52 @@ function DailyRow({ day }: { day: MtiDailyResultDTO }) {
   );
 }
 
-function DailyResultsSection({ days }: { days: MtiDailyResultDTO[] }) {
+function ForecastAccuracySummary({
+  evaluableDays,
+  hitCount,
+  accuracyPct,
+}: {
+  evaluableDays: number;
+  hitCount: number;
+  accuracyPct: number | null;
+}) {
+  if (evaluableDays === 0) {
+    return (
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
+        Forecast accuracy: not enough graded days yet.
+      </Typography>
+    );
+  }
+  return (
+    <Typography variant="caption" sx={{ display: "block", mb: 1 }}>
+      Forecast accuracy so far: <strong>{accuracyPct}%</strong> ({hitCount}/{evaluableDays} directional days where the
+      pre-3pm forecast could be graded against the actual outcome -- neutral-outcome days excluded).
+    </Typography>
+  );
+}
+
+function DailyResultsSection({
+  days,
+  forecastEvaluableDays,
+  forecastHitCount,
+  forecastAccuracyPct,
+}: {
+  days: MtiDailyResultDTO[];
+  forecastEvaluableDays: number;
+  forecastHitCount: number;
+  forecastAccuracyPct: number | null;
+}) {
   return (
     <Paper sx={{ p: 1.5 }}>
       <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
         Daily Transition Results
       </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-        Most recent first. Click a row for the full explanation and contributing factors.
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+        Most recent first. Click a row for the full explanation and contributing factors. "Predicted" is the pre-3pm
+        forecast's lean (from that day's own probability_reversal/continuation); "Match" grades it against what
+        actually happened.
       </Typography>
+      <ForecastAccuracySummary evaluableDays={forecastEvaluableDays} hitCount={forecastHitCount} accuracyPct={forecastAccuracyPct} />
       {days.length === 0 ? (
         <Typography variant="body2" color="text.secondary">
           No complete days analyzed yet.
@@ -177,6 +224,8 @@ function DailyResultsSection({ days }: { days: MtiDailyResultDTO[] }) {
                 <TableCell sx={{ width: 32 }} />
                 <TableCell>Date</TableCell>
                 <TableCell>Outcome</TableCell>
+                <TableCell>Predicted</TableCell>
+                <TableCell>Match</TableCell>
                 <TableCell align="right">Risk Score</TableCell>
                 <TableCell align="right">P(Reversal)</TableCell>
                 <TableCell align="right">P(Continuation)</TableCell>
@@ -232,7 +281,12 @@ export function MarketTransitionPage() {
           </Box>
 
           <CorrelationSection correlations={data.correlations} />
-          <DailyResultsSection days={data.daily_results} />
+          <DailyResultsSection
+            days={data.daily_results}
+            forecastEvaluableDays={data.forecast_evaluable_days}
+            forecastHitCount={data.forecast_hit_count}
+            forecastAccuracyPct={data.forecast_accuracy_pct}
+          />
         </>
       )}
     </Stack>

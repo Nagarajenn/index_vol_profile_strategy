@@ -6,11 +6,17 @@ import { MarketIntelligenceSummaryBar } from "../components/market-intelligence/
 import { OptionChainPanel } from "../components/option-chain/OptionChainPanel";
 import { VolumeProfileIntelligencePanel } from "../components/volume-profile/VolumeProfileIntelligencePanel";
 import { useDashboardData } from "../hooks/useDashboardData";
+import { useLiveTransitionAdvisor } from "../hooks/useLiveTransitionAdvisor";
 import { useSymbolStore } from "../store/useSymbolStore";
 
 export function TerminalPage() {
   const selectedSymbol = useSymbolStore((s) => s.selectedSymbol);
   const { data, isLoading, isError, error } = useDashboardData(selectedSymbol);
+  // Live Market Transition Advisor's forecast, reused here only to draw the
+  // chart's directional arrow marker -- this page doesn't otherwise touch
+  // the Market Transition Intelligence feature, and a fetch error here must
+  // never break the main dashboard (hence no isError handling below).
+  const { data: liveAdvisory } = useLiveTransitionAdvisor(selectedSymbol);
 
   if (isLoading) {
     return (
@@ -38,7 +44,7 @@ export function TerminalPage() {
           <VolumeProfileIntelligencePanel symbol={selectedSymbol} />
         </Box>
         <Box sx={{ width: { xs: "100%", md: "70%" }, minWidth: 0 }}>
-          <CandlestickChart candles={data.candles} levels={data.levels} />
+          <CandlestickChart candles={data.candles} levels={data.levels} liveAdvisory={liveAdvisory ?? null} />
         </Box>
       </Box>
       <OptionChainPanel data={data.option_chain} />

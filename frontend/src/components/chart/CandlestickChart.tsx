@@ -1,6 +1,7 @@
 import { Box, Paper, Typography } from "@mui/material";
 
 import type { CandleDTO, LevelsSummaryDTO } from "../../types/dashboard";
+import type { LiveAdvisoryDTO } from "../../types/liveTransitionAdvisor";
 import { CHART_AXIS, CHART_BG, CHART_BORDER, CHART_TEXT } from "./chartTheme";
 import { ChartTooltip } from "./ChartTooltip";
 import { LevelBandOverlay } from "./LevelBandOverlay";
@@ -14,11 +15,13 @@ const CHART_HEIGHT = { xs: 420, md: "clamp(440px, 48vh, 680px)" };
 export function CandlestickChart({
   candles,
   levels,
+  liveAdvisory = null,
 }: {
   candles: CandleDTO[];
   levels: LevelsSummaryDTO | null;
+  liveAdvisory?: LiveAdvisoryDTO | null;
 }) {
-  const { containerRef, bands, hover } = useCandlestickChart(candles, levels);
+  const { containerRef, bands, hover } = useCandlestickChart(candles, levels, liveAdvisory);
 
   if (candles.length === 0) {
     return (

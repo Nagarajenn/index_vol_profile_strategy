@@ -41,6 +41,8 @@ export interface MtiDailyResultDTO {
   statistical_confidence: ConfidenceLabel | null;
   explanation: string | null;
   computed_at: string | null;
+  predicted_outcome: "reversal" | "continuation" | null;
+  forecast_correct: boolean | null;
 }
 
 export interface MtiResearchResponseDTO {
@@ -48,4 +50,7 @@ export interface MtiResearchResponseDTO {
   total_days_analyzed: number;
   correlations: MtiFactorCorrelationDTO[];
   daily_results: MtiDailyResultDTO[];
+  forecast_evaluable_days: number;
+  forecast_hit_count: number;
+  forecast_accuracy_pct: number | null;
 }

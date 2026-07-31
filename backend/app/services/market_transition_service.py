@@ -28,11 +28,18 @@ class MarketTransitionService:
 
         daily_results = [self._to_daily_dto(r) for r in daily_rows]
 
+        gradable = [d.forecast_correct for d in daily_results if d.forecast_correct is not None]
+        hit_count = sum(1 for correct in gradable if correct)
+        evaluable = len(gradable)
+
         return MtiResearchResponseDTO(
             symbol=symbol,
             total_days_analyzed=len(daily_results),
             correlations=correlations,
             daily_results=daily_results,
+            forecast_evaluable_days=evaluable,
+            forecast_hit_count=hit_count,
+            forecast_accuracy_pct=round(hit_count / evaluable * 100, 1) if evaluable else None,
         )
 
     @staticmethod
@@ -52,6 +59,8 @@ class MarketTransitionService:
     @staticmethod
     def _to_daily_dto(row: MtiDailyTransition) -> MtiDailyResultDTO:
         factors = [ContributingFactorDTO(**f) for f in (row.top_contributing_factors or [])]
+        predicted_outcome = MarketTransitionService._predicted_outcome(row.probability_reversal, row.probability_continuation)
+        forecast_correct = MarketTransitionService._forecast_correct(predicted_outcome, row.outcome)
         return MtiDailyResultDTO(
             session_date=row.session_date,
             profile_shape_1459=row.profile_shape_1459,
@@ -72,4 +81,18 @@ class MarketTransitionService:
             statistical_confidence=row.statistical_confidence,
             explanation=row.explanation,
             computed_at=row.computed_at,
+            predicted_outcome=predicted_outcome,
+            forecast_correct=forecast_correct,
         )
+
+    @staticmethod
+    def _predicted_outcome(p_reversal: float | None, p_continuation: float | None) -> str | None:
+        if p_reversal is None or p_continuation is None or p_reversal == p_continuation:
+            return None
+        return "reversal" if p_reversal > p_continuation else "continuation"
+
+    @staticmethod
+    def _forecast_correct(predicted_outcome: str | None, actual_outcome: str) -> bool | None:
+        if predicted_outcome is None or actual_outcome == "neutral":
+            return None
+        return predicted_outcome == actual_outcome

@@ -51,6 +51,17 @@ class MtiDailyResultDTO(BaseModel):
     statistical_confidence: ConfidenceLabelLiteral | None
     explanation: str | None
     computed_at: datetime | None
+    # Forecast-vs-actual: `predicted_outcome` is the pre-3pm forecast's lean
+    # (whichever of probability_reversal/probability_continuation was
+    # higher), derived at read time -- not stored, since it's fully implied
+    # by the two probability columns already on this row. None when the
+    # forecast was a dead-even split (i.e. score_day() had insufficient
+    # analogs). `forecast_correct` compares that lean against the actual
+    # `outcome`; None when there's no forecast to grade, or when the actual
+    # outcome was "neutral" (no significant move -- not a fair test of a
+    # reversal-vs-continuation call).
+    predicted_outcome: Literal["reversal", "continuation"] | None
+    forecast_correct: bool | None
 
 
 class MtiResearchResponseDTO(BaseModel):
@@ -58,6 +69,12 @@ class MtiResearchResponseDTO(BaseModel):
     total_days_analyzed: int
     correlations: list[MtiFactorCorrelationDTO]
     daily_results: list[MtiDailyResultDTO]
+    # Aggregate forecast accuracy across all graded days (see MtiDailyResultDTO
+    # docstring for what makes a day "evaluable"). forecast_accuracy_pct is
+    # None when forecast_evaluable_days == 0 -- avoids a misleading 0/0 rate.
+    forecast_evaluable_days: int
+    forecast_hit_count: int
+    forecast_accuracy_pct: float | None
 
 
 # ---------------------------------------------------------------------------

@@ -10,11 +10,13 @@ import {
   type IChartApi,
   type ISeriesApi,
   type ISeriesMarkersPluginApi,
+  type SeriesMarker,
   type Time,
   type UTCTimestamp,
 } from "lightweight-charts";
 
 import type { CandleDTO, LevelsSummaryDTO } from "../../types/dashboard";
+import type { LiveAdvisoryDTO } from "../../types/liveTransitionAdvisor";
 import {
   CHART_AXIS,
   CHART_BG,
@@ -65,7 +67,50 @@ export interface HoverInfo {
   candle: IndexedCandle;
 }
 
-export function useCandlestickChart(candles: CandleDTO[], levels: LevelsSummaryDTO | null) {
+// Draws the Live Market Transition Advisor's current forecast as a single
+// marker on the latest candle -- not a trading signal, just a visual echo
+// of the advisor already shown on the Market Transition page. Direction
+// comes straight from expected_direction (itself the actual sign of
+// analogs' post-transition moves, so it already reflects a reversal
+// correctly -- e.g. an uptrend day where analogs mostly reversed down
+// yields "down", no separate trend-vs-lean combination needed here). Only
+// shown once the advisor has a genuine, non-Observe read -- otherwise the
+// chart stays clean.
+function buildForecastMarker(indexed: IndexedCandle[], liveAdvisory: LiveAdvisoryDTO | null): SeriesMarker<Time> | null {
+  if (!liveAdvisory || !liveAdvisory.is_active || liveAdvisory.risk_level === "Observe" || indexed.length === 0) {
+    return null;
+  }
+  const lastIndex = indexed[indexed.length - 1].index;
+  const lean = liveAdvisory.probability_reversal > liveAdvisory.probability_continuation ? "Reversal" : "Continuation";
+
+  if (liveAdvisory.expected_direction === "up") {
+    return {
+      time: syntheticTime(lastIndex),
+      position: "belowBar",
+      shape: "arrowUp",
+      color: UP_COLOR,
+      text: `${lean} (${liveAdvisory.risk_level})`,
+    };
+  }
+  if (liveAdvisory.expected_direction === "down") {
+    return {
+      time: syntheticTime(lastIndex),
+      position: "aboveBar",
+      shape: "arrowDown",
+      color: DOWN_COLOR,
+      text: `${lean} (${liveAdvisory.risk_level})`,
+    };
+  }
+  return {
+    time: syntheticTime(lastIndex),
+    position: "inBar",
+    shape: "circle",
+    color: CHART_AXIS,
+    text: `Neutral (${liveAdvisory.risk_level})`,
+  };
+}
+
+export function useCandlestickChart(candles: CandleDTO[], levels: LevelsSummaryDTO | null, liveAdvisory: LiveAdvisoryDTO | null = null) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<"Candlestick"> | null>(null);
@@ -220,24 +265,25 @@ export function useCandlestickChart(candles: CandleDTO[], levels: LevelsSummaryD
     const firstDate = indexed.length > 0 ? new Date(indexed[0].timestamp).toDateString() : null;
     const boundaryCandle = indexed.find((c) => new Date(c.timestamp).toDateString() !== firstDate);
     if (markersRef.current) {
-      markersRef.current.setMarkers(
-        boundaryCandle
-          ? [
-              {
-                time: syntheticTime(boundaryCandle.index),
-                position: "aboveBar",
-                shape: "arrowDown",
-                color: CHART_AXIS,
-                text: formatDateLabel(boundaryCandle.timestamp),
-              },
-            ]
-          : []
-      );
+      const markers: SeriesMarker<Time>[] = [];
+      if (boundaryCandle) {
+        markers.push({
+          time: syntheticTime(boundaryCandle.index),
+          position: "aboveBar",
+          shape: "arrowDown",
+          color: CHART_AXIS,
+          text: formatDateLabel(boundaryCandle.timestamp),
+        });
+      }
+      const forecastMarker = buildForecastMarker(indexed, liveAdvisory);
+      if (forecastMarker) markers.push(forecastMarker);
+      markers.sort((a, b) => (a.time as number) - (b.time as number));
+      markersRef.current.setMarkers(markers);
     }
 
     chartRef.current?.timeScale().fitContent();
     recomputeBandsRef.current();
-  }, [candles]);
+  }, [candles, liveAdvisory]);
 
   // Level price lines (POC/VWAP/VAH/VAL) -- distinct colors + native labels.
   useEffect(() => {

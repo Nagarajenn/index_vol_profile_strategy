@@ -10,7 +10,9 @@ from app.models import MtiDailyTransition, MtiFactorCorrelation
 from app.services.market_transition_service import MarketTransitionService
 
 
-def _daily_row(session_date: date, outcome: str = "reversal", factors=None) -> MtiDailyTransition:
+def _daily_row(
+    session_date: date, outcome: str = "reversal", factors=None, p_reversal: float | None = 0.65, p_continuation: float | None = 0.35
+) -> MtiDailyTransition:
     return MtiDailyTransition(
         symbol="NIFTY",
         session_date=session_date,
@@ -26,8 +28,8 @@ def _daily_row(session_date: date, outcome: str = "reversal", factors=None) -> M
         outcome=outcome,
         outcome_magnitude=4,
         transition_risk_score=65.0,
-        probability_continuation=0.35,
-        probability_reversal=0.65,
+        probability_continuation=p_continuation,
+        probability_reversal=p_reversal,
         expected_volatility=10.0,
         expected_direction="up",
         historical_similarity_score=0.8,
@@ -115,3 +117,89 @@ async def test_daily_result_handles_missing_top_contributing_factors():
 
     result = await service.get_research("NIFTY")
     assert result.daily_results[0].top_contributing_factors == []
+
+
+@pytest.mark.asyncio
+async def test_forecast_correct_when_predicted_reversal_and_actual_reversal():
+    daily = [_daily_row(date(2026, 7, 30), outcome="reversal", p_reversal=0.65, p_continuation=0.35)]
+    service = MarketTransitionService(_FakeRepo(daily, []))
+
+    result = await service.get_research("NIFTY")
+
+    dto = result.daily_results[0]
+    assert dto.predicted_outcome == "reversal"
+    assert dto.forecast_correct is True
+    assert result.forecast_evaluable_days == 1
+    assert result.forecast_hit_count == 1
+    assert result.forecast_accuracy_pct == 100.0
+
+
+@pytest.mark.asyncio
+async def test_forecast_incorrect_when_predicted_reversal_but_actual_continuation():
+    daily = [_daily_row(date(2026, 7, 30), outcome="continuation", p_reversal=0.65, p_continuation=0.35)]
+    service = MarketTransitionService(_FakeRepo(daily, []))
+
+    result = await service.get_research("NIFTY")
+
+    dto = result.daily_results[0]
+    assert dto.predicted_outcome == "reversal"
+    assert dto.forecast_correct is False
+    assert result.forecast_evaluable_days == 1
+    assert result.forecast_hit_count == 0
+    assert result.forecast_accuracy_pct == 0.0
+
+
+@pytest.mark.asyncio
+async def test_forecast_not_graded_when_actual_outcome_is_neutral():
+    daily = [_daily_row(date(2026, 7, 30), outcome="neutral", p_reversal=0.65, p_continuation=0.35)]
+    service = MarketTransitionService(_FakeRepo(daily, []))
+
+    result = await service.get_research("NIFTY")
+
+    dto = result.daily_results[0]
+    assert dto.predicted_outcome == "reversal"
+    assert dto.forecast_correct is None
+    assert result.forecast_evaluable_days == 0
+    assert result.forecast_accuracy_pct is None
+
+
+@pytest.mark.asyncio
+async def test_forecast_not_graded_on_tied_probabilities():
+    daily = [_daily_row(date(2026, 7, 30), outcome="reversal", p_reversal=0.5, p_continuation=0.5)]
+    service = MarketTransitionService(_FakeRepo(daily, []))
+
+    result = await service.get_research("NIFTY")
+
+    dto = result.daily_results[0]
+    assert dto.predicted_outcome is None
+    assert dto.forecast_correct is None
+    assert result.forecast_evaluable_days == 0
+
+
+@pytest.mark.asyncio
+async def test_forecast_not_graded_when_probabilities_missing():
+    daily = [_daily_row(date(2026, 7, 30), outcome="reversal", p_reversal=None, p_continuation=None)]
+    service = MarketTransitionService(_FakeRepo(daily, []))
+
+    result = await service.get_research("NIFTY")
+
+    dto = result.daily_results[0]
+    assert dto.predicted_outcome is None
+    assert dto.forecast_correct is None
+
+
+@pytest.mark.asyncio
+async def test_forecast_accuracy_aggregates_across_multiple_days():
+    daily = [
+        _daily_row(date(2026, 7, 30), outcome="reversal", p_reversal=0.65, p_continuation=0.35),  # hit
+        _daily_row(date(2026, 7, 29), outcome="continuation", p_reversal=0.65, p_continuation=0.35),  # miss
+        _daily_row(date(2026, 7, 28), outcome="continuation", p_reversal=0.3, p_continuation=0.7),  # hit
+        _daily_row(date(2026, 7, 27), outcome="neutral", p_reversal=0.65, p_continuation=0.35),  # ungraded
+    ]
+    service = MarketTransitionService(_FakeRepo(daily, []))
+
+    result = await service.get_research("NIFTY")
+
+    assert result.forecast_evaluable_days == 3
+    assert result.forecast_hit_count == 2
+    assert result.forecast_accuracy_pct == pytest.approx(66.7, abs=0.1)

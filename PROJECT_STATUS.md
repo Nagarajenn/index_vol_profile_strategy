@@ -878,6 +878,62 @@ by the monkeypatched backend test.
 **Zero diff** verified on `confidence_score.py`, `trend_classifier.py`,
 `decision_card.py`, `institutional_bias.py`.
 
+**Follow-up (2026-07-31, later same day) — active window extended through
+market close.** User reported the advisor's output reverted to "not enough
+data" right after 3:01pm and asked whether that was expected, requesting it
+stay visible through the end of the session instead. Root cause: `determine_transition_stage()`
+already had a "Post-Transition Follow-Through" concept, but `is_advisor_active()`
+gated on the stricter `PRE_WINDOW_START..TRANSITION_END` (14:00-15:01), so
+that stage never actually produced a scored result. Fixed by extending
+`FOLLOW_THROUGH_END` from 15:20 to `time(15, 30)` (session close) and
+aligning `is_advisor_active()` to match; the score itself stays frozen at
+the 14:59 pre-window read (unchanged), just visible longer, with an added
+explanation note during follow-through: *"This reflects the pre-transition
+read (frozen at 2:59 PM) -- compare it against how price actually moved."*
+Updated `tests/test_live_advisor.py`'s stage/active-window parametrize
+tables and added `test_build_live_advisory_stays_active_through_follow_through`.
+All 162 tests (135 pipeline + 27 backend) passed at the time.
+
+**Follow-up (2026-07-31, later same day) — forecast-vs-actual tracking +
+chart arrow.** User asked for two things: (1) a way to see, per day,
+whether the pre-3pm forecast matched what actually happened, and (2) a
+simple directional arrow on the price chart reflecting the live forecast.
+
+*Forecast vs actual* turned out to need no new persistence: every
+historical day in `mti_daily_transitions` already carries both a forecast
+(`probability_reversal`/`probability_continuation`, computed via the same
+leave-one-day-out k-NN scoring as the live advisor) and the actual
+`outcome` — the historical engine effectively re-forecasts every day
+against the others when it scores it. `MarketTransitionService._to_daily_dto`
+now derives `predicted_outcome` (whichever probability is higher; `None`
+on a dead-even split) and `forecast_correct` (matches `outcome`, but
+`None` when `outcome == "neutral"` — grading a directional call against a
+no-significant-move day isn't a fair test). `get_research()` aggregates
+these into `forecast_evaluable_days`/`forecast_hit_count`/`forecast_accuracy_pct`
+on the response. Frontend: "Predicted" + "Match" columns added to the
+Daily Transition Results table, plus an accuracy summary line. Live on
+SENSEX at build time: 59.6% (28/47 directional days).
+
+*Chart arrow*: `TerminalPage` now also polls `useLiveTransitionAdvisor`
+(already built for the MTI page) and passes it into `CandlestickChart` →
+`useCandlestickChart`, which draws one additional marker at the latest
+candle — up/down arrow colored by `expected_direction` (already the
+correct signal: it's the actual sign of analogs' post-transition moves,
+so a reversal against an uptrend already resolves to a down arrow with no
+separate trend-vs-lean combination needed) with the risk level and
+reversal-vs-continuation lean in the marker text; a neutral circle when
+`expected_direction == "flat"`. Only drawn while the advisor is active
+with a non-"Observe" read, so the chart stays clean the rest of the day —
+verified negatively today, since the session crossed 15:30 (market close)
+during testing and the marker correctly stayed absent (`is_active: false`,
+`risk_level: "Observe"`).
+
+Both pieces are additive/derived-only — no schema changes, no new writes,
+`CandlestickChart`'s existing callers unaffected (`liveAdvisory` defaults
+to `null`). 10 new backend tests for the forecast-grading logic (tie/null
+probabilities, neutral-outcome exclusion, multi-day aggregation) — all 33
+backend + 135 pipeline tests pass; `npx tsc -b` clean.
+
 **Deferred, not forgotten:** OI/call-writing/put-writing as *scored*
 (not just contextual) factors once `option_chain_raw` has enough history;
 allowing this advisor to adjust the live trading confidence score
