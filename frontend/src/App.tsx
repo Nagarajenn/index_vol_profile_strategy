@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/layout/AppShell";
 import { MarketIntelligencePage } from "./pages/MarketIntelligencePage";
+import { MarketTransitionPage } from "./pages/MarketTransitionPage";
 import { TerminalPage } from "./pages/TerminalPage";
 import { appTheme } from "./theme/theme";
 
@@ -19,6 +20,7 @@ function App() {
             <Routes>
               <Route path="/" element={<TerminalPage />} />
               <Route path="/market-intelligence" element={<MarketIntelligencePage />} />
+              <Route path="/market-transition-intelligence" element={<MarketTransitionPage />} />
             </Routes>
           </AppShell>
         </BrowserRouter>

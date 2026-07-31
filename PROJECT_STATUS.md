@@ -1,6 +1,6 @@
 # Project Status — Sensex/Nifty Options Decision-Support Tool
 
-_Last updated: 2026-07-27_
+_Last updated: 2026-07-31_
 
 ## 1. Intent of this strategy
 
@@ -639,3 +639,121 @@ by historical sector-reaction data (today's is a same-request client-side
 aggregate, not a learned/historical one), Alert Engine, wiring news risk
 into the actual `confidence_score`, scheduling `run_market_intelligence.py`
 to run automatically, and a full event-history/timeline page.
+
+## 11. Market Transition Intelligence (Phase 1, 2026-07-31)
+
+**Origin:** a new research-engine requirement — discover, quantify, and
+explain recurring intraday transition behaviour around 3pm (2:00-2:59pm
+pre-window vs. the 3:00-3:01pm move vs. what happens 3:01pm-to-close),
+using historical data to find genuine statistical predictors rather than
+assuming any. Explicitly **not** a trading-signal engine and explicitly
+independent of the decision engine, with an optional future path to
+becoming an advisory confidence adjustment.
+
+**Scoping decisions made before building:**
+- **Tick data**: unavailable (Dhan only ever provides 1-min OHLCV, same
+  constraint as the rest of this project) — built on 1-min candles.
+- **OI/option-chain-based factors** (call/put writing, PCR trends) and
+  news-risk amplification: **deferred**. `option_chain_raw`/`summary` only
+  has 14 days of history (vs. 78 days of price history in `raw_candles`) —
+  far too thin to claim anything statistically. Expiry-day effects
+  (weekly/monthly) *were* included, since they're derivable purely from the
+  calendar (see below), no option-chain dependency needed.
+- **Methodology**: transparent statistical comparison (point-biserial /
+  Pearson correlation, chi-square, Kruskal-Wallis via `scipy.stats`) plus a
+  k-nearest-neighbor "historical analog" approach for per-day scoring —
+  **not** a fitted ML model. With ~56-77 usable days, a fitted model would
+  overfit and be far harder to explain; "here are the N most similar
+  historical days and what actually happened" directly serves the stated
+  goal of letting the user validate whether a pattern is genuine or
+  anecdotal.
+- **Explanations**: template-generated (deterministic, composed only from
+  the computed numbers), not LLM-generated — an explicit decision so the
+  tool can never narrate more certainty than the underlying stats support.
+- **Expiry calendar verified live** (not from training-data memory, which
+  would likely be stale — SEBI changed expiry-day rules multiple times
+  through 2025): NIFTY weekly = Tuesday, monthly = last Tuesday of month;
+  SENSEX weekly = Thursday, monthly = last Thursday; holiday-adjusted via
+  the existing `pipeline/trading_calendar.py`. Effective since 2025-09-01,
+  stable across this project's entire price-history window.
+
+**What Phase 1 built** — new top-level `market_transition/` package
+(sibling to `analytics/`, `market_intelligence/`), pure functions only, no
+DB/network dependency in the analysis logic itself:
+- `expiry_calendar.py` — weekly/monthly classification per date.
+- `market_regime.py` — 3-category regime (Trending / Range-Bound /
+  Volatile) from realized volatility vs. its own historical average (same
+  pattern as Volume Pace) combined with `compute_rotation_factor`.
+- `models.py` — pure dataclasses for features, outcomes, correlation
+  results, and scores.
+- `feature_extraction.py` — one day's pre-3pm features + 3pm transition +
+  post-3pm outcome, reusing `analytics/vwap.py`, `volume_profile.py`, and
+  `volume_profile_intelligence.py` directly (no duplicated logic). Skips
+  (returns `None`) any day with a pipeline-outage gap spanning the window
+  rather than fabricating a result from partial data.
+- `statistics.py` — the correlation study: every factor tested against
+  both **reversal** (does it predict which way the move breaks) and
+  **magnitude** (does it predict how big the post-3pm move is).
+  `confidence_label` requires both significance *and* n≥20 — a low p-value
+  from a handful of days is labeled "Insufficient data", never "Strong".
+- `scoring.py` — k-NN historical-analog scoring: finds the K most similar
+  historical days (weighted by how significant each factor is, per the
+  correlation study), reports the analogs' empirical outcome mix as
+  Transition Risk Score / P(Reversal) / P(Continuation) / Expected
+  Volatility / Expected Direction / Historical Similarity Score / top
+  contributing factors / deterministic explanation.
+- `research.py` + `scripts/run_market_transition_research.py` — one-shot,
+  idempotent orchestrator: loads all `raw_candles` history, extracts every
+  complete day, runs the correlation study, scores every day, upserts both
+  results tables. Re-running as more days accumulate refreshes both the
+  study and every day's score (expected/desired — a day's read can change
+  as history grows).
+
+New DB tables: `mti_daily_transitions` (one row per symbol/day — features,
+outcome, and current score) and `mti_factor_correlations` (one row per
+symbol/factor/target — the current study, overwritten each run, not a
+history of past studies).
+
+Backend: `MarketTransitionRepository` → `MarketTransitionService` → new
+endpoint `GET /api/v1/market-transition/{symbol}/research`, same
+Repository/Service/Router pattern as the rest of the app. Frontend: new
+route `/market-transition-intelligence` — a two-table research dashboard
+(factor correlation study; daily results with click-to-expand explanations)
+— plus persistent nav links in `AppShell` (`Terminal` /
+`Market Intelligence` / `Market Transition Intelligence`), the first real
+navigation in the app beyond the single summary-bar link pattern.
+
+**Real bug caught during verification, before shipping:** `scoring.py`'s
+`expected_direction` initially only counted analogs where the *original*
+3pm transition direction matched the *later* post-3pm direction (i.e., only
+"continuation" analogs), silently excluding every "reversal" analog's real
+post-3pm direction from the vote — the result was `expected_direction`
+reading "Flat" for nearly every one of the 77 days, caught by eyeballing
+the live table (25 Flat/33 Up out of 77 before the fix vs. a healthy
+25-down/22-flat/30-up split after). Fixed to use the actual sign of
+`post_transition_move` directly, re-ran the research script to refresh
+persisted scores, re-verified live in the browser.
+
+**Verified on real data (2026-07-31):** 77 complete trading days extracted
+per symbol (out of 78 available `raw_candles` days — one excluded for an
+incomplete window). Current finding, honestly reported: **no factor has
+reached Strong/Moderate confidence yet** — the two closest (2-3pm volume
+slope, VWAP distance at 2:59pm, both vs. reversal) sit at p≈0.07-0.09,
+correctly labeled "Weak", not oversold. This is the expected, correct
+behavior for a ~2.5-month-old dataset, not a bug — the engine is designed
+to say "not enough evidence yet" rather than manufacture false confidence,
+and real signals should sharpen as more trading days accumulate via the
+same orchestrator script.
+
+**Zero diff** verified on `confidence_score.py`, `trend_classifier.py`,
+`decision_card.py`, `institutional_bias.py` — this module reads
+`raw_candles` history and writes only its own two new tables.
+
+**Deferred, not forgotten:** OI/option-chain-based factors and news-risk
+amplification (both revisit-worthy once `option_chain_raw` has months of
+history), any wiring of a transition score into the live confidence score
+(explicitly optional/future per the original ask), scheduling
+`run_market_transition_research.py` to run automatically (currently
+manual-only, same caution applied to every new pipeline in this project
+until reviewed), and a dedicated Historical Knowledge Base beyond the
+per-run k-NN analog search.
