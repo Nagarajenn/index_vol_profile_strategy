@@ -58,3 +58,54 @@ class MtiResearchResponseDTO(BaseModel):
     total_days_analyzed: int
     correlations: list[MtiFactorCorrelationDTO]
     daily_results: list[MtiDailyResultDTO]
+
+
+# ---------------------------------------------------------------------------
+# Live Market Transition Advisor -- served by
+# GET /api/v1/market-transition/{symbol}/live-advisor. A read-time advisory
+# comparing today's in-progress session against the historical MTI database
+# above; never a trading signal (risk_level is capped to the fixed
+# vocabulary below), entirely independent of the trading decision engine.
+# ---------------------------------------------------------------------------
+TransitionStageLiteral = Literal[
+    "Not Yet Active", "Pre-Transition Monitoring", "Transition Window", "Post-Transition Follow-Through", "Session Complete"
+]
+TransitionRiskLevelLiteral = Literal["Observe", "Low", "Medium", "High", "Very High"]
+
+
+class MostSimilarDayDTO(BaseModel):
+    session_date: date
+    distance: float
+    similarity: float
+    outcome: Literal["continuation", "reversal", "neutral"]
+    transition_direction: Literal["up", "down", "flat"]
+
+
+class TransitionTimingEstimateDTO(BaseModel):
+    earliest: str | None  # "HH:MM AM/PM", pre-formatted -- there's no clean JSON `time` wire format worth the client-side parsing
+    latest: str | None
+    n_analogs_with_onset: int
+    note: str
+
+
+class LiveAdvisoryDTO(BaseModel):
+    symbol: str
+    session_date: date
+    as_of: datetime
+    stage: TransitionStageLiteral
+    is_active: bool
+    historical_similarity_score: float
+    most_similar_days: list[MostSimilarDayDTO]
+    expected_direction: Literal["up", "down", "flat"]
+    probability_continuation: float
+    probability_reversal: float
+    expected_volatility: float
+    expected_timing: TransitionTimingEstimateDTO | None
+    estimated_move: float
+    risk_level: TransitionRiskLevelLiteral
+    statistical_confidence: ConfidenceLabelLiteral
+    top_contributing_factors: list[ContributingFactorDTO]
+    institutional_bias_label: str | None
+    news_risk_score: int | None
+    news_sentiment: Literal["Bullish", "Bearish", "Neutral"] | None
+    explanation: str

@@ -18,6 +18,7 @@ class LevelsSnapshotRepositoryProtocol(Protocol):
 
 class CandleRepositoryProtocol(Protocol):
     async def list_since(self, symbol: str, since: datetime) -> list[RawCandle]: ...
+    async def list_between(self, symbol: str, start: datetime, end: datetime) -> list[RawCandle]: ...
 
 
 class OptionChainRepositoryProtocol(Protocol):

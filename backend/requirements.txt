@@ -6,5 +6,6 @@ pydantic
 pydantic-settings
 alembic
 psycopg[binary]
+scipy
 pytest
 pytest-asyncio
