@@ -9,7 +9,7 @@ to satisfy the shape (structural typing), no explicit inheritance required.
 from datetime import datetime
 from typing import Protocol
 
-from app.models import ClassifiedEvent, LevelsSnapshot, OptionChainSummary, RawCandle
+from app.models import ClassifiedEvent, LevelsSnapshot, MtiDailyTransition, MtiFactorCorrelation, OptionChainSummary, RawCandle
 
 
 class LevelsSnapshotRepositoryProtocol(Protocol):
@@ -28,3 +28,8 @@ class MarketIntelligenceRepositoryProtocol(Protocol):
     async def list_recent(
         self, limit: int, relevant_only: bool = True, published_since: datetime | None = None
     ) -> list[ClassifiedEvent]: ...
+
+
+class MarketTransitionRepositoryProtocol(Protocol):
+    async def list_daily(self, symbol: str, limit: int = 200) -> list[MtiDailyTransition]: ...
+    async def list_correlations(self, symbol: str) -> list[MtiFactorCorrelation]: ...

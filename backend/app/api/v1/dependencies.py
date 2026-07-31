@@ -5,9 +5,11 @@ from app.core.database import get_db_session
 from app.repositories.candle_repository import CandleRepository
 from app.repositories.levels_snapshot_repository import LevelsSnapshotRepository
 from app.repositories.market_intelligence_repository import MarketIntelligenceRepository
+from app.repositories.market_transition_repository import MarketTransitionRepository
 from app.repositories.option_chain_repository import OptionChainRepository
 from app.services.dashboard_service import DashboardService
 from app.services.market_intelligence_service import MarketIntelligenceService
+from app.services.market_transition_service import MarketTransitionService
 from app.services.volume_profile_intelligence_service import VolumeProfileIntelligenceService
 
 
@@ -47,3 +49,15 @@ def get_market_intelligence_service(
     repo: MarketIntelligenceRepository = Depends(get_market_intelligence_repository),
 ) -> MarketIntelligenceService:
     return MarketIntelligenceService(repo)
+
+
+def get_market_transition_repository(
+    session: AsyncSession = Depends(get_db_session),
+) -> MarketTransitionRepository:
+    return MarketTransitionRepository(session)
+
+
+def get_market_transition_service(
+    repo: MarketTransitionRepository = Depends(get_market_transition_repository),
+) -> MarketTransitionService:
+    return MarketTransitionService(repo)
