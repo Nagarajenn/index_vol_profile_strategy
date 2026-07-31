@@ -33,8 +33,8 @@ from tests.fixtures.synthetic_candles import make_candles
         (time(15, 0), "Transition Window"),
         (time(15, 1), "Transition Window"),
         (time(15, 2), "Post-Transition Follow-Through"),
-        (time(15, 20), "Post-Transition Follow-Through"),
-        (time(15, 21), "Session Complete"),
+        (time(15, 30), "Post-Transition Follow-Through"),
+        (time(15, 31), "Session Complete"),
     ],
 )
 def test_determine_transition_stage(t, expected):
@@ -43,7 +43,11 @@ def test_determine_transition_stage(t, expected):
 
 @pytest.mark.parametrize(
     "t,expected",
-    [(time(13, 59), False), (time(14, 0), True), (time(15, 1), True), (time(15, 2), False)],
+    # Active through the full session (15:30 close), not just the fixed
+    # 15:00-15:01 transition window -- the score is frozen at the 14:59
+    # pre-window snapshot either way, but it stays visible as a reference
+    # point through follow-through instead of reverting to "not enough data".
+    [(time(13, 59), False), (time(14, 0), True), (time(15, 1), True), (time(15, 20), True), (time(15, 30), True), (time(15, 31), False)],
 )
 def test_is_advisor_active(t, expected):
     assert is_advisor_active(t) == expected
@@ -235,6 +239,31 @@ def test_build_live_advisory_end_to_end_leans_reversal():
     assert advisory.institutional_bias_label == "Mildly Bearish"
     assert advisory.news_risk_score == 25
     assert "reversal" in advisory.explanation.lower() or "%" in advisory.explanation
+
+
+def test_build_live_advisory_stays_active_through_follow_through():
+    # 3:15pm -- past the 15:00-15:01 transition window but still within
+    # the extended active range (through 15:30 close). Must still produce
+    # a real scored read, not revert to "not enough data".
+    history = _known_history_reversal_on_high_migration()
+    correlations = run_correlation_study(history)
+    query_features = PreWindowFeatures(
+        poc_migration_1400_1459=60, vwap_distance_1459=None, vwap_distance_1459_pct=None,
+        volume_slope_1400_1459=None, realized_range_1400_1459=None, profile_shape_1459="D",
+        rotation_label_1459=None, market_regime_1459=None, is_inside_initial_balance_1459=None,
+        day_of_week=2, expiry_type=None, prior_day_profile_shape=None, prior_day_close_vs_poc=None,
+    )
+    placeholder_outcome = TransitionOutcome(
+        close_1459=0, close_1501=0, market_close=0, transition_move=0,
+        transition_direction="flat", post_transition_move=0, outcome="neutral", outcome_magnitude=0,
+    )
+    query = DailyTransitionRecord(symbol="TEST", session_date=date(2026, 3, 1), features=query_features, outcome=placeholder_outcome)
+
+    advisory = build_live_advisory(query, history, correlations, now=datetime(2026, 3, 1, 15, 15, tzinfo=timezone.utc))
+
+    assert advisory.stage == "Post-Transition Follow-Through"
+    assert advisory.probability_reversal > advisory.probability_continuation
+    assert "frozen" in advisory.explanation.lower()
 
 
 def test_build_live_advisory_observe_outside_window():

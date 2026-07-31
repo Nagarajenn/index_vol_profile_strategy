@@ -43,9 +43,11 @@ from market_transition.scoring import DEFAULT_K, MIN_ANALOGS, find_analogs, scor
 
 # How long after the transition window the advisor keeps reporting
 # follow-through (has the predicted reversal/continuation actually
-# happened) before considering the session's transition read "complete".
-FOLLOW_THROUGH_END = time(15, 20)
-SESSION_LATEST = time(15, 30)
+# happened) before considering the session's transition read "complete" --
+# through the rest of the trading session (15:30 close), not just a short
+# window after 15:01, so the read stays visible rather than reverting to
+# "not enough data" the instant the clock crosses 3:01pm.
+FOLLOW_THROUGH_END = time(15, 30)
 
 # Onset detection for "Expected Timing of Transition": a candle counts as
 # the transition's onset once price has moved at least this fraction of the
@@ -67,10 +69,13 @@ def determine_transition_stage(now_time: time) -> TransitionStage:
 
 
 def is_advisor_active(now_time: time) -> bool:
-    """The advisor only produces a meaningful live read between 2:00pm and
-    3:01pm per the spec -- outside that it's dormant (still shows the stage,
-    just no score)."""
-    return PRE_WINDOW_START <= now_time <= TRANSITION_END
+    """Produces a read from 2:00pm through the rest of the session (15:30
+    close) -- outside that it's dormant (still shows the stage, just no
+    score). The score itself is computed once, from the frozen 14:00-14:59
+    pre-window (see build_live_query's clamping), so it doesn't keep
+    changing after 3:01pm -- it's retained as the pre-transition read for
+    the trader to judge against what actually happened, not re-forecast."""
+    return PRE_WINDOW_START <= now_time <= FOLLOW_THROUGH_END
 
 
 def build_live_query(
@@ -216,6 +221,7 @@ def _build_explanation(
     timing: TransitionTimingEstimate | None,
     risk_level: TransitionRiskLevel,
     news_risk_score: int | None,
+    stage: TransitionStage,
 ) -> str:
     if n_analogs < MIN_ANALOGS:
         return "Not enough historically similar sessions yet to produce a reliable live read."
@@ -244,7 +250,9 @@ def _build_explanation(
     if news_phrase:
         parts.append(news_phrase)
 
-    if risk_level in ("High", "Very High"):
+    if stage == "Post-Transition Follow-Through":
+        parts.append("This reflects the pre-transition read (frozen at 2:59 PM) -- compare it against how price actually moved.")
+    elif risk_level in ("High", "Very High"):
         parts.append("Consider tightening stops before the transition window.")
     elif risk_level == "Medium":
         parts.append("Stay alert as the transition window approaches.")
@@ -283,7 +291,7 @@ def build_live_advisory(
     reversal_count = sum(1 for d in analog_days if d.outcome.outcome == "reversal")
     explanation = _build_explanation(
         len(analogs), reversal_count, base_score.probability_reversal, base_score.top_contributing_factors,
-        timing, risk_level, news_risk_score,
+        timing, risk_level, news_risk_score, stage,
     )
 
     most_similar = [
