@@ -1,5 +1,5 @@
 import sys
-from datetime import date, datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -11,10 +11,17 @@ from app.models import RawCandle
 from app.services.volume_profile_intelligence_service import VolumeProfileIntelligenceService
 
 
-def _candle(day: int, hour: int, minute: int, price: float = 100.0, volume: float = 10.0) -> RawCandle:
+def _day(days_ago: int):
+    return (datetime.now(timezone.utc) - timedelta(days=days_ago)).date()
+
+
+def _candle(days_ago: int, hour: int, minute: int, price: float = 100.0, volume: float = 10.0) -> RawCandle:
+    # Relative to "now" (not a hardcoded date) so this fixture stays inside
+    # the service's rolling lookback window no matter when the suite runs.
+    d = _day(days_ago)
     return RawCandle(
         symbol="NIFTY",
-        timestamp=datetime(2026, 7, day, hour, minute, tzinfo=timezone.utc),
+        timestamp=datetime(d.year, d.month, d.day, hour, minute, tzinfo=timezone.utc),
         open=price,
         high=price,
         low=price,
@@ -24,13 +31,13 @@ def _candle(day: int, hour: int, minute: int, price: float = 100.0, volume: floa
 
 
 def test_group_by_date_splits_rows_into_per_day_frames():
-    rows = [_candle(20, 9, 15), _candle(20, 9, 16), _candle(21, 9, 15)]
+    rows = [_candle(1, 9, 15), _candle(1, 9, 16), _candle(0, 9, 15)]
     grouped = VolumeProfileIntelligenceService._group_by_date(rows)
 
-    assert set(grouped.keys()) == {date(2026, 7, 20), date(2026, 7, 21)}
-    assert len(grouped[date(2026, 7, 20)]) == 2
-    assert len(grouped[date(2026, 7, 21)]) == 1
-    assert list(grouped[date(2026, 7, 20)].columns) == ["timestamp", "open", "high", "low", "close", "volume"]
+    assert set(grouped.keys()) == {_day(1), _day(0)}
+    assert len(grouped[_day(1)]) == 2
+    assert len(grouped[_day(0)]) == 1
+    assert list(grouped[_day(1)].columns) == ["timestamp", "open", "high", "low", "close", "volume"]
 
 
 def test_group_by_date_empty_input():
@@ -62,10 +69,10 @@ async def test_get_latest_raises_when_no_candles():
 @pytest.mark.asyncio
 async def test_get_latest_returns_populated_dto():
     rows = [
-        _candle(20, 9, 15, price=100.0, volume=50),
-        _candle(20, 9, 20, price=101.0, volume=50),
-        _candle(21, 9, 15, price=105.0, volume=50),
-        _candle(21, 9, 20, price=105.0, volume=50),
+        _candle(1, 9, 15, price=100.0, volume=50),
+        _candle(1, 9, 20, price=101.0, volume=50),
+        _candle(0, 9, 15, price=105.0, volume=50),
+        _candle(0, 9, 20, price=105.0, volume=50),
     ]
     service = VolumeProfileIntelligenceService(_FakeCandleRepo(rows))
     dto = await service.get_latest("NIFTY")
