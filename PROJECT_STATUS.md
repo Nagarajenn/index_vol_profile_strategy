@@ -757,3 +757,130 @@ history), any wiring of a transition score into the live confidence score
 manual-only, same caution applied to every new pipeline in this project
 until reviewed), and a dedicated Historical Knowledge Base beyond the
 per-run k-NN analog search.
+
+## 12. Live Market Transition Advisor (2026-07-31)
+
+**Origin:** a follow-on to §11's historical engine — consume today's
+in-progress 2:00-3:01pm session and compare it against the stored
+historical MTI database in real time, before the 3pm event happens, so the
+trader can see whether today is starting to resemble a known pattern.
+Explicitly not a trading signal: output is capped to
+Observe/Low/Medium/High/Very High transition risk plus a confidence label,
+no buy/sell language anywhere, and the module only *reads* the historical
+database — it never writes to it and never touches the trading decision
+engine. Placed at the top of the Market Transition Intelligence page per
+explicit instruction.
+
+**Two upstream fixes made before building this, both driven by direct
+user questions/observations:**
+- **`statistical_confidence` was reading "Weak" for all 77 historical
+  days.** Root cause: the label only depended on the *global* count of
+  statistically-significant factors from the correlation study (currently
+  2, for the whole 77-day dataset) — applied identically to every single
+  day regardless of how well that specific day's analogs actually matched.
+  Fixed by blending the global factor count with each day's own
+  `historical_similarity_score`, so confidence now genuinely varies
+  per-day (re-running the research script shifted the real distribution
+  from 77×"Weak" to 6×"Weak"/71×"Moderate" on SENSEX). Will keep
+  improving further as more days accumulate and more factors cross
+  significance, but no longer *only* depends on that.
+- **`feature_extraction.py` refactored** to expose
+  `compute_pre_window_features(..., pre_window_end=<any time>)` as its own
+  function (defaulting to the historical engine's fixed 14:59, so
+  `extract_daily_transition_record`'s behavior is byte-for-byte unchanged
+  and all existing tests still pass unmodified) — this is what lets the
+  live advisor compute the *same* kind of features from a partial,
+  still-forming session at any point during 14:00-14:59, not just at the
+  end of a complete day.
+
+**What was built** — `market_transition/live_advisor.py`, reusing
+`scoring.py`'s k-NN engine wholesale (`find_analogs`, `score_day`, newly
+exported publicly) rather than re-implementing similarity/probability
+logic. The only genuinely new pieces:
+- **Transition stage** from the clock: Not Yet Active / Pre-Transition
+  Monitoring / Transition Window / Post-Transition Follow-Through /
+  Session Complete. The advisor only produces a scored read during
+  Pre-Transition Monitoring through Transition Window (2:00-3:01pm);
+  outside that it reports `is_active=false` with just the stage and
+  secondary context.
+- **Expected Timing of Transition** — genuinely new analysis, not derived
+  from anything already stored: for each of the K historical analogs,
+  fetches a padded ~14:50-15:10 candle window and finds the first minute
+  price moved at least 40% of that day's eventual post-transition move in
+  the matching direction (the "onset"), then reports the earliest-latest
+  range across analogs with a detectable onset (falls back to "expect it
+  around the 3:00 PM window" if fewer than 3 analogs have one).
+- **Estimated Move** — signed mean of the analogs' `post_transition_move`,
+  distinct from the historical engine's `expected_volatility` (which is
+  the unsigned average magnitude); this is the point estimate, that's the
+  dispersion.
+- **Transition Risk Level** — a documented heuristic (same "reasonable,
+  explained heuristic" spirit as Profile Shape/Opening Type elsewhere in
+  this codebase): `0.6 × decisiveness + 0.4 × historical_similarity`,
+  where decisiveness is how far the reversal probability sits from 50/50.
+  Always "Observe" outside the active window or below the minimum analog
+  count.
+- **Trader-language explanation** — deterministic template (not LLM, same
+  decision as the historical engine), composed to match the user's
+  example style: "*Today's market currently resembles N previous sessions
+  where X; in Y of those the market reversed around Z; current reversal
+  probability is estimated at P%; news risk remains ...*"
+
+**Contextual, not scored:** institutional bias (`levels_snapshots.institutional_bias_label`,
+already computed live) and news risk/sentiment (existing Market
+Intelligence engine) are surfaced in the explanation and as separate
+fields, but are **not** weighted into the k-NN similarity or probability
+computation — consistent with the historical engine's own deferral of
+OI-based factors (still only ~2-3 weeks of `option_chain_raw` history,
+nowhere near enough to weight anything statistically). If confidence in
+those factors builds over months, revisit; for now they're informational
+context only, matching this whole module's "advisory only" design.
+
+**Packaging fix required:** `market_transition` (and, transitively via
+`expiry_calendar.py`'s holiday-adjustment logic, `pipeline.trading_calendar`)
+had to be added to the root `pyproject.toml`'s installable packages list
+and reinstalled (`pip install -e .`) into *both* venvs — the historical
+engine never needed this since its only consumer was pipeline-side
+scripts, but the live advisor's backend service reuses `market_transition`'s
+pure functions directly (same pattern as `VolumeProfileIntelligenceService`
+reusing `analytics/`), so the backend's separate Python 3.14 venv needed
+it too. `scipy` was missing from `backend/requirements.txt` for the same
+reason and has been added.
+
+**Backend:** `LiveTransitionAdvisorService` composes four repositories
+(candles, the historical MTI database, levels snapshots for institutional
+bias, market intelligence for news) — same multi-repo composition pattern
+as `DashboardService`. New `CandleRepository.list_between(symbol, start, end)`
+added (existing `list_since` is open-ended, unsuitable for fetching a
+single analog day's narrow candle window without pulling in every day
+since). New endpoint `GET /api/v1/market-transition/{symbol}/live-advisor`.
+
+**Verified:** 26 new `market_transition` unit tests (transition stage
+boundaries, live query building/clamping, timing-onset detection,
+risk-level thresholds, end-to-end k-NN scoring on synthetic known-correlation
+data) + 3 new backend service tests (unknown symbol, inactive-outside-window,
+active-scored-result — the latter two via monkeypatching `datetime.now()`
+in the service module, since real wall-clock time can't be relied on to
+land inside the 2:00-3:01pm window during a test run). All 132 pipeline +
+27 backend tests pass. Live-curl-verified against the running backend at
+13:38 (before 2pm): correctly returned `is_active: false`, `stage: "Not
+Yet Active"`, `risk_level: "Observe"`, while still surfacing institutional
+bias ("Bullish") and news risk (39/100, Neutral) as background context —
+confirming those secondary signals work independent of the core advisory's
+active state. The "active, scored" path was verified via an ad-hoc
+real-data simulation (today's real 2026-07-30 candles sliced to 14:20,
+compared against the real 77-day historical database) rather than live at
+market time, since building landed before 2:00pm; results were coherent
+(similarity 84%, confidence "Moderate" matching the new blended formula,
+5 nearest analogs all plausible dates) and the same code path is exercised
+by the monkeypatched backend test.
+
+**Zero diff** verified on `confidence_score.py`, `trend_classifier.py`,
+`decision_card.py`, `institutional_bias.py`.
+
+**Deferred, not forgotten:** OI/call-writing/put-writing as *scored*
+(not just contextual) factors once `option_chain_raw` has enough history;
+allowing this advisor to adjust the live trading confidence score
+(explicitly future/optional per the original ask, never done here);
+scheduling anything automatic (this is entirely on-demand/read-time, no
+new scheduled task was added).

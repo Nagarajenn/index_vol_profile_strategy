@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 
+import { LiveAdvisorPanel } from "../components/market-transition/LiveAdvisorPanel";
 import { useMarketTransitionResearch } from "../hooks/useMarketTransitionResearch";
 import { useSymbolStore } from "../store/useSymbolStore";
 import type { ConfidenceLabel, MtiDailyResultDTO, MtiFactorCorrelationDTO } from "../types/marketTransition";
@@ -201,37 +202,39 @@ export function MarketTransitionPage() {
   const selectedSymbol = useSymbolStore((s) => s.selectedSymbol);
   const { data, isLoading, isError, error } = useMarketTransitionResearch(selectedSymbol);
 
-  if (isLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", mt: 8 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (isError || !data) {
-    return (
-      <Alert severity="error" sx={{ mt: 2 }}>
-        Failed to load Market Transition research: {error instanceof Error ? error.message : "unknown error"}
-      </Alert>
-    );
-  }
-
   return (
     <Stack spacing={2} sx={{ width: "100%" }}>
-      <Box>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>
-          Market Transition Intelligence -- {data.symbol}
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Research engine discovering statistical predictors of the 2:00-3:01pm intraday transition. Not a trading
-          signal -- entirely independent of the live decision engine. {data.total_days_analyzed} trading days
-          analyzed.
-        </Typography>
-      </Box>
+      <LiveAdvisorPanel />
 
-      <CorrelationSection correlations={data.correlations} />
-      <DailyResultsSection days={data.daily_results} />
+      {isLoading && (
+        <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {(isError || (!isLoading && !data)) && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          Failed to load Market Transition research: {error instanceof Error ? error.message : "unknown error"}
+        </Alert>
+      )}
+
+      {data && (
+        <>
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 700 }}>
+              Market Transition Intelligence -- {data.symbol}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              Research engine discovering statistical predictors of the 2:00-3:01pm intraday transition. Not a
+              trading signal -- entirely independent of the live decision engine. {data.total_days_analyzed} trading
+              days analyzed.
+            </Typography>
+          </Box>
+
+          <CorrelationSection correlations={data.correlations} />
+          <DailyResultsSection days={data.daily_results} />
+        </>
+      )}
     </Stack>
   );
 }
