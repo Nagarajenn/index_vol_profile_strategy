@@ -10,6 +10,29 @@ def get_last_candle_timestamp(symbol: str) -> datetime | None:
     return row[0] if row and row[0] is not None else None
 
 
+_CANDLE_COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
+
+
+def load_raw_candles(symbol: str, start_date: date | None = None, end_date: date | None = None) -> pd.DataFrame:
+    """1-minute OHLCV candles for `symbol`, ascending by timestamp -- used by
+    market_transition/ (feature extraction over multi-day history) rather
+    than the levels_snapshots checkpoint cadence, since that module needs
+    full session data at arbitrary intraday cutoffs, not 5-min checkpoints.
+    """
+    conditions = ["symbol = %s"]
+    params: list = [symbol]
+    if start_date:
+        conditions.append("timestamp::date >= %s")
+        params.append(start_date)
+    if end_date:
+        conditions.append("timestamp::date <= %s")
+        params.append(end_date)
+
+    sql = f"SELECT {', '.join(_CANDLE_COLUMNS)} FROM raw_candles WHERE {' AND '.join(conditions)} ORDER BY timestamp"
+    rows = fetch_all(sql, params)
+    return pd.DataFrame(rows, columns=_CANDLE_COLUMNS)
+
+
 def get_last_chart_row(symbol: str, mode: str, session_date: date) -> dict | None:
     """Most recent row for `symbol`/`mode` on `session_date` that actually
     has a chart -- the baseline should_render_chart() compares against.

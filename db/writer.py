@@ -280,3 +280,96 @@ def insert_product_requirement(
         (title, requirement_text, status, notes),
     )
     return row[0]
+
+
+def insert_mti_daily_transition(record, score=None) -> None:
+    """`record` is a market_transition.models.DailyTransitionRecord, `score`
+    an optional market_transition.models.DailyTransitionScore (None when a
+    day couldn't be scored, e.g. too few historical analogs -- the
+    feature/outcome columns are still stored so it counts toward future
+    correlation studies)."""
+    f, o = record.features, record.outcome
+    execute(
+        """
+        INSERT INTO mti_daily_transitions (
+            symbol, session_date,
+            poc_migration_1400_1459, vwap_distance_1459, vwap_distance_1459_pct,
+            volume_slope_1400_1459, realized_range_1400_1459, profile_shape_1459,
+            rotation_label_1459, market_regime_1459, is_inside_initial_balance_1459,
+            day_of_week, expiry_type, prior_day_profile_shape, prior_day_close_vs_poc,
+            close_1459, close_1501, market_close, transition_move, transition_direction,
+            post_transition_move, outcome, outcome_magnitude,
+            transition_risk_score, probability_continuation, probability_reversal,
+            expected_volatility, expected_direction, historical_similarity_score,
+            top_contributing_factors, statistical_confidence, explanation, computed_at
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (symbol, session_date) DO UPDATE SET
+            poc_migration_1400_1459 = EXCLUDED.poc_migration_1400_1459,
+            vwap_distance_1459 = EXCLUDED.vwap_distance_1459,
+            vwap_distance_1459_pct = EXCLUDED.vwap_distance_1459_pct,
+            volume_slope_1400_1459 = EXCLUDED.volume_slope_1400_1459,
+            realized_range_1400_1459 = EXCLUDED.realized_range_1400_1459,
+            profile_shape_1459 = EXCLUDED.profile_shape_1459,
+            rotation_label_1459 = EXCLUDED.rotation_label_1459,
+            market_regime_1459 = EXCLUDED.market_regime_1459,
+            is_inside_initial_balance_1459 = EXCLUDED.is_inside_initial_balance_1459,
+            day_of_week = EXCLUDED.day_of_week, expiry_type = EXCLUDED.expiry_type,
+            prior_day_profile_shape = EXCLUDED.prior_day_profile_shape,
+            prior_day_close_vs_poc = EXCLUDED.prior_day_close_vs_poc,
+            close_1459 = EXCLUDED.close_1459, close_1501 = EXCLUDED.close_1501,
+            market_close = EXCLUDED.market_close, transition_move = EXCLUDED.transition_move,
+            transition_direction = EXCLUDED.transition_direction,
+            post_transition_move = EXCLUDED.post_transition_move, outcome = EXCLUDED.outcome,
+            outcome_magnitude = EXCLUDED.outcome_magnitude,
+            transition_risk_score = EXCLUDED.transition_risk_score,
+            probability_continuation = EXCLUDED.probability_continuation,
+            probability_reversal = EXCLUDED.probability_reversal,
+            expected_volatility = EXCLUDED.expected_volatility,
+            expected_direction = EXCLUDED.expected_direction,
+            historical_similarity_score = EXCLUDED.historical_similarity_score,
+            top_contributing_factors = EXCLUDED.top_contributing_factors,
+            statistical_confidence = EXCLUDED.statistical_confidence,
+            explanation = EXCLUDED.explanation, computed_at = EXCLUDED.computed_at
+        """,
+        (
+            record.symbol, record.session_date,
+            f.poc_migration_1400_1459, f.vwap_distance_1459, f.vwap_distance_1459_pct,
+            f.volume_slope_1400_1459, f.realized_range_1400_1459, f.profile_shape_1459,
+            f.rotation_label_1459, f.market_regime_1459, f.is_inside_initial_balance_1459,
+            f.day_of_week, f.expiry_type, f.prior_day_profile_shape, f.prior_day_close_vs_poc,
+            o.close_1459, o.close_1501, o.market_close, o.transition_move, o.transition_direction,
+            o.post_transition_move, o.outcome, o.outcome_magnitude,
+            score.transition_risk_score if score else None,
+            score.probability_continuation if score else None,
+            score.probability_reversal if score else None,
+            score.expected_volatility if score else None,
+            score.expected_direction if score else None,
+            score.historical_similarity_score if score else None,
+            _jsonb([asdict(c) for c in score.top_contributing_factors]) if score else None,
+            score.statistical_confidence if score else None,
+            score.explanation if score else None,
+            score.computed_at if score else None,
+        ),
+    )
+
+
+def insert_mti_factor_correlation(symbol: str, result) -> None:
+    """`result` is a market_transition.models.FactorCorrelationResult."""
+    execute(
+        """
+        INSERT INTO mti_factor_correlations (
+            symbol, factor_name, factor_type, target, n_days, statistic, p_value,
+            confidence_label, direction_note, category_breakdown
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (symbol, factor_name, target) DO UPDATE SET
+            factor_type = EXCLUDED.factor_type, n_days = EXCLUDED.n_days,
+            statistic = EXCLUDED.statistic, p_value = EXCLUDED.p_value,
+            confidence_label = EXCLUDED.confidence_label, direction_note = EXCLUDED.direction_note,
+            category_breakdown = EXCLUDED.category_breakdown, computed_at = now()
+        """,
+        (
+            symbol, result.factor_name, result.factor_type, result.target, result.n,
+            result.statistic, result.p_value, result.confidence_label, result.direction_note,
+            _jsonb(result.category_breakdown) if result.category_breakdown else None,
+        ),
+    )

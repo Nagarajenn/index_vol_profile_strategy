@@ -168,3 +168,68 @@ CREATE TABLE IF NOT EXISTS product_requirements (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_product_requirements_submitted ON product_requirements (submitted_at DESC);
+
+-- Market Transition Intelligence (research engine, independent of the
+-- trading decision engine -- see market_transition/ package). One row per
+-- symbol/session_date: the extracted 2-3pm features/outcome plus the most
+-- recently computed research score (recomputed and overwritten each time
+-- scripts/run_market_transition_research.py runs, since the score depends
+-- on the current correlation study across all history, not just this day).
+CREATE TABLE IF NOT EXISTS mti_daily_transitions (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    poc_migration_1400_1459 DOUBLE PRECISION,
+    vwap_distance_1459 DOUBLE PRECISION,
+    vwap_distance_1459_pct DOUBLE PRECISION,
+    volume_slope_1400_1459 DOUBLE PRECISION,
+    realized_range_1400_1459 DOUBLE PRECISION,
+    profile_shape_1459 TEXT,
+    rotation_label_1459 TEXT,
+    market_regime_1459 TEXT,
+    is_inside_initial_balance_1459 BOOLEAN,
+    day_of_week SMALLINT,
+    expiry_type TEXT,
+    prior_day_profile_shape TEXT,
+    prior_day_close_vs_poc TEXT,
+    close_1459 DOUBLE PRECISION NOT NULL,
+    close_1501 DOUBLE PRECISION NOT NULL,
+    market_close DOUBLE PRECISION NOT NULL,
+    transition_move DOUBLE PRECISION NOT NULL,
+    transition_direction TEXT NOT NULL,
+    post_transition_move DOUBLE PRECISION NOT NULL,
+    outcome TEXT NOT NULL CHECK (outcome IN ('continuation', 'reversal', 'neutral')),
+    outcome_magnitude DOUBLE PRECISION NOT NULL,
+    transition_risk_score DOUBLE PRECISION,
+    probability_continuation DOUBLE PRECISION,
+    probability_reversal DOUBLE PRECISION,
+    expected_volatility DOUBLE PRECISION,
+    expected_direction TEXT,
+    historical_similarity_score DOUBLE PRECISION,
+    top_contributing_factors JSONB,
+    statistical_confidence TEXT,
+    explanation TEXT,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date)
+);
+CREATE INDEX IF NOT EXISTS idx_mti_daily_symbol_date ON mti_daily_transitions (symbol, session_date DESC);
+
+-- One row per symbol/factor/target: the current correlation-study finding.
+-- Overwritten (upserted) each research run -- this table always reflects
+-- the latest study, not a history of past studies.
+CREATE TABLE IF NOT EXISTS mti_factor_correlations (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    factor_name TEXT NOT NULL,
+    factor_type TEXT NOT NULL CHECK (factor_type IN ('continuous', 'categorical')),
+    target TEXT NOT NULL CHECK (target IN ('reversal', 'magnitude')),
+    n_days INTEGER NOT NULL,
+    statistic DOUBLE PRECISION,
+    p_value DOUBLE PRECISION,
+    confidence_label TEXT NOT NULL,
+    direction_note TEXT,
+    category_breakdown JSONB,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, factor_name, target)
+);
+CREATE INDEX IF NOT EXISTS idx_mti_correlations_symbol ON mti_factor_correlations (symbol);
