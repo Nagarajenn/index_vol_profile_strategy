@@ -37,11 +37,20 @@ ANALOG_WINDOW_END = time(15, 10)
 
 
 def _candles_to_df(rows: list[RawCandle]) -> pd.DataFrame:
+    """asyncpg (this service's driver) returns TIMESTAMPTZ columns tagged
+    as UTC regardless of the session/column's actual timezone -- unlike
+    psycopg (the sync pipeline's driver), which correctly tags them IST.
+    The underlying instant is right either way, but market_transition's
+    pure functions compare .dt.time against clock constants like 14:00,
+    so they need the wall-clock value to actually BE IST, not UTC-labeled.
+    Converting here, once, at the ORM->DataFrame boundary, keeps every
+    downstream pure function correct without needing IST awareness itself.
+    """
     if not rows:
         return pd.DataFrame(columns=["timestamp", "open", "high", "low", "close", "volume"])
     return pd.DataFrame(
         {
-            "timestamp": [r.timestamp for r in rows],
+            "timestamp": [r.timestamp.astimezone(settings.ist) for r in rows],
             "open": [r.open for r in rows],
             "high": [r.high for r in rows],
             "low": [r.low for r in rows],

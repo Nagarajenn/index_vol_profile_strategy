@@ -166,6 +166,7 @@ def _top_contributing_factors(
             z = (today_val - mean) / sd
             contribution = f.weight * f.sign * z
             note = f"{today_val:.2f} vs. historical average {mean:.2f}"
+            today_value_str = f"{today_val:.2f}"
         else:
             if corr is None or corr.category_breakdown is None:
                 continue
@@ -177,7 +178,8 @@ def _top_contributing_factors(
             )
             contribution = f.weight * (cat_stats.get("reversal_rate", overall_rate) - overall_rate)
             note = f"{today_val} (historical reversal rate {cat_stats.get('reversal_rate', 0):.0%})"
-        contributions.append(ContributingFactor(factor_name=f.name, today_value=str(today_val), note=note, contribution=contribution))
+            today_value_str = str(today_val)
+        contributions.append(ContributingFactor(factor_name=f.name, today_value=today_value_str, note=note, contribution=contribution))
 
     contributions.sort(key=lambda c: -abs(c.contribution))
     return contributions[:5]

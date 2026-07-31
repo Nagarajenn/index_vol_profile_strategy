@@ -884,3 +884,44 @@ allowing this advisor to adjust the live trading confidence score
 (explicitly future/optional per the original ask, never done here);
 scheduling anything automatic (this is entirely on-demand/read-time, no
 new scheduled task was added).
+
+**Follow-up (2026-07-31, same day, ~14:38 IST):** the user reported the
+panel stuck showing "only produces a read between 2:00 PM and 3:01 PM"
+*while it actually was 2:38 PM* — a real bug, not the expected pre-2pm
+state. Root cause: **`asyncpg` (the backend's async driver) returns
+`TIMESTAMPTZ` columns tagged as UTC regardless of the column's actual
+value, unlike `psycopg` (the sync pipeline's driver), which correctly
+tags them IST.** The underlying instant was always correct, but
+`market_transition`'s pure functions compare `.dt.time` against clock
+constants (`time(14, 0)`, etc.) — with candles mislabeled as UTC, a real
+14:38 IST reading showed as 09:08, permanently below every window
+threshold. This is a new class of bug specific to the live advisor: no
+earlier backend service ever compared `.dt.time` against a clock
+threshold (only date-level grouping, which coincidentally still works
+under the mislabeling since IST's +5:30 offset never crosses a date
+boundary during market hours) — so it was never surfaced before. Fixed
+by converting to IST once, at the ORM-row-to-DataFrame boundary, in
+`live_transition_advisor_service.py::_candles_to_df`
+(`r.timestamp.astimezone(settings.ist)`), rather than touching the shared
+DB engine config (narrower blast radius, only affects this service).
+
+Caught in the same pass: `ContributingFactor.today_value` was an
+unrounded `str(float)` (e.g. `"-0.024586044683282456"`), landing directly
+in the trader-language explanation text — not the clean read the whole
+point of this feature was to produce. Fixed to format continuous values
+to 2 decimal places at the source (`scoring.py::_top_contributing_factors`),
+so both this page and the historical daily-results panel benefit.
+
+Also hit an operational snag applying the fix: `uvicorn --reload`
+auto-picked up the `_candles_to_df` change (inside `backend/`) but not
+the `scoring.py` change (in the external `market_transition/` package,
+imported via the editable install) — reload only watches the directory
+it's run from. Had to manually kill and restart the backend process, and
+in doing so discovered the very first `Stop-Process` had silently failed
+to kill the old process (leaving two servers bound to :8000
+simultaneously, with curl nondeterministically hitting whichever). Fully
+verified only after confirming exactly one PID owned the port. Live-verified
+end-to-end afterward: correct `is_active: true`, real analog matches,
+onset-based timing estimate ("between 2:50 PM and 3:04 PM"), and clean
+`0.10`/`0.04`-formatted explanation text, both via curl and in the browser.
+All 132 pipeline + 27 backend tests still pass.
