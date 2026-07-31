@@ -110,16 +110,41 @@ def _find_analogs(
     return scored[:k]
 
 
-def _confidence_from_factor_count(n_weighted_factors: int, n_analogs: int) -> str:
-    if n_analogs < MIN_ANALOGS:
+def find_analogs(
+    query: DailyTransitionRecord,
+    history: list[DailyTransitionRecord],
+    correlations: list[FactorCorrelationResult],
+    k: int = DEFAULT_K,
+) -> list[tuple[DailyTransitionRecord, float]]:
+    """Public entrypoint: the K historical days most similar to `query`,
+    weighted by which factors the correlation study found significant
+    (lower distance = more similar). `score_day()` uses this internally,
+    but callers that want the actual analog day list -- not just the
+    aggregated score -- (e.g. the live advisor's "Most Similar Trading
+    Days" output) should call this directly."""
+    factors = _build_weighted_factors(correlations)
+    return _find_analogs(query, history, factors, k)
+
+
+def _confidence_from_factor_count(n_weighted_factors: int, n_analogs: int, similarity: float) -> str:
+    """Blends how many factors the *global* correlation study currently
+    finds significant with how tightly *this specific day's* analogs
+    actually match. Early in the dataset's life, n_weighted_factors will be
+    small for every single day (few factors have crossed significance yet)
+    -- if confidence depended on that alone, every day would read the same
+    label until the study matures over months. Similarity is what lets two
+    days differ today even while the global factor count is still thin."""
+    if n_analogs < MIN_ANALOGS or n_weighted_factors == 0:
         return "Insufficient data"
-    if n_weighted_factors >= 5:
+    factor_score = min(n_weighted_factors / 5, 1.0)
+    combined = 0.5 * factor_score + 0.5 * similarity
+    if combined >= 0.7:
         return "Strong"
-    if n_weighted_factors >= 3:
+    if combined >= 0.5:
         return "Moderate"
-    if n_weighted_factors >= 1:
+    if combined >= 0.3:
         return "Weak"
-    return "Insufficient data"
+    return "Not significant"
 
 
 def _top_contributing_factors(
@@ -235,7 +260,7 @@ def score_day(
     risk_score = max(0.0, min(100.0, risk_score))
 
     top_factors = _top_contributing_factors(query, history, factors, correlations)
-    confidence = _confidence_from_factor_count(len(factors), len(analogs))
+    confidence = _confidence_from_factor_count(len(factors), len(analogs), similarity)
     explanation = _explanation(query, risk_score, p_reversal, p_continuation, len(analogs), similarity, top_factors, confidence)
 
     return DailyTransitionScore(

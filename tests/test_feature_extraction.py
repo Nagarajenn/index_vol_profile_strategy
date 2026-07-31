@@ -1,12 +1,12 @@
 import sys
-from datetime import date
+from datetime import date, time
 from pathlib import Path
 
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from market_transition.feature_extraction import extract_daily_transition_record
+from market_transition.feature_extraction import compute_pre_window_features, extract_daily_transition_record
 from tests.fixtures.synthetic_candles import make_candles
 
 
@@ -155,3 +155,51 @@ def test_prior_day_features_populated_when_prior_day_given():
     assert record is not None
     assert record.features.prior_day_profile_shape is not None
     assert record.features.prior_day_close_vs_poc is not None
+
+
+def test_compute_pre_window_features_with_partial_cutoff():
+    full_day = _full_session("2026-07-10", close_1459=150.0, close_1501=155.0, market_close=165.0)
+    # Simulate a live, still-forming session that has only reached 14:20.
+    partial = full_day[full_day["timestamp"].dt.time <= time(14, 20)]
+
+    features = compute_pre_window_features(
+        today_candles=partial,
+        prior_day_candles=None,
+        historical_by_date={},
+        bin_size=1.0,
+        expiry_type=None,
+        session_date=date(2026, 7, 10),
+        pre_window_end=time(14, 20),
+    )
+    assert features is not None
+    assert features.vwap_distance_1459 is not None
+    assert features.realized_range_1400_1459 is not None
+    assert features.volume_slope_1400_1459 is not None
+
+
+def test_compute_pre_window_features_none_when_no_data_reaches_pre_window():
+    full_day = _full_session("2026-07-10", close_1459=150.0, close_1501=155.0, market_close=165.0)
+    too_early = full_day[full_day["timestamp"].dt.time <= time(10, 0)]
+
+    features = compute_pre_window_features(
+        today_candles=too_early,
+        prior_day_candles=None,
+        historical_by_date={},
+        bin_size=1.0,
+        expiry_type=None,
+        session_date=date(2026, 7, 10),
+        pre_window_end=time(14, 20),
+    )
+    assert features is None
+
+
+def test_extract_daily_transition_record_matches_compute_pre_window_features_at_full_cutoff():
+    today = _full_session("2026-07-10", close_1459=150.0, close_1501=155.0, market_close=165.0)
+    record = extract_daily_transition_record(
+        symbol="NIFTY", session_date=date(2026, 7, 10), today_candles=today,
+        prior_day_candles=None, historical_by_date={}, bin_size=1.0, expiry_type=None,
+    )
+    features_direct = compute_pre_window_features(today, None, {}, 1.0, None, date(2026, 7, 10))
+
+    assert record is not None
+    assert record.features == features_direct

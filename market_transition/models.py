@@ -9,7 +9,7 @@ path.
 """
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import Literal
 
 MarketRegime = Literal["Trending", "Range-Bound", "Volatile"]
@@ -21,6 +21,10 @@ ExpiryType = Literal["weekly", "monthly"]
 ConfidenceLabel = Literal["Strong", "Moderate", "Weak", "Not significant", "Insufficient data"]
 FactorType = Literal["continuous", "categorical"]
 CorrelationTarget = Literal["reversal", "magnitude"]
+TransitionStage = Literal[
+    "Not Yet Active", "Pre-Transition Monitoring", "Transition Window", "Post-Transition Follow-Through", "Session Complete"
+]
+TransitionRiskLevel = Literal["Observe", "Low", "Medium", "High", "Very High"]
 
 
 @dataclass
@@ -111,3 +115,55 @@ class DailyTransitionScore:
     statistical_confidence: ConfidenceLabel = "Insufficient data"
     explanation: str = ""
     computed_at: datetime | None = None
+
+
+@dataclass
+class MostSimilarDay:
+    session_date: date
+    distance: float  # lower = more similar
+    similarity: float  # 1/(1+distance), 0-1
+    outcome: TransitionOutcomeLabel
+    transition_direction: TransitionDirection
+
+
+@dataclass
+class TransitionTimingEstimate:
+    """When, historically, the transition tended to actually begin among
+    the matched analogs -- distinct from the fixed 15:00-15:01 definition
+    used to MEASURE the transition; this estimates when price action
+    actually started moving."""
+
+    earliest: time | None
+    latest: time | None
+    n_analogs_with_onset: int
+    note: str
+
+
+@dataclass
+class LiveAdvisory:
+    """The Live Market Transition Advisor's output for one point-in-time
+    check during the 2:00-3:01pm window. Never a trading signal -- only
+    Observe/Low/Medium/High/Very High transition risk plus a confidence
+    label. Entirely independent of the trading decision engine; consumes
+    the historical MTI database (DailyTransitionRecord/FactorCorrelationResult)
+    read-only, never writes back to it."""
+
+    symbol: str
+    session_date: date
+    as_of: datetime
+    stage: TransitionStage
+    historical_similarity_score: float
+    most_similar_days: list[MostSimilarDay]
+    expected_direction: TransitionDirection
+    probability_continuation: float
+    probability_reversal: float
+    expected_volatility: float
+    expected_timing: TransitionTimingEstimate | None
+    estimated_move: float  # signed mean of analogs' post_transition_move
+    risk_level: TransitionRiskLevel
+    statistical_confidence: ConfidenceLabel
+    top_contributing_factors: list[ContributingFactor]
+    institutional_bias_label: str | None
+    news_risk_score: int | None
+    news_sentiment: str | None
+    explanation: str

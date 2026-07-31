@@ -21,7 +21,7 @@ pipeline outage spanning the window (several are on record in
 PROJECT_STATUS.md) rather than fabricating a result from partial data.
 """
 
-from datetime import date, time
+from datetime import date, datetime, time
 from typing import Literal
 
 import pandas as pd
@@ -33,7 +33,6 @@ from market_transition.market_regime import classify_market_regime
 from market_transition.models import DailyTransitionRecord, ExpiryType, PreWindowFeatures, TransitionOutcome
 
 PRE_WINDOW_START = time(14, 0)
-PRE_WINDOW_MID = time(14, 30)
 PRE_WINDOW_END = time(14, 59)
 TRANSITION_START = time(15, 0)
 TRANSITION_END = time(15, 1)
@@ -52,6 +51,13 @@ def _session_so_far(candles: pd.DataFrame, cutoff_time: time) -> pd.DataFrame:
     return candles[candles["timestamp"].dt.time <= cutoff_time]
 
 
+def _midpoint_time(start: time, end: time) -> time:
+    base = datetime(2000, 1, 1)
+    start_dt = datetime.combine(base, start)
+    end_dt = datetime.combine(base, end)
+    return (start_dt + (end_dt - start_dt) / 2).time()
+
+
 def _direction(move: float, reference_price: float) -> Literal["up", "down", "flat"]:
     if reference_price <= 0 or abs(move) / reference_price * 100 < FLAT_MOVE_THRESHOLD_PCT:
         return "flat"
@@ -68,6 +74,89 @@ def _prior_day_close_vs_poc(prior_day_candles: pd.DataFrame, bin_size: float) ->
     if abs(prior_close - vp.poc) / vp.poc * 100 < FLAT_MOVE_THRESHOLD_PCT:
         return "at"
     return "above" if prior_close > vp.poc else "below"
+
+
+def compute_pre_window_features(
+    today_candles: pd.DataFrame,
+    prior_day_candles: pd.DataFrame | None,
+    historical_by_date: dict[date, pd.DataFrame],
+    bin_size: float,
+    expiry_type: ExpiryType | None,
+    session_date: date,
+    pre_window_end: time = PRE_WINDOW_END,
+) -> PreWindowFeatures | None:
+    """The pre-transition feature set as of `pre_window_end` (defaults to
+    the historical engine's fixed 14:59 cutoff). Passing an earlier cutoff
+    -- e.g. "now" during a still-forming session -- computes the SAME kind
+    of features from partial, in-progress data. This is what the live
+    advisor uses; `extract_daily_transition_record` below is just this
+    function called with the default cutoff, plus the transition/outcome
+    that only exist once the day is complete.
+    """
+    if today_candles.empty:
+        return None
+
+    pre_window = _time_between(today_candles, PRE_WINDOW_START, pre_window_end)
+    if pre_window.empty:
+        return None
+
+    session_at_start = _session_so_far(today_candles, PRE_WINDOW_START)
+    session_at_end = _session_so_far(today_candles, pre_window_end)
+    if session_at_start.empty or session_at_end.empty:
+        return None
+
+    vp_start = compute_volume_profile(session_at_start, bin_size)
+    vp_end = compute_volume_profile(session_at_end, bin_size)
+    poc_migration = (vp_end.poc - vp_start.poc) if (vp_start and vp_end) else None
+
+    vwap_series = compute_vwap(session_at_end)
+    vwap_end = float(vwap_series.iloc[-1]) if not vwap_series.empty else None
+    close_end = float(pre_window["close"].iloc[-1])
+    vwap_distance = (close_end - vwap_end) if vwap_end is not None else None
+    vwap_distance_pct = (vwap_distance / vwap_end * 100) if (vwap_distance is not None and vwap_end) else None
+
+    mid = _midpoint_time(PRE_WINDOW_START, pre_window_end)
+    first_half = pre_window[pre_window["timestamp"].dt.time < mid]
+    second_half = pre_window[pre_window["timestamp"].dt.time >= mid]
+    volume_slope = None
+    if not first_half.empty and not second_half.empty:
+        first_avg = first_half["volume"].mean()
+        second_avg = second_half["volume"].mean()
+        if first_avg > 0:
+            volume_slope = (second_avg - first_avg) / first_avg
+
+    realized_range = float(pre_window["high"].max() - pre_window["low"].min())
+
+    profile_shape = classify_profile_shape(vp_end.bins, vp_end.poc, bin_size) if vp_end else None
+    rotation = compute_rotation_factor(session_at_end)
+    regime = classify_market_regime(session_at_end, historical_by_date)
+
+    ib = compute_initial_balance(session_at_end)
+    is_inside_ib = (ib.ib_low <= close_end <= ib.ib_high) if ib else None
+
+    prior_shape = None
+    prior_close_vs_poc = None
+    if prior_day_candles is not None and not prior_day_candles.empty:
+        prior_vp = compute_volume_profile(prior_day_candles, bin_size)
+        if prior_vp is not None:
+            prior_shape = classify_profile_shape(prior_vp.bins, prior_vp.poc, bin_size).shape
+        prior_close_vs_poc = _prior_day_close_vs_poc(prior_day_candles, bin_size)
+
+    return PreWindowFeatures(
+        poc_migration_1400_1459=poc_migration,
+        vwap_distance_1459=vwap_distance,
+        vwap_distance_1459_pct=vwap_distance_pct,
+        volume_slope_1400_1459=volume_slope,
+        realized_range_1400_1459=realized_range,
+        profile_shape_1459=profile_shape.shape if profile_shape else None,
+        rotation_label_1459=rotation.label if rotation else None,
+        market_regime_1459=regime,
+        is_inside_initial_balance_1459=is_inside_ib,
+        day_of_week=session_date.weekday(),
+        expiry_type=expiry_type,
+        prior_day_profile_shape=prior_shape,
+        prior_day_close_vs_poc=prior_close_vs_poc,
+    )
 
 
 def extract_daily_transition_record(
@@ -89,63 +178,13 @@ def extract_daily_transition_record(
     if pre_window.empty or transition_window.empty or post_window.empty:
         return None
 
-    session_at_1400 = _session_so_far(today_candles, PRE_WINDOW_START)
-    session_at_1459 = _session_so_far(today_candles, PRE_WINDOW_END)
-    if session_at_1400.empty or session_at_1459.empty:
+    features = compute_pre_window_features(
+        today_candles, prior_day_candles, historical_by_date, bin_size, expiry_type, session_date, PRE_WINDOW_END
+    )
+    if features is None:
         return None
 
-    vp_1400 = compute_volume_profile(session_at_1400, bin_size)
-    vp_1459 = compute_volume_profile(session_at_1459, bin_size)
-    poc_migration = (vp_1459.poc - vp_1400.poc) if (vp_1400 and vp_1459) else None
-
-    vwap_series = compute_vwap(session_at_1459)
-    vwap_1459 = float(vwap_series.iloc[-1]) if not vwap_series.empty else None
     close_1459 = float(pre_window["close"].iloc[-1])
-    vwap_distance = (close_1459 - vwap_1459) if vwap_1459 is not None else None
-    vwap_distance_pct = (vwap_distance / vwap_1459 * 100) if (vwap_distance is not None and vwap_1459) else None
-
-    first_half = pre_window[pre_window["timestamp"].dt.time < PRE_WINDOW_MID]
-    second_half = pre_window[pre_window["timestamp"].dt.time >= PRE_WINDOW_MID]
-    volume_slope = None
-    if not first_half.empty and not second_half.empty:
-        first_avg = first_half["volume"].mean()
-        second_avg = second_half["volume"].mean()
-        if first_avg > 0:
-            volume_slope = (second_avg - first_avg) / first_avg
-
-    realized_range = float(pre_window["high"].max() - pre_window["low"].min())
-
-    profile_shape = classify_profile_shape(vp_1459.bins, vp_1459.poc, bin_size) if vp_1459 else None
-    rotation = compute_rotation_factor(session_at_1459)
-    regime = classify_market_regime(session_at_1459, historical_by_date)
-
-    ib = compute_initial_balance(session_at_1459)
-    is_inside_ib = (ib.ib_low <= close_1459 <= ib.ib_high) if ib else None
-
-    prior_shape = None
-    prior_close_vs_poc = None
-    if prior_day_candles is not None and not prior_day_candles.empty:
-        prior_vp = compute_volume_profile(prior_day_candles, bin_size)
-        if prior_vp is not None:
-            prior_shape = classify_profile_shape(prior_vp.bins, prior_vp.poc, bin_size).shape
-        prior_close_vs_poc = _prior_day_close_vs_poc(prior_day_candles, bin_size)
-
-    features = PreWindowFeatures(
-        poc_migration_1400_1459=poc_migration,
-        vwap_distance_1459=vwap_distance,
-        vwap_distance_1459_pct=vwap_distance_pct,
-        volume_slope_1400_1459=volume_slope,
-        realized_range_1400_1459=realized_range,
-        profile_shape_1459=profile_shape.shape if profile_shape else None,
-        rotation_label_1459=rotation.label if rotation else None,
-        market_regime_1459=regime,
-        is_inside_initial_balance_1459=is_inside_ib,
-        day_of_week=session_date.weekday(),
-        expiry_type=expiry_type,
-        prior_day_profile_shape=prior_shape,
-        prior_day_close_vs_poc=prior_close_vs_poc,
-    )
-
     close_1501 = float(transition_window["close"].iloc[-1])
     market_close = float(post_window["close"].iloc[-1])
     transition_move = close_1501 - close_1459

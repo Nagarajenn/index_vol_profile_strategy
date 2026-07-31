@@ -5,7 +5,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from market_transition.models import DailyTransitionRecord, PreWindowFeatures, TransitionOutcome
-from market_transition.scoring import score_day
+from market_transition.scoring import _confidence_from_factor_count, find_analogs, score_day
 from market_transition.statistics import run_correlation_study
 
 
@@ -89,6 +89,38 @@ def test_score_day_excludes_query_date_from_its_own_analogs():
     # Should not crash or trivially match itself; just verify it still
     # produces a real (non-fallback) result using other days.
     assert result.statistical_confidence != "Insufficient data"
+
+
+def test_confidence_varies_with_similarity_at_same_factor_count():
+    # Same global factor count (2) but different per-day analog match
+    # quality must produce different confidence labels -- this is the
+    # exact bug fixed: previously confidence depended only on factor
+    # count, so every day read identically regardless of match quality.
+    tight_match = _confidence_from_factor_count(n_weighted_factors=2, n_analogs=10, similarity=0.9)
+    loose_match = _confidence_from_factor_count(n_weighted_factors=2, n_analogs=10, similarity=0.2)
+    assert tight_match != loose_match
+
+
+def test_confidence_insufficient_data_below_min_analogs_regardless_of_similarity():
+    assert _confidence_from_factor_count(n_weighted_factors=5, n_analogs=1, similarity=0.99) == "Insufficient data"
+
+
+def test_confidence_insufficient_data_with_zero_factors():
+    assert _confidence_from_factor_count(n_weighted_factors=0, n_analogs=50, similarity=0.99) == "Insufficient data"
+
+
+def test_find_analogs_returns_k_closest_excluding_query_date():
+    history = _build_known_history()
+    correlations = run_correlation_study(history)
+    query = _record(999, poc_migration=60, outcome="continuation")
+
+    analogs = find_analogs(query, history, correlations, k=5)
+
+    assert len(analogs) == 5
+    assert all(d.session_date != query.session_date for d, _ in analogs)
+    # Sorted nearest-first.
+    distances = [dist for _, dist in analogs]
+    assert distances == sorted(distances)
 
 
 def test_explanation_is_non_empty_and_deterministic():
