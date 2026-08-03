@@ -981,3 +981,66 @@ end-to-end afterward: correct `is_active: true`, real analog matches,
 onset-based timing estimate ("between 2:50 PM and 3:04 PM"), and clean
 `0.10`/`0.04`-formatted explanation text, both via curl and in the browser.
 All 132 pipeline + 27 backend tests still pass.
+
+## 13. Trend alarm sound (2-candle Bullish/Bearish streak) (2026-07-31)
+
+User asked for an audible alert when `trend_label` (from `analytics/trend_classifier.py`'s
+5-level scale: Strong Bearish/Bearish/Neutral/Bullish/Strong Bullish) reads
+Bullish or Bearish for 2 candles in a row, with a distinct sound for the
+Strong variants. Frontend-only — no backend or schema change; `trend_label`
+was already served on every `/api/v1/dashboard/{symbol}/latest` poll.
+
+**"2 candles" interpretation**: tracked across consecutive dashboard polls
+(20s cadence against the live pipeline's 1-min snapshot cadence) rather
+than the chart's 5-min resampled bars, since there's no existing way to
+read back a short history of `trend_label` at chart-candle granularity
+without new backend work — this is the same signal already reaching the
+frontend today, just watched for two-in-a-row persistence in the same
+Bullish/Bearish family.
+
+**New files:**
+- `frontend/src/utils/trendAlertSounds.ts` — two beeps synthesized via
+  Web Audio API (`AudioContext`/`OscillatorNode`), not sampled audio
+  files: a single 660Hz tone for plain Bullish/Bearish, a louder
+  880Hz double-beep for Strong Bullish/Strong Bearish so the two are
+  distinguishable by ear. `unlockTrendAlertAudio()` resumes a suspended
+  context (browsers block audio until a user gesture has occurred
+  somewhere on the page) — called opportunistically on every play attempt
+  and from the mute-toggle click.
+- `frontend/src/hooks/useTrendAlert.ts` — the streak logic. Depends on
+  both `trendLabel` **and** `dataUpdatedAt` (TanStack Query's per-fetch
+  timestamp) — depending on `trendLabel` alone would never re-fire the
+  effect while the label stays unchanged across several polls in a row,
+  which is exactly the common case this needs to detect. Fires once when
+  a Bullish/Bearish family streak reaches 2, and again only on
+  *escalation* to Strong within the same streak (tracked via an
+  `alertedRank` 0/1/2 so a de-escalation back to plain Bullish/Bearish, or
+  the streak just continuing at the same strength, never re-fires or
+  nags). Resets on Neutral or a family flip, and on the selected symbol
+  changing.
+- `frontend/src/store/useAlertSoundStore.ts` — tiny Zustand store, one
+  `enabled` boolean + `toggle()`, no persistence (defaults on each
+  session load, matching "don't add what wasn't asked for").
+
+**Wired into `AppShell.tsx`** (not `TerminalPage`) so the alarm fires
+regardless of which page the trader currently has open — polls
+`useDashboardData(selectedSymbol)` at the shell level, sharing the same
+TanStack Query cache entry `TerminalPage` already uses (same `queryKey`,
+so no extra network requests). A small speaker icon button next to the
+nav links mutes/unmutes and doubles as the audio-unlock gesture.
+
+**Verified:** `npx tsc -b` clean; browser check confirmed no console
+errors, the mute toggle flips state correctly (label swaps "Mute trend
+alarm..." <-> "Unmute trend alarm") with no `AudioContext` errors. Since
+the market was closed at build time (`trend_label` static for the rest of
+the session, can't observe a real live streak), the streak/escalation
+logic itself was verified by running the exact algorithm in the live page
+context via 8 scenarios (2-candle fire, no-fire-on-1-reading,
+escalate-to-strong-fires-again, no-repeat-at-same-strength,
+no-refire-on-de-escalation, reset-then-rearm-after-neutral,
+family-switch-resets, direct-2-candle-strong) — all 8 matched the
+intended behavior exactly. No frontend test runner exists in this repo
+yet (`npm run build`/`tsc -b` + manual browser checks is the established
+verification pattern here), so this was the most direct feasible check
+short of adding one. Backend/pipeline test suites (33 + 135) untouched
+and still pass, as expected for a frontend-only change.
