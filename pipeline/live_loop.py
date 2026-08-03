@@ -36,8 +36,10 @@ def run_live_loop(
 ) -> None:
     """Blocks forever (or until `max_iterations`), firing a live snapshot for
     every symbol on each `interval_min`-spaced wall-clock boundary during
-    market hours (09:15-15:30 IST on trading days), and sleeping through
-    nights/weekends/holidays and outside session hours in between.
+    market hours (09:15-15:40 IST on trading days, per NSE's F&O close
+    extension effective 2026-08-03 -- see config.settings.SESSION_CLOSE),
+    and sleeping through nights/weekends/holidays and outside session hours
+    in between.
 
     `run_single_session=True` makes it exit as soon as today's session is
     over (or immediately, on a non-trading day) instead of sleeping through

@@ -44,10 +44,11 @@ from market_transition.scoring import DEFAULT_K, MIN_ANALOGS, find_analogs, scor
 # How long after the transition window the advisor keeps reporting
 # follow-through (has the predicted reversal/continuation actually
 # happened) before considering the session's transition read "complete" --
-# through the rest of the trading session (15:30 close), not just a short
-# window after 15:01, so the read stays visible rather than reverting to
-# "not enough data" the instant the clock crosses 3:01pm.
-FOLLOW_THROUGH_END = time(15, 30)
+# through the rest of the trading session (15:40 close, per NSE's F&O
+# session extension effective 2026-08-03 -- was 15:30 before that), not
+# just a short window after 15:01, so the read stays visible rather than
+# reverting to "not enough data" the instant the clock crosses 3:01pm.
+FOLLOW_THROUGH_END = time(15, 40)
 
 # Onset detection for "Expected Timing of Transition": a candle counts as
 # the transition's onset once price has moved at least this fraction of the

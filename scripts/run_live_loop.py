@@ -1,4 +1,4 @@
-"""Auto-repeating live snapshot loop for market hours (09:15-15:30 IST, every 1 min).
+"""Auto-repeating live snapshot loop for market hours (09:15-15:40 IST, every 1 min).
 
 Usage: venv\\Scripts\\python.exe scripts\\run_live_loop.py [SENSEX NIFTY ...] [--single-session]
 

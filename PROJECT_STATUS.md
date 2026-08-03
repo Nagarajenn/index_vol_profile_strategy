@@ -1044,3 +1044,56 @@ yet (`npm run build`/`tsc -b` + manual browser checks is the established
 verification pattern here), so this was the most direct feasible check
 short of adding one. Backend/pipeline test suites (33 + 135) untouched
 and still pass, as expected for a frontend-only change.
+
+## 14. SEBI/NSE market-close time change (2026-08-03) — SESSION_CLOSE 15:30 -> 15:40
+
+User asked (1) whether the pipeline had stopped -- it hadn't, `raw_candles`
+was current to the same minute as wall-clock time for both symbols -- and
+(2) to check whether a same-day regulatory timing change affected the
+tool's closing-time assumptions. It does: effective 2026-08-03, NSE
+extended the F&O session close from 3:30 PM to 3:40 PM (10-minute
+extension, applies to both index and stock derivatives -- covers
+SENSEX/NIFTY options, this tool's actual instruments), introduced alongside
+a new cash-market Closing Auction Session (continuous trading to 3:15 PM,
+auction 3:15-3:35 PM for F&O-eligible stocks) and a widened derivative
+VWAP window (3:10 PM-3:40 PM, was 3:00 PM-3:30 PM). Sources: [Groww](https://groww.in/blog/nse-extends-f-and-o-trading-hours-by-10-minutes-new-timings-effective-from-august-3-2026),
+[Flattrade Kosh](https://flattrade.in/kosh/nse-extends-fo-trading-hours-till-340-pm-from-august-3-2026-what-it-means-for-traders/),
+[Outlook Business](https://www.outlookbusiness.com/markets/sebi-closing-auction-session-new-stock-market-timings-from-august-3).
+
+**Fixed (mechanical, low-risk):** `config/settings.py::SESSION_CLOSE`
+"15:30" -> "15:40" -- governs `pipeline/live_loop.py`'s daily exit time
+and the backend's `is_market_hours` computation (`backend/app/core/config.py`
+re-exports the same constant; `dashboard_service.py` derives
+`is_market_hours` from it, no separate edit needed there). Also bumped
+`market_transition/live_advisor.py::FOLLOW_THROUGH_END` (15:30 -> 15:40)
+so the Live Advisor's follow-through display stays visible through the
+new close instead of reverting to dormant 10 minutes early. Updated the
+matching boundary tests in `tests/test_live_advisor.py`
+(`test_determine_transition_stage`, `test_is_advisor_active`). All 135
+pipeline + 33 backend tests pass.
+
+Today's already-running `live_loop` process (started 09:10, `--single-session`)
+had the old 15:30 baked in at import time -- a file edit alone wouldn't
+have applied to it today, only tomorrow's fresh Task-Scheduler-launched
+process. Restarted it cleanly today (precisely identified PIDs 38460/3020
+by `CreationDate`+`CommandLine` before killing, replicated the exact
+invocation `run_live_loop_daily.bat` uses: `python.exe scripts/run_live_loop.py
+SENSEX NIFTY --single-session >> logs/live_loop_daily.log 2>&1`) so
+today's session also collects through 15:40 instead of stopping at 15:30
+and needing a manual catch-up backfill afterward. Confirmed zero data gap
+(last snapshot under the old process at 15:16, first under the new one at
+15:17) and confirmed the new process holds `SESSION_CLOSE == "15:40"` in
+memory. Also cleaned up an unrelated dangling backend process tree left
+over from the 2026-07-31 session (PIDs 26348/34332/25820, 3 days stale,
+not the one actually bound to :8000) while investigating.
+
+**Deliberately NOT changed:** the Market Transition Intelligence engine's
+`PRE_WINDOW_START`/`PRE_WINDOW_END`/`TRANSITION_START`/`TRANSITION_END`
+(14:00/14:59/15:00/15:01 in `market_transition/feature_extraction.py`).
+These anchor the entire "2:00-3:01pm transition" research thesis across
+77+ days of existing historical data (originally chosen as roughly
+30-minutes-before-the-old-3:30-close). Whether to shift this window (e.g.
+to preserve "~30 min before F&O close" under the new 3:40 close) is a
+methodology decision, not a mechanical constant fix, and changes the
+meaning of every historical day already scored -- flagged for the user to
+decide rather than changed silently.

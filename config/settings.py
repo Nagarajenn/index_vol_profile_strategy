@@ -34,7 +34,13 @@ def require_database_url() -> str:
 IST = ZoneInfo("Asia/Kolkata")
 
 SESSION_OPEN = "09:15"
-SESSION_CLOSE = "15:30"
+# NSE extended the F&O session close from 15:30 to 15:40 effective 2026-08-03
+# (new Closing Auction Session framework for the cash/equity segment runs
+# 15:15-15:35; the VWAP window used for derivative closing prices is now
+# 15:10-15:40). Since SENSEX/NIFTY options are the actual instruments this
+# tool supports, the F&O close is the one that governs when the pipeline
+# should keep collecting live data.
+SESSION_CLOSE = "15:40"
 
 SNAPSHOT_ROOT = PROJECT_ROOT / "vol_pro_snapshot_training"
 CACHE_DIR = PROJECT_ROOT / "data" / "cache"

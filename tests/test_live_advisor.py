@@ -33,8 +33,8 @@ from tests.fixtures.synthetic_candles import make_candles
         (time(15, 0), "Transition Window"),
         (time(15, 1), "Transition Window"),
         (time(15, 2), "Post-Transition Follow-Through"),
-        (time(15, 30), "Post-Transition Follow-Through"),
-        (time(15, 31), "Session Complete"),
+        (time(15, 40), "Post-Transition Follow-Through"),
+        (time(15, 41), "Session Complete"),
     ],
 )
 def test_determine_transition_stage(t, expected):
@@ -43,11 +43,13 @@ def test_determine_transition_stage(t, expected):
 
 @pytest.mark.parametrize(
     "t,expected",
-    # Active through the full session (15:30 close), not just the fixed
-    # 15:00-15:01 transition window -- the score is frozen at the 14:59
-    # pre-window snapshot either way, but it stays visible as a reference
-    # point through follow-through instead of reverting to "not enough data".
-    [(time(13, 59), False), (time(14, 0), True), (time(15, 1), True), (time(15, 20), True), (time(15, 30), True), (time(15, 31), False)],
+    # Active through the full session (15:40 close, per NSE's F&O session
+    # extension effective 2026-08-03 -- was 15:30 before that), not just the
+    # fixed 15:00-15:01 transition window -- the score is frozen at the
+    # 14:59 pre-window snapshot either way, but it stays visible as a
+    # reference point through follow-through instead of reverting to "not
+    # enough data".
+    [(time(13, 59), False), (time(14, 0), True), (time(15, 1), True), (time(15, 20), True), (time(15, 40), True), (time(15, 41), False)],
 )
 def test_is_advisor_active(t, expected):
     assert is_advisor_active(t) == expected
