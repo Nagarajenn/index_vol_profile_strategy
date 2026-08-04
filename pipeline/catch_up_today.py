@@ -28,9 +28,13 @@ def catch_up_date(symbol: str, target_date: date, interval_min: int = LIVE_LOOP_
     so there's no way to know historical intraday OI for each past minute.
     This represents "today's price action so far, read against current OI
     positioning" rather than truly contemporaneous OI -- weakest for the
-    earliest checkpoints, exact for the most recent one. Checkpoints beyond
-    the latest available candle are naturally skipped (empty truncation),
-    so this safely stops at "now" without computing that boundary explicitly.
+    earliest checkpoints, exact for the most recent one. The loop below
+    explicitly stops once a checkpoint's cutoff passes the latest available
+    candle -- `truncated` does NOT naturally become empty past that point
+    (it's just every candle up to the real latest one, same as the previous
+    checkpoint), so without this the loop would silently recompute and
+    rewrite the same "now" snapshot for every remaining checkpoint through
+    session close.
 
     For a past `target_date` (recovering a fully-missed day, e.g. an outage),
     there is no live option chain to fetch at all -- every checkpoint gets
@@ -86,9 +90,15 @@ def catch_up_date(symbol: str, target_date: date, interval_min: int = LIVE_LOOP_
         except Exception as e:
             logger.warning("Option chain fetch failed for %s during catch-up: %s", symbol, e)
 
+    latest_available = day_df_full["timestamp"].max()
     written: list[dict] = []
     for cp_time in generate_checkpoint_times(interval_min=interval_min):
         cutoff = pd.Timestamp(datetime.combine(target_date, cp_time)).tz_localize(IST)
+        if cutoff > latest_available:
+            # generate_checkpoint_times() is strictly ascending, so every
+            # remaining checkpoint would also exceed the latest candle --
+            # stop instead of recomputing the same "now" snapshot on repeat.
+            break
         truncated = day_df_full[day_df_full["timestamp"] <= cutoff]
         if truncated.empty:
             continue

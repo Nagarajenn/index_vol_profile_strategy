@@ -1097,3 +1097,51 @@ to preserve "~30 min before F&O close" under the new 3:40 close) is a
 methodology decision, not a mechanical constant fix, and changes the
 meaning of every historical day already scored -- flagged for the user to
 decide rather than changed silently.
+
+## 15. Dhan access-token expiry + a real catch-up-loop bug (2026-08-04)
+
+User asked to check the pipeline. It was down for the entire session so
+far (`live_loop` running since 09:10 but every fetch failing since
+09:15:08 with `DH-901 Invalid_Authentication` -- confirmed via
+`raw_candles` still stuck at yesterday's 15:39 close). This is expected,
+recoverable Dhan behavior (access tokens expire and must be regenerated
+through their portal, not a code bug) -- reported it and asked the user to
+regenerate. They did; verified the new token directly with a standalone
+`fetch_intraday_candles` call (got real candles through 09:24) before
+touching anything, then restarted `live_loop` (the already-running
+process had the expired token baked in at import time, same class of
+issue as the SESSION_CLOSE fix in §14 -- a `.env` edit alone doesn't reach
+an already-running process).
+
+**Real bug found and fixed while backfilling the ~9-minute gap this left
+in `levels_snapshots`** (raw candles had no gap -- Dhan's intraday
+endpoint returns the whole day per request, so the first successful fetch
+retroactively filled `raw_candles` for free): `scripts/run_catch_up_today.py`
+produced 807 log lines and took ~35s for what should've been a ~10-checkpoint
+job. `pipeline/catch_up_today.py::catch_up_date()` loops
+`generate_checkpoint_times()` (strictly ascending, session-open to
+session-close) and filters `day_df_full` to `<= cutoff` each time. Once
+`cutoff` passes the latest actually-fetched candle, that filter does
+**not** become empty like the old docstring claimed -- it just returns
+every candle up to the real latest one again, identical to the previous
+iteration, so `run_snapshot()` recomputed and rewrote the exact same "now"
+snapshot for every remaining checkpoint through session close (376 repeats
+of `09:25:00` alone for SENSEX). Harmless to final DB state (idempotent
+upsert on `(symbol, as_of)`, confirmed `COUNT(*) == COUNT(DISTINCT as_of)`
+after the fix), but pure wasted computation and log noise every time this
+script has ever been run mid-session -- predates today's SESSION_CLOSE
+change, which only made the checkpoint list 10 minutes longer.
+
+**Fixed**: compute `latest_available = day_df_full["timestamp"].max()`
+once before the loop; `break` (checkpoints are strictly ascending, so
+nothing later can differ) once `cutoff > latest_available`, instead of
+relying on a truncation-emptiness check that never actually fires for
+today's in-progress-session case. Re-ran live to verify: SENSEX went from
+386 checkpoints/~35s (old, buggy) to 14 checkpoints/~10s (fixed, matching
+the 14 real minutes elapsed since open); NIFTY similarly to 15. No
+existing test coverage exists for this class of orchestration script in
+this repo (only pure-function analytics/market_transition/backend layers
+are unit-tested; `run_snapshot`/`backfill`/`catch_up_today` aren't, and
+adding a full external-API/DB mock harness for one loop-boundary fix
+wasn't judged worth the new precedent) -- verified via the live re-run
+instead. All 135 pipeline tests (untouched by this change) still pass.
