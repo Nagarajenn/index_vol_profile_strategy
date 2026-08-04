@@ -1145,3 +1145,87 @@ are unit-tested; `run_snapshot`/`backfill`/`catch_up_today` aren't, and
 adding a full external-API/DB mock harness for one loop-boundary fix
 wasn't judged worth the new precedent) -- verified via the live re-run
 instead. All 135 pipeline tests (untouched by this change) still pass.
+
+## 16. Volume Intelligence Engine (VIE) (2026-08-04)
+
+New engine reading volume as a **leading, not confirming, indicator** --
+distinct from Volume Profile Intelligence (§5), which describes price-at-
+volume distribution shape (POC/VA/HVN-LVN); VIE describes volume-*over-time*
+dynamics (magnitude vs. baseline, buy/sell pressure, momentum, pattern
+detection, a 5-15 minute forecast). User supplied a detailed 14-analytic
+spec up front; planned via `EnterPlanMode` given the size (comparable to
+Market Transition Intelligence), with three confirmed design decisions
+before building:
+
+1. **No tick data** (the spec assumed it existed; confirmed via repo-wide
+   grep that this pipeline only ever fetches 1-min OHLCV from Dhan --
+   zero bid/ask/tick/buy-sell-volume anywhere). Buy/sell volume is a
+   **Chaikin-style close-position proxy**: `mfm = ((close-low)-(high-close))/(high-low)`,
+   `buy_volume = volume*max(mfm,0)`, `sell_volume = volume*max(-mfm,0)` --
+   disclosed in the UI footer as an estimate, same transparency norm as
+   `analytics/volume_profile.py`'s triangular-kernel price-bin proxy.
+2. **Live-compute only, no new DB tables, no orchestrator script** --
+   mirrors Volume Profile Intelligence's pattern exactly (fetch history
+   from `raw_candles` via the existing `CandleRepositoryProtocol.list_since`,
+   recompute fresh per request). Chosen over a Market-Transition-
+   Intelligence-style DB-backed batch architecture since VIE's baselines
+   are simple averaging, not the statistical-significance testing that
+   made MTI's persistence genuinely necessary.
+3. **Deterministic template narrative, not an LLM call** -- matches every
+   other live/per-minute explanation in this app; the one real-LLM
+   precedent (Market Intelligence's news classifier) runs per-news-item,
+   not on a fast poll.
+
+**Package**: `analytics/volume_intelligence/` (12 files: `models.py` +
+`proxy.py`/`baselines.py` (foundation) + `rvol.py` (#1 RVOL, #2
+Acceleration, #7 Spike, #8 Dry-up) + `pressure.py` (#3 Dominance, #4
+Cumulative Pressure, #5 Momentum) + `institutional.py` (#6, volume-side
+only -- does not read OI, complementary to `analytics/institutional_bias.py`,
+not a duplicate) + `patterns.py` (#9 Absorption, #10 Exhaustion) +
+`character.py` (#11 Volume Trend, #12 Volume Character -- Wyckoff-style,
+documented as "a reasonable heuristic, not one canonical definition", same
+framing as Profile Shape/Opening Type) + `similarity.py` (#13, a
+lightweight single-curve distance metric, NOT `market_transition/scoring.py`'s
+k-NN/correlation-study machinery -- a much simpler problem) + `forecast.py`
+(#14, fixed 10-minute horizon, weighted composite of the other 5 modules'
+outputs, confidence downgrades on thin data) + `narrative.py` (headline +
+up to 4 gated observation sentences, most minutes surface 0-2) +
+`engine.py` (`compute_volume_intelligence()` orchestrator). Added
+`analytics.volume_intelligence` to `pyproject.toml`'s `packages` list and
+reinstalled editable in both venvs.
+
+**Backend**: `backend/app/schemas/volume_intelligence.py` (DTOs) +
+`backend/app/services/volume_intelligence_service.py` (mirrors
+`VolumeProfileIntelligenceService` exactly; `HISTORY_LOOKBACK_DAYS = 60`,
+the full `BACKFILL_LOOKBACK_DAYS` ceiling, vs. VPI's 10 -- the
+monthly-expiry-day baseline only occurs ~2-3 times per 60 days and needs
+the maximum available history) + `GET /api/v1/volume-intelligence/{symbol}`
+router + DI wiring. No new repository -- reuses the same `CandleRepository`/
+`raw_candles` source VPI already reads from.
+
+**Frontend**: new `VolumeIntelligencePanel` (does not use the shared
+4-layer `AnalysisCard` -- same "raw multi-metric analysis by design"
+reasoning as VPI), polled every 90s (slower than VPI's 60s given a 6x
+larger candle fetch plus an O(days) similarity calc; faster than the full
+120s considered, since dominance/momentum/the narrative are explicitly
+"last few minutes" reads). Placed as a new full-width section on
+`TerminalPage` between the [Volume Profile + Chart] row and the Option
+Chain panel.
+
+**Verified**: 87 new pure-function tests (hand-computed synthetic-candle
+fixtures, same style as every prior analytics module -- e.g. the forecast
+composite's exact 0.77 score and 80.8% continuation probability were
+predicted by hand before running, and matched) + 5 new backend service
+tests (`_FakeCandleRepo` stub, no real DB) -- all pass, plus the existing
+135 pipeline + 33 backend tests unaffected (222 + 38 = 260 total). Live-
+verified against real production data: the endpoint correctly reflected a
+genuinely 0-volume final candle (a real Dhan closing-auction quirk, not a
+bug -- confirmed by querying `raw_candles` directly) and correctly reported
+`n_days_compared: 1` for historical similarity, an honest artifact of
+yesterday's NSE session-time extension (§14) meaning almost no prior day
+yet reaches today's longer elapsed-time cutoff. Browser-verified: all 6
+panel sections render with real, coherent SENSEX data, zero console
+errors, zero network errors. Zero-diff confirmed on `confidence_score.py`/
+`trend_classifier.py`/`decision_card.py`/`institutional_bias.py` -- VIE is
+additive/informational only, same discipline as every prior analytics
+engine in this project.
