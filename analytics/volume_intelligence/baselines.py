@@ -22,7 +22,7 @@ import pandas as pd
 
 from market_transition.expiry_calendar import ExpiryType, classify_expiry_day
 
-from .models import BaselineGroup, BaselineReading
+from .models import BaselineGroup, BaselineReading, DailyComparisonLabel, DailyVolumeComparison, DailyVolumeTrend
 
 # last_5_days/last_20_days/same_weekday need enough days for the average to
 # mean anything; expiry groups occur far less often in a 60-day window
@@ -132,3 +132,88 @@ def compute_all_baseline_readings(
         if reading is not None:
             readings[group] = reading
     return readings
+
+
+DAILY_TREND_DEFAULT_DAYS = 5
+
+_DAILY_COMPARISON_INTERPRETATION: dict[DailyComparisonLabel, str] = {
+    "Much Higher": "Volume well above the prior day -- often reflects stronger institutional participation or a reaction to a significant event.",
+    "Higher": "Volume above the prior day -- modestly increased participation.",
+    "Similar": "Volume in line with the prior day -- no notable change in participation.",
+    "Lower": "Volume below the prior day -- modestly reduced participation.",
+    "Much Lower": "Volume well below the prior day -- often reflects fading interest or a lack of conviction.",
+}
+
+
+def _cumulative_volume_as_of(day_df: pd.DataFrame | None, elapsed_minutes: float) -> float | None:
+    if day_df is None or day_df.empty:
+        return None
+    day_start = day_df["timestamp"].iloc[0]
+    cutoff = day_start + timedelta(minutes=elapsed_minutes)
+    window = day_df[day_df["timestamp"] <= cutoff]
+    return float(window["volume"].sum()) if not window.empty else None
+
+
+def _daily_comparison_label(pct_change: float) -> DailyComparisonLabel:
+    if pct_change >= 50.0:
+        return "Much Higher"
+    if pct_change >= 15.0:
+        return "Higher"
+    if pct_change <= -50.0:
+        return "Much Lower"
+    if pct_change <= -15.0:
+        return "Lower"
+    return "Similar"
+
+
+def compute_daily_volume_trend(
+    today_candles: pd.DataFrame,
+    historical_by_date: dict[date, pd.DataFrame],
+    n_days: int = DAILY_TREND_DEFAULT_DAYS,
+) -> DailyVolumeTrend | None:
+    """Chain of day-over-day volume-so-far comparisons for the last
+    `n_days` trading days (today, then each of the n_days most recent
+    priors) -- each day compared only to the ONE day immediately before
+    it, not to a multi-day average (that's compute_all_baseline_readings'
+    job -- RVOL). "Volume-so-far" is elapsed-time-aligned to the current
+    moment (today's last candle's elapsed time since session start), so
+    it's a same-time-of-day comparison even while today's session is
+    still in progress: "yesterday's volume as of 11:40am" vs "today's
+    volume as of 11:40am", not yesterday's full-day total.
+    """
+    if today_candles.empty:
+        return None
+
+    elapsed_minutes = float((today_candles["timestamp"].iloc[-1] - today_candles["timestamp"].iloc[0]).total_seconds() / 60)
+    today_date = today_candles["timestamp"].iloc[-1].date()
+
+    sorted_prior_dates = sorted((d for d in historical_by_date if d < today_date), reverse=True)
+    chain_dates: list[date] = [today_date] + sorted_prior_dates[:n_days]
+
+    day_volumes: dict[date, float | None] = {}
+    for d in chain_dates:
+        day_df = today_candles if d == today_date else historical_by_date.get(d)
+        day_volumes[d] = _cumulative_volume_as_of(day_df, elapsed_minutes)
+
+    rows: list[DailyVolumeComparison] = []
+    for i in range(min(n_days, len(chain_dates) - 1)):
+        current_date, prior_date = chain_dates[i], chain_dates[i + 1]
+        current_vol = day_volumes.get(current_date)
+        if current_vol is None:
+            continue
+        prior_vol = day_volumes.get(prior_date)
+        pct_change = ((current_vol - prior_vol) / prior_vol * 100) if prior_vol else None
+        label = _daily_comparison_label(pct_change) if pct_change is not None else None
+        interpretation = _DAILY_COMPARISON_INTERPRETATION[label] if label else "Not enough data to compare against the prior day."
+        rows.append(
+            DailyVolumeComparison(
+                session_date=current_date,
+                volume_as_of=current_vol,
+                prior_day_volume_as_of=prior_vol,
+                pct_change=pct_change,
+                label=label,
+                interpretation=interpretation,
+            )
+        )
+
+    return DailyVolumeTrend(elapsed_minutes=round(elapsed_minutes), days=rows)

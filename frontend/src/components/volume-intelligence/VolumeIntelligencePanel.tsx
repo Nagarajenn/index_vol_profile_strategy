@@ -1,7 +1,27 @@
-import { Box, Chip, Paper, Stack, Typography } from "@mui/material";
+import {
+  Box,
+  Chip,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Typography,
+} from "@mui/material";
 
 import { useVolumeIntelligence } from "../../hooks/useVolumeIntelligence";
-import type { ForecastConfidence, RvolLabel, SimilarDayDTO, VolumeCharacterLabel } from "../../types/volumeIntelligence";
+import type {
+  DailyComparisonLabel,
+  DailyVolumeComparisonDTO,
+  ForecastConfidence,
+  RvolLabel,
+  SignificantIntervalDTO,
+  SimilarDayDTO,
+  VolumeCharacterLabel,
+} from "../../types/volumeIntelligence";
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -42,6 +62,126 @@ function confidenceColor(confidence: ForecastConfidence): "success" | "primary" 
 
 function SimilarDayChip({ day }: { day: SimilarDayDTO }) {
   return <Chip size="small" variant="outlined" label={`${day.session_date} · ${(day.similarity * 100).toFixed(0)}%`} />;
+}
+
+function dailyComparisonColor(label: DailyComparisonLabel | null): "success" | "error" | "default" {
+  if (label === "Much Higher" || label === "Higher") return "success";
+  if (label === "Much Lower" || label === "Lower") return "error";
+  return "default";
+}
+
+function fmtVolume(v: number): string {
+  return Math.round(v).toLocaleString();
+}
+
+function fmtPct(v: number | null): string {
+  return v === null ? "N/A" : `${v >= 0 ? "+" : ""}${v.toFixed(0)}%`;
+}
+
+function DailyVolumeTrendSection({ trend }: { trend: { elapsed_minutes: number; days: DailyVolumeComparisonDTO[] } | null }) {
+  return (
+    <Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+        5-Day Volume Trend
+      </Typography>
+      {!trend || trend.days.length === 0 ? (
+        <Typography variant="caption" color="text.secondary">
+          Not enough prior-day data yet.
+        </Typography>
+      ) : (
+        <>
+          <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 0.5 }}>
+            Each day's volume as of {trend.elapsed_minutes} min into the session, vs. the day immediately before it.
+          </Typography>
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell align="right">Volume (as of)</TableCell>
+                  <TableCell align="right">Prior Day</TableCell>
+                  <TableCell align="right">% Change</TableCell>
+                  <TableCell>Signal</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {trend.days.map((d) => (
+                  <TableRow key={d.session_date} hover>
+                    <TableCell sx={{ whiteSpace: "nowrap" }}>{d.session_date}</TableCell>
+                    <TableCell align="right">{fmtVolume(d.volume_as_of)}</TableCell>
+                    <TableCell align="right">{d.prior_day_volume_as_of !== null ? fmtVolume(d.prior_day_volume_as_of) : "N/A"}</TableCell>
+                    <TableCell align="right">{fmtPct(d.pct_change)}</TableCell>
+                    <TableCell>
+                      {d.label ? (
+                        <Chip size="small" variant="outlined" label={d.label} color={dailyComparisonColor(d.label)} />
+                      ) : (
+                        "N/A"
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </>
+      )}
+    </Box>
+  );
+}
+
+function formatIntervalTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function SignificantIntervalsSection({ intervals }: { intervals: SignificantIntervalDTO[] }) {
+  return (
+    <Box>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+        Significant 5-Minute Intervals (Today)
+      </Typography>
+      {intervals.length === 0 ? (
+        <Typography variant="caption" color="text.secondary">
+          No unusual 5-minute volume intervals detected today.
+        </Typography>
+      ) : (
+        <TableContainer>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Time</TableCell>
+                <TableCell align="right">Volume</TableCell>
+                <TableCell align="right">vs Baseline</TableCell>
+                <TableCell>Side</TableCell>
+                <TableCell>Price Move</TableCell>
+                <TableCell>Notes</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {intervals.map((i) => (
+                <TableRow key={i.start_time} hover>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>
+                    {formatIntervalTime(i.start_time)}–{formatIntervalTime(i.end_time)}
+                  </TableCell>
+                  <TableCell align="right">{fmtVolume(i.interval_volume)}</TableCell>
+                  <TableCell align="right">{i.multiple !== null ? `${i.multiple.toFixed(1)}x` : "N/A"}</TableCell>
+                  <TableCell sx={{ textTransform: "capitalize" }}>{i.dominant_side}</TableCell>
+                  <TableCell sx={{ textTransform: "capitalize" }}>{i.price_direction}</TableCell>
+                  <TableCell sx={{ minWidth: 260 }}>
+                    <Typography variant="caption" sx={{ display: "block" }}>
+                      {i.institutional_note}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                      {i.trend_note}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
+    </Box>
+  );
 }
 
 export function VolumeIntelligencePanel({ symbol }: { symbol: string }) {
@@ -124,6 +264,10 @@ export function VolumeIntelligencePanel({ symbol }: { symbol: string }) {
               </Typography>
             )}
           </Box>
+
+          <SignificantIntervalsSection intervals={data.significant_intervals} />
+
+          <DailyVolumeTrendSection trend={data.daily_volume_trend} />
 
           <Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>

@@ -16,6 +16,8 @@ export type ResemblanceLabel =
   | "quiet/low-volume sessions"
   | "mixed/typical sessions";
 export type ForecastConfidence = "Low" | "Medium" | "High";
+export type DailyComparisonLabel = "Much Higher" | "Higher" | "Similar" | "Lower" | "Much Lower";
+export type PriceDirection = "up" | "down" | "flat";
 
 export interface RvolBaselineResultDTO {
   group: BaselineGroup;
@@ -137,6 +139,33 @@ export interface VolumeNarrativeDTO {
   observations: string[];
 }
 
+export interface DailyVolumeComparisonDTO {
+  session_date: string;
+  volume_as_of: number;
+  prior_day_volume_as_of: number | null;
+  pct_change: number | null;
+  label: DailyComparisonLabel | null;
+  interpretation: string;
+}
+
+export interface DailyVolumeTrendDTO {
+  elapsed_minutes: number;
+  days: DailyVolumeComparisonDTO[];
+}
+
+export interface SignificantIntervalDTO {
+  start_time: string;
+  end_time: string;
+  interval_volume: number;
+  baseline_volume: number | null;
+  pct_change: number | null;
+  multiple: number | null;
+  dominant_side: DominantSide;
+  price_direction: PriceDirection;
+  institutional_note: string;
+  trend_note: string;
+}
+
 export interface VolumeIntelligenceDTO {
   symbol: string;
   as_of: string | null;
@@ -155,4 +184,6 @@ export interface VolumeIntelligenceDTO {
   similarity: HistoricalSimilarityDTO | null;
   forecast: NextIntervalForecastDTO | null;
   narrative: VolumeNarrativeDTO | null;
+  daily_volume_trend: DailyVolumeTrendDTO | null;
+  significant_intervals: SignificantIntervalDTO[];
 }

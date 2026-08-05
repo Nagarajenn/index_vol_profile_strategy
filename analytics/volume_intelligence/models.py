@@ -39,6 +39,8 @@ ResemblanceLabel = Literal[
     "mixed/typical sessions",
 ]
 ForecastConfidence = Literal["Low", "Medium", "High"]
+DailyComparisonLabel = Literal["Much Higher", "Higher", "Similar", "Lower", "Much Lower"]
+PriceDirection = Literal["up", "down", "flat"]
 
 
 @dataclass
@@ -229,6 +231,48 @@ class VolumeNarrative:
 
 
 @dataclass
+class DailyVolumeComparison:
+    """One row of the day-over-day volume trend table: a trading day's
+    volume-so-far (as of the same elapsed session time as the current
+    read) vs. the immediately preceding trading day's volume at that same
+    elapsed point -- a chain of consecutive day-over-day comparisons, not
+    comparisons against a multi-day average (that's RvolReading's job)."""
+
+    session_date: date
+    volume_as_of: float
+    prior_day_volume_as_of: float | None
+    pct_change: float | None
+    label: DailyComparisonLabel | None
+    interpretation: str
+
+
+@dataclass
+class DailyVolumeTrend:
+    elapsed_minutes: int  # the elapsed-session-time cutoff every row was measured at, for context
+    days: list[DailyVolumeComparison] = field(default_factory=list)
+
+
+@dataclass
+class SignificantInterval:
+    """One 5-minute bucket of today's session whose volume cleared the
+    "notable" bar against the historical average for that same time-of-day
+    window. Only buckets that clear the bar are ever produced -- most of
+    the day should show nothing here, same "don't spam" philosophy as
+    narrative.py's observation gate."""
+
+    start_time: datetime
+    end_time: datetime
+    interval_volume: float
+    baseline_volume: float | None
+    pct_change: float | None
+    multiple: float | None
+    dominant_side: DominantSide
+    price_direction: PriceDirection
+    institutional_note: str
+    trend_note: str
+
+
+@dataclass
 class VolumeIntelligence:
     """The top-level snapshot returned by engine.py::compute_volume_intelligence().
     Every field is optional/None-able so a thin-data session (e.g. the first
@@ -251,3 +295,5 @@ class VolumeIntelligence:
     similarity: HistoricalSimilarity | None = None
     forecast: NextIntervalForecast | None = None
     narrative: VolumeNarrative | None = None
+    daily_volume_trend: DailyVolumeTrend | None = None
+    significant_intervals: list[SignificantInterval] = field(default_factory=list)

@@ -12,12 +12,15 @@ from app.schemas.volume_intelligence import (
     AbsorptionSignalDTO,
     BuySellDominanceDTO,
     CumulativePressureDTO,
+    DailyVolumeComparisonDTO,
+    DailyVolumeTrendDTO,
     ExhaustionSignalDTO,
     HistoricalSimilarityDTO,
     InstitutionalParticipationDTO,
     NextIntervalForecastDTO,
     RvolBaselineResultDTO,
     RvolReadingDTO,
+    SignificantIntervalDTO,
     SimilarDayDTO,
     VolumeAccelerationDTO,
     VolumeCharacterDTO,
@@ -117,4 +120,11 @@ class VolumeIntelligenceService:
             else None,
             forecast=NextIntervalForecastDTO(**vars(result.forecast)) if result.forecast else None,
             narrative=VolumeNarrativeDTO(**vars(result.narrative)) if result.narrative else None,
+            daily_volume_trend=DailyVolumeTrendDTO(
+                elapsed_minutes=result.daily_volume_trend.elapsed_minutes,
+                days=[DailyVolumeComparisonDTO(**vars(d)) for d in result.daily_volume_trend.days],
+            )
+            if result.daily_volume_trend
+            else None,
+            significant_intervals=[SignificantIntervalDTO(**vars(i)) for i in result.significant_intervals],
         )

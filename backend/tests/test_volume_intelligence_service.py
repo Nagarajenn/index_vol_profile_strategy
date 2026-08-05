@@ -92,6 +92,9 @@ async def test_get_latest_returns_populated_dto():
     assert dto.institutional is not None
     assert dto.trend is not None
     assert dto.character is not None
+    assert dto.daily_volume_trend is not None
+    assert len(dto.daily_volume_trend.days) == 5
+    assert isinstance(dto.significant_intervals, list)
     assert dto.forecast is not None
     assert dto.narrative is not None
     assert dto.narrative.headline != ""

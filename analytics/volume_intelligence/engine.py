@@ -11,10 +11,11 @@ import pandas as pd
 
 from market_transition.expiry_calendar import ExpiryType
 
-from .baselines import compute_all_baseline_readings
+from .baselines import compute_all_baseline_readings, compute_daily_volume_trend
 from .character import classify_volume_character, compute_volume_trend
 from .forecast import compute_next_interval_forecast
 from .institutional import compute_institutional_participation
+from .intervals import compute_significant_intervals
 from .models import VolumeIntelligence
 from .narrative import build_narrative
 from .patterns import compute_absorption, compute_exhaustion
@@ -74,6 +75,9 @@ def compute_volume_intelligence(
         rvol, dominance, trend, character, spike, dryup, absorption, exhaustion, institutional, similarity, forecast, enriched
     )
 
+    daily_volume_trend = compute_daily_volume_trend(enriched, historical_by_date)
+    significant_intervals = compute_significant_intervals(enriched, historical_by_date)
+
     return VolumeIntelligence(
         symbol=symbol,
         as_of=enriched["timestamp"].iloc[-1].to_pydatetime(),
@@ -92,4 +96,6 @@ def compute_volume_intelligence(
         similarity=similarity,
         forecast=forecast,
         narrative=narrative,
+        daily_volume_trend=daily_volume_trend,
+        significant_intervals=significant_intervals,
     )

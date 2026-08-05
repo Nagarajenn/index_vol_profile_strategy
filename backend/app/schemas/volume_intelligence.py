@@ -27,6 +27,8 @@ ResemblanceLabelLiteral = Literal[
     "mixed/typical sessions",
 ]
 ForecastConfidenceLiteral = Literal["Low", "Medium", "High"]
+DailyComparisonLabelLiteral = Literal["Much Higher", "Higher", "Similar", "Lower", "Much Lower"]
+PriceDirectionLiteral = Literal["up", "down", "flat"]
 
 
 class RvolBaselineResultDTO(BaseModel):
@@ -149,6 +151,33 @@ class VolumeNarrativeDTO(BaseModel):
     observations: list[str]
 
 
+class DailyVolumeComparisonDTO(BaseModel):
+    session_date: date
+    volume_as_of: float
+    prior_day_volume_as_of: float | None
+    pct_change: float | None
+    label: DailyComparisonLabelLiteral | None
+    interpretation: str
+
+
+class DailyVolumeTrendDTO(BaseModel):
+    elapsed_minutes: int
+    days: list[DailyVolumeComparisonDTO]
+
+
+class SignificantIntervalDTO(BaseModel):
+    start_time: datetime
+    end_time: datetime
+    interval_volume: float
+    baseline_volume: float | None
+    pct_change: float | None
+    multiple: float | None
+    dominant_side: DominantSideLiteral
+    price_direction: PriceDirectionLiteral
+    institutional_note: str
+    trend_note: str
+
+
 class VolumeIntelligenceDTO(BaseModel):
     symbol: str
     as_of: datetime | None
@@ -167,3 +196,5 @@ class VolumeIntelligenceDTO(BaseModel):
     similarity: HistoricalSimilarityDTO | None
     forecast: NextIntervalForecastDTO | None
     narrative: VolumeNarrativeDTO | None
+    daily_volume_trend: DailyVolumeTrendDTO | None
+    significant_intervals: list[SignificantIntervalDTO]

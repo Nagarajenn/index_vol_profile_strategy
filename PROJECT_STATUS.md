@@ -1229,3 +1229,76 @@ errors, zero network errors. Zero-diff confirmed on `confidence_score.py`/
 `trend_classifier.py`/`decision_card.py`/`institutional_bias.py` -- VIE is
 additive/informational only, same discipline as every prior analytics
 engine in this project.
+
+## 17. VIE enhancement: 5-Day Volume Trend + Significant 5-Minute Intervals (2026-08-05)
+
+User asked for two additions to §16's Volume Intelligence Engine: (1) a
+table comparing each of the last 5 trading days' volume against the day
+immediately before it (day-over-day, not vs. a multi-day average -- that's
+already `RvolReading`'s job), with a plain-language signal; (2) a table of
+any 5-minute interval in *today's* session with a significant volume
+change, noting possible institutional involvement and what it implies for
+trend. Bounded, well-precedented extension of the existing live-compute
+engine -- built directly without a separate planning pass, reusing the
+elapsed-time-alignment technique `baselines.py` already established.
+
+**New analytics**: `baselines.py::compute_daily_volume_trend()` -- chains
+today + the 5 most recent prior days, each compared only to the ONE day
+before it via the same day-start-relative elapsed-time cutoff used
+elsewhere ("yesterday's volume as of 11:40am" vs "today's as of 11:40am",
+not yesterday's full-day total). Label thresholds (±15%/±50%) map to
+Much Higher/Higher/Similar/Lower/Much Lower with a plain-language
+interpretation string. New `analytics/volume_intelligence/intervals.py::compute_significant_intervals()`
+-- buckets today's session into 5-min windows, compares each against the
+historical average volume for that same time-of-day window (>=3
+comparable days required), flags buckets clearing a 1.8x multiple (lower
+than `rvol.py`'s single-minute 2.5x SPIKE_MULTIPLE, since a 5-min sum
+naturally smooths out the extremes that justify a stricter single-minute
+bar). Only significant buckets are ever returned -- most sessions should
+show few. Each flagged interval gets an institutional-involvement note
+(volume multiple + buy/sell dominance) and a trend note that explicitly
+flags **divergence** (e.g. a buy-side volume surge while price fell)
+separately from **absorption** (surge with flat price) and **aligned
+continuation** (surge with price moving the same direction as the
+dominant side).
+
+**Wiring**: two new `VolumeIntelligence` fields (`daily_volume_trend`,
+`significant_intervals`), computed in `engine.py` alongside everything
+else -- no new persistence, same live-compute-only architecture as the
+rest of VIE. Backend: `DailyVolumeComparisonDTO`/`DailyVolumeTrendDTO`/
+`SignificantIntervalDTO` added to the existing schema/service, no new
+endpoint (same `GET /api/v1/volume-intelligence/{symbol}` response, just
+two more fields). Frontend: two new MUI tables in `VolumeIntelligencePanel`
+(matching Market Transition Intelligence's `DailyResultsSection` table
+style), placed after "Current Character" (today's Significant Intervals)
+and after that (the historical day-over-day trend), ahead of "Historical
+Comparison".
+
+**Verified**: 15 new analytics tests (10 for `compute_daily_volume_trend`
+including exact hand-computed pct_change/label boundaries, 5 for
+`compute_significant_intervals` including one that deliberately
+constructs a buy-side volume surge during a *falling* price to confirm
+the divergence-note path fires) -- all pass; existing 232 pipeline + 38
+backend tests unaffected (247 pipeline + 38 backend = 285 total). Live-
+verified against real production data on both symbols: NIFTY's 5-Day
+table showed a correct day-over-day chain (+19%/Higher, -17%/Lower,
+-3%/Similar, -3%/Similar, -15%/Lower); SENSEX surfaced 5 genuine
+significant intervals spanning all three note types (two absorption
+cases, one real divergence -- a 16x buy-side surge while price fell --
+and one aligned continuation). Browser-verified: both tables render with
+real, coherent data, zero console/network errors.
+
+Hit and resolved an operational snag while restarting the backend to pick
+up the change: orphaned `python.exe` multiprocessing-fork worker
+processes from earlier killed uvicorn sessions were still alive (Windows
+doesn't always cascade-kill a reloader's child when the parent is
+stopped) and were silently answering requests with stale code on the
+same port -- `Get-NetTCPConnection` attributed the listening socket to
+the newest reloader, but responses never appeared in that process's log,
+which was the tell. Fixed by explicitly enumerating and killing every
+orphaned `python.exe` process (not just the current reloader/worker
+pair) before starting a single fresh instance, then confirming via
+`Get-NetTCPConnection` that exactly one PID owned port 8000 before
+retesting -- same "verify only one PID owns the port" discipline
+documented in §12, extended here to also check for leaked orphans, not
+just duplicate top-level launches.

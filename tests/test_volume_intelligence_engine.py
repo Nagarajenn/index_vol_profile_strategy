@@ -45,6 +45,9 @@ def test_engine_full_orchestration_smoke():
     assert result.forecast is not None
     assert result.narrative is not None
     assert result.narrative.headline != ""
+    assert result.daily_volume_trend is not None
+    assert len(result.daily_volume_trend.days) == 5
+    assert isinstance(result.significant_intervals, list)
 
 
 def test_engine_empty_today_candles_returns_all_none():
