@@ -1,5 +1,6 @@
 import json
 from dataclasses import asdict
+from dataclasses import fields as dataclass_fields
 from datetime import date, datetime, timedelta
 
 import numpy as np
@@ -10,6 +11,20 @@ from analytics.levels import LevelsResult
 from db import reader
 from db.connection import execute, executemany, fetch_one
 from option_chain.summary import OptionChainSummary
+from quant_features.models import (
+    DecisionFeatureSet,
+    ExpiryFeatureSet,
+    ForwardOutcomeRow,
+    MarketFeatureRow,
+    NewsFeatureSet,
+    OptionFeatureRow,
+    PriceVolatilityFeatures,
+    RegimeFeatureSet,
+    StructureFeatureSet,
+    VolumeIntelligenceFeatureSet,
+    VolumeProfileFeatureSet,
+    VwapFeatures,
+)
 
 RAW_CANDLE_OVERLAP_MINUTES = 5  # re-upsert a small trailing window in case Dhan revises the still-forming last bar
 
@@ -350,6 +365,107 @@ def insert_mti_daily_transition(record, score=None) -> None:
             score.explanation if score else None,
             score.computed_at if score else None,
         ),
+    )
+
+
+_QUANT_MARKET_FEATURE_GROUPS = (
+    PriceVolatilityFeatures,
+    VwapFeatures,
+    VolumeProfileFeatureSet,
+    VolumeIntelligenceFeatureSet,
+    StructureFeatureSet,
+    DecisionFeatureSet,
+    RegimeFeatureSet,
+    ExpiryFeatureSet,
+    NewsFeatureSet,
+)
+_QUANT_MARKET_FEATURE_COLUMNS = (
+    ["symbol", "timestamp", "feature_version"]
+    + [f.name for group in _QUANT_MARKET_FEATURE_GROUPS for f in dataclass_fields(group)]
+    + ["data_quality_flags"]
+)
+
+
+def insert_quant_market_features_row(row: MarketFeatureRow) -> None:
+    """Column list is derived directly from MarketFeatureRow's sub-
+    dataclasses (see _QUANT_MARKET_FEATURE_COLUMNS) -- a new field only
+    needs a matching column added to db/schema.sql, never a change here."""
+    values = {"symbol": row.symbol, "timestamp": row.timestamp, "feature_version": row.feature_version}
+    for group in (row.price, row.vwap, row.volume_profile, row.volume_intelligence, row.structure, row.decision, row.regime, row.expiry, row.news):
+        values.update(asdict(group))
+    values["data_quality_flags"] = _jsonb(asdict(row.data_quality))
+
+    col_list = ", ".join(_QUANT_MARKET_FEATURE_COLUMNS)
+    placeholders = ", ".join(f"%({c})s" for c in _QUANT_MARKET_FEATURE_COLUMNS)
+    update_list = ", ".join(f"{c} = EXCLUDED.{c}" for c in _QUANT_MARKET_FEATURE_COLUMNS if c not in ("symbol", "timestamp", "feature_version"))
+    sql = f"""
+        INSERT INTO quant_market_features ({col_list})
+        VALUES ({placeholders})
+        ON CONFLICT (symbol, timestamp, feature_version) DO UPDATE SET {update_list}
+    """
+    execute(sql, values)
+
+
+_QUANT_OPTION_FEATURE_SCALAR_COLUMNS = [
+    "symbol", "timestamp", "feature_version", "expiry", "spot", "atm_strike", "pcr",
+    "atm_iv_call", "atm_iv_put", "atm_iv_skew", "call_oi_wall_strike", "put_oi_wall_strike",
+    "call_oi_delta_intraday", "put_oi_delta_intraday",
+]
+_QUANT_OPTION_FEATURE_COLUMNS = _QUANT_OPTION_FEATURE_SCALAR_COLUMNS + ["strike_ladder", "data_quality_flags"]
+
+
+def insert_quant_option_features_row(row: OptionFeatureRow) -> None:
+    values = {c: getattr(row, c) for c in _QUANT_OPTION_FEATURE_SCALAR_COLUMNS}
+    values["strike_ladder"] = _jsonb([asdict(e) for e in row.strike_ladder])
+    values["data_quality_flags"] = _jsonb(asdict(row.data_quality))
+
+    col_list = ", ".join(_QUANT_OPTION_FEATURE_COLUMNS)
+    placeholders = ", ".join(f"%({c})s" for c in _QUANT_OPTION_FEATURE_COLUMNS)
+    update_list = ", ".join(f"{c} = EXCLUDED.{c}" for c in _QUANT_OPTION_FEATURE_COLUMNS if c not in ("symbol", "timestamp", "feature_version"))
+    sql = f"""
+        INSERT INTO quant_option_features ({col_list})
+        VALUES ({placeholders})
+        ON CONFLICT (symbol, timestamp, feature_version) DO UPDATE SET {update_list}
+    """
+    execute(sql, values)
+
+
+_QUANT_FORWARD_OUTCOME_COLUMNS = [f.name for f in dataclass_fields(ForwardOutcomeRow)]
+
+
+def insert_quant_forward_outcomes_row(row: ForwardOutcomeRow) -> None:
+    values = asdict(row)
+    col_list = ", ".join(_QUANT_FORWARD_OUTCOME_COLUMNS)
+    placeholders = ", ".join(f"%({c})s" for c in _QUANT_FORWARD_OUTCOME_COLUMNS)
+    update_list = ", ".join(f"{c} = EXCLUDED.{c}" for c in _QUANT_FORWARD_OUTCOME_COLUMNS if c not in ("symbol", "timestamp", "feature_version"))
+    sql = f"""
+        INSERT INTO quant_forward_outcomes ({col_list})
+        VALUES ({placeholders})
+        ON CONFLICT (symbol, timestamp, feature_version) DO UPDATE SET {update_list}
+    """
+    execute(sql, values)
+
+
+def start_quant_feature_run(
+    run_type: str, feature_version: str, symbol: str, start_date: date | None, end_date: date | None, started_at: datetime
+) -> int:
+    row = fetch_one(
+        """
+        INSERT INTO quant_feature_runs (run_type, feature_version, symbol, start_date, end_date, rows_written, started_at, status)
+        VALUES (%s, %s, %s, %s, %s, 0, %s, 'running')
+        RETURNING id
+        """,
+        (run_type, feature_version, symbol, start_date, end_date, started_at),
+    )
+    return row[0]
+
+
+def finish_quant_feature_run(
+    run_id: int, rows_written: int, status: str, finished_at: datetime, error_message: str | None = None
+) -> None:
+    execute(
+        "UPDATE quant_feature_runs SET rows_written = %s, status = %s, finished_at = %s, error_message = %s WHERE id = %s",
+        (rows_written, status, finished_at, error_message, run_id),
     )
 
 

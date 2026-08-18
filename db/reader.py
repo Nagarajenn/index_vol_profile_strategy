@@ -3,6 +3,15 @@ from datetime import date, datetime
 import pandas as pd
 
 from db.connection import fetch_all, fetch_one
+from market_intelligence.models import (
+    ClassifiedEvent,
+    Direction,
+    Duration,
+    EventCategory,
+    ImpactLevel,
+    NewsItem,
+    Sentiment,
+)
 
 
 def get_last_candle_timestamp(symbol: str) -> datetime | None:
@@ -139,3 +148,92 @@ def load_levels_for_backtest(symbol: str, start_date: date | None = None, end_da
     )
     df = df.drop(columns=sub_cols)
     return df
+
+
+def load_option_chain_raw(symbol: str, start_date: date | None = None, end_date: date | None = None) -> list[dict]:
+    """Every option_chain_raw snapshot for `symbol` in range, ascending by
+    fetched_at -- used by quant_features/backfill.py to walk "current" and
+    "previous" snapshot as of each minute via a two-pointer scan, rather
+    than one query per minute."""
+    conditions = ["symbol = %s"]
+    params: list = [symbol]
+    if start_date:
+        conditions.append("fetched_at::date >= %s")
+        params.append(start_date)
+    if end_date:
+        conditions.append("fetched_at::date <= %s")
+        params.append(end_date)
+
+    rows = fetch_all(
+        f"SELECT fetched_at, expiry, raw_payload FROM option_chain_raw WHERE {' AND '.join(conditions)} ORDER BY fetched_at",
+        params,
+    )
+    return [{"fetched_at": r[0], "expiry": r[1], "raw_payload": r[2]} for r in rows]
+
+
+def load_classified_events(start: datetime | None = None, end: datetime | None = None) -> list[ClassifiedEvent]:
+    """Reconstructs ClassifiedEvent (+ nested NewsItem) dataclasses from
+    storage -- used by quant_features/news_features.py via backfill.py.
+    Classified events aren't symbol-specific (one event carries a direction
+    per index), so this isn't filtered by symbol; callers pick the right
+    per-symbol field (see news_features._direction_for_symbol)."""
+    conditions = []
+    params: list = []
+    if start:
+        conditions.append("ce.classified_at >= %s")
+        params.append(start)
+    if end:
+        conditions.append("ce.classified_at <= %s")
+        params.append(end)
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+
+    rows = fetch_all(
+        f"""
+        SELECT
+            n.source, n.title, n.link, n.published_at, n.summary, n.guid,
+            ce.is_relevant, ce.category, ce.severity, ce.confidence, ce.sentiment,
+            ce.expected_duration, ce.volatility_impact, ce.reversal_probability,
+            ce.affected_sectors, ce.affected_indices,
+            ce.expected_direction_nifty, ce.expected_direction_sensex, ce.expected_direction_banknifty,
+            ce.recommended_action, ce.risk_level, ce.rationale, ce.model, ce.classified_at
+        FROM classified_events ce
+        JOIN news_items n ON n.id = ce.news_item_id
+        {where}
+        ORDER BY ce.classified_at
+        """,
+        params,
+    )
+
+    events: list[ClassifiedEvent] = []
+    for (
+        source, title, link, published_at, summary, guid,
+        is_relevant, category, severity, confidence, sentiment,
+        expected_duration, volatility_impact, reversal_probability,
+        affected_sectors, affected_indices,
+        expected_direction_nifty, expected_direction_sensex, expected_direction_banknifty,
+        recommended_action, risk_level, rationale, model, classified_at,
+    ) in rows:
+        events.append(
+            ClassifiedEvent(
+                news_item=NewsItem(source=source, title=title, link=link, published_at=published_at, summary=summary, guid=guid),
+                is_relevant=is_relevant,
+                category=EventCategory(category),
+                severity=severity,
+                confidence=confidence,
+                sentiment=Sentiment(sentiment),
+                expected_duration=Duration(expected_duration),
+                volatility_impact=ImpactLevel(volatility_impact),
+                reversal_probability=reversal_probability,
+                affected_sectors=affected_sectors,
+                affected_indices=affected_indices,
+                expected_direction_nifty=Direction(expected_direction_nifty),
+                expected_direction_sensex=Direction(expected_direction_sensex),
+                expected_direction_banknifty=Direction(expected_direction_banknifty),
+                recommended_action=recommended_action,
+                risk_level=ImpactLevel(risk_level),
+                rationale=rationale,
+                classified_at=classified_at,
+                model=model,
+            )
+        )
+    return events

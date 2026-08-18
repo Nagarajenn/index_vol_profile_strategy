@@ -233,3 +233,198 @@ CREATE TABLE IF NOT EXISTS mti_factor_correlations (
     UNIQUE (symbol, factor_name, target)
 );
 CREATE INDEX IF NOT EXISTS idx_mti_correlations_symbol ON mti_factor_correlations (symbol);
+
+-- Quant Feature Store & Forward Outcome Engine (see quant_features/ package).
+-- Wraps/flattens every existing analytics module (VWAP, Volume Profile
+-- Intelligence, the Volume Intelligence Engine, the trend/confidence
+-- decision engine, market regime, expiry calendar, option chain, news) into
+-- versioned, leakage-safe per-minute rows for backtesting/threshold-tuning/
+-- a future ML step. Purely additive/informational -- feeds no existing
+-- trading-decision logic. `feature_version` is part of every unique key so
+-- a future feature-catalogue revision can be backfilled alongside the old
+-- one without deleting history.
+--
+-- Column names below match quant_features/models.py's dataclass field names
+-- 1:1 (MarketFeatureRow's price/vwap/volume_profile/volume_intelligence/
+-- structure/decision/regime/expiry/news sub-dataclasses flattened in that
+-- order) -- db/writer.py derives its column list directly from those
+-- dataclasses, so a new field only needs a matching column added here.
+CREATE TABLE IF NOT EXISTS quant_market_features (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    feature_version TEXT NOT NULL,
+    -- PriceVolatilityFeatures
+    close DOUBLE PRECISION NOT NULL,
+    ret_1m DOUBLE PRECISION,
+    ret_5m DOUBLE PRECISION,
+    realized_vol_20m DOUBLE PRECISION,
+    atr_14 DOUBLE PRECISION,
+    gap_open_pct DOUBLE PRECISION,
+    body_pct DOUBLE PRECISION,
+    upper_wick_pct DOUBLE PRECISION,
+    lower_wick_pct DOUBLE PRECISION,
+    -- VwapFeatures
+    vwap_now DOUBLE PRECISION,
+    vwap_distance_pct DOUBLE PRECISION,
+    vwap_distance_atr DOUBLE PRECISION,
+    vwap_slope_5m DOUBLE PRECISION,
+    -- VolumeProfileFeatureSet
+    today_poc DOUBLE PRECISION,
+    today_vah DOUBLE PRECISION,
+    today_val DOUBLE PRECISION,
+    poc_distance_pct DOUBLE PRECISION,
+    profile_shape TEXT,
+    opening_type TEXT,
+    rotation_label TEXT,
+    volume_pace_pct DOUBLE PRECISION,
+    is_inside_initial_balance BOOLEAN,
+    poc_migration_intraday DOUBLE PRECISION,
+    -- VolumeIntelligenceFeatureSet
+    rvol_interval_pct DOUBLE PRECISION,
+    rvol_cumulative_pct DOUBLE PRECISION,
+    rvol_label TEXT,
+    volume_acceleration_label TEXT,
+    dominance_ratio DOUBLE PRECISION,
+    dominant_side TEXT,
+    consecutive_dominant_minutes INTEGER,
+    cumulative_pressure_ratio DOUBLE PRECISION,
+    momentum_score DOUBLE PRECISION,
+    momentum_label TEXT,
+    institutional_participation_score INTEGER,
+    institutional_participation_label TEXT,
+    is_volume_spike BOOLEAN,
+    is_volume_dryup BOOLEAN,
+    is_absorption BOOLEAN,
+    is_exhaustion BOOLEAN,
+    volume_trend_label TEXT,
+    volume_character_label TEXT,
+    historical_similarity_top1_score DOUBLE PRECISION,
+    forecast_probability_continuation DOUBLE PRECISION,
+    forecast_confidence TEXT,
+    -- StructureFeatureSet
+    support_low DOUBLE PRECISION,
+    support_high DOUBLE PRECISION,
+    resistance_low DOUBLE PRECISION,
+    resistance_high DOUBLE PRECISION,
+    support_distance_pct DOUBLE PRECISION,
+    resistance_distance_pct DOUBLE PRECISION,
+    nearest_trendline_touch_count INTEGER,
+    nearest_trendline_direction TEXT,
+    breakout_box_status TEXT,
+    swing_structure_score SMALLINT,
+    -- DecisionFeatureSet
+    trend_label TEXT,
+    trend_score SMALLINT,
+    confidence_score SMALLINT,
+    sub_score_trend_alignment DOUBLE PRECISION,
+    sub_score_vwap_position DOUBLE PRECISION,
+    sub_score_structure_hh_hl DOUBLE PRECISION,
+    sub_score_trendline_confluence DOUBLE PRECISION,
+    sub_score_sr_proximity DOUBLE PRECISION,
+    sub_score_breakout_confirmation DOUBLE PRECISION,
+    sub_score_institutional_bias DOUBLE PRECISION,
+    confidence_partial_data BOOLEAN,
+    -- RegimeFeatureSet
+    market_regime_3way TEXT,
+    market_regime_expanded TEXT,
+    volatility_pace_pct DOUBLE PRECISION,
+    -- ExpiryFeatureSet
+    expiry_type TEXT,
+    is_expiry_day BOOLEAN,
+    days_to_weekly_expiry INTEGER,
+    days_to_monthly_expiry INTEGER,
+    day_of_week SMALLINT,
+    minutes_since_open INTEGER,
+    -- NewsFeatureSet
+    event_count_30m INTEGER,
+    max_severity_30m SMALLINT,
+    dominant_sentiment_30m TEXT,
+    most_recent_event_direction TEXT,
+    most_recent_event_risk_level TEXT,
+    -- DataQualityFlags
+    data_quality_flags JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, timestamp, feature_version)
+);
+CREATE INDEX IF NOT EXISTS idx_quant_market_features_symbol_ts ON quant_market_features (symbol, timestamp DESC);
+
+-- Only populated while a live option_chain_raw snapshot exists at/before a
+-- given timestamp -- a much shorter history than quant_market_features
+-- (Dhan's option chain API is live-only, no historical backfill), hence a
+-- separate table rather than nullable columns bolted onto the wide table
+-- above -- exactly why option_chain_summary is already separate from
+-- raw_candles in this schema.
+CREATE TABLE IF NOT EXISTS quant_option_features (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    feature_version TEXT NOT NULL,
+    expiry DATE,
+    spot DOUBLE PRECISION,
+    atm_strike DOUBLE PRECISION,
+    pcr DOUBLE PRECISION,
+    atm_iv_call DOUBLE PRECISION,
+    atm_iv_put DOUBLE PRECISION,
+    atm_iv_skew DOUBLE PRECISION,
+    call_oi_wall_strike DOUBLE PRECISION,
+    put_oi_wall_strike DOUBLE PRECISION,
+    call_oi_delta_intraday DOUBLE PRECISION,
+    put_oi_delta_intraday DOUBLE PRECISION,
+    strike_ladder JSONB,
+    data_quality_flags JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, timestamp, feature_version)
+);
+CREATE INDEX IF NOT EXISTS idx_quant_option_features_symbol_ts ON quant_option_features (symbol, timestamp DESC);
+
+-- Written by a separate, LATER-running process than the two tables above --
+-- a row can't be labeled until enough future candles genuinely exist, so
+-- feature computation and labeling are independently re-runnable (e.g.
+-- redefining horizons doesn't require recomputing input features).
+CREATE TABLE IF NOT EXISTS quant_forward_outcomes (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    timestamp TIMESTAMPTZ NOT NULL,
+    feature_version TEXT NOT NULL,
+    atr_at_t DOUBLE PRECISION,
+    fwd_return_1m DOUBLE PRECISION,
+    fwd_return_3m DOUBLE PRECISION,
+    fwd_return_5m DOUBLE PRECISION,
+    fwd_return_10m DOUBLE PRECISION,
+    fwd_return_15m DOUBLE PRECISION,
+    fwd_return_30m DOUBLE PRECISION,
+    mfe_1m DOUBLE PRECISION,
+    mae_1m DOUBLE PRECISION,
+    mfe_5m DOUBLE PRECISION,
+    mae_5m DOUBLE PRECISION,
+    mfe_15m DOUBLE PRECISION,
+    mae_15m DOUBLE PRECISION,
+    mfe_30m DOUBLE PRECISION,
+    mae_30m DOUBLE PRECISION,
+    label_5m TEXT,
+    label_15m TEXT,
+    label_30m TEXT,
+    horizon_truncated_by_session_close BOOLEAN NOT NULL DEFAULT false,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, timestamp, feature_version)
+);
+CREATE INDEX IF NOT EXISTS idx_quant_forward_outcomes_symbol_ts ON quant_forward_outcomes (symbol, timestamp DESC);
+
+-- Audit/provenance log -- one row per batch backfill / live incremental /
+-- labeling run. The concrete implementation of "feature versioning" as a
+-- run-level guarantee, not just a column value.
+CREATE TABLE IF NOT EXISTS quant_feature_runs (
+    id BIGSERIAL PRIMARY KEY,
+    run_type TEXT NOT NULL CHECK (run_type IN ('batch_backfill', 'live_incremental', 'labeling')),
+    feature_version TEXT NOT NULL,
+    symbol TEXT NOT NULL,
+    start_date DATE,
+    end_date DATE,
+    rows_written INTEGER NOT NULL DEFAULT 0,
+    started_at TIMESTAMPTZ NOT NULL,
+    finished_at TIMESTAMPTZ,
+    status TEXT NOT NULL CHECK (status IN ('running', 'completed', 'failed')),
+    error_message TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_quant_feature_runs_symbol ON quant_feature_runs (symbol, started_at DESC);
