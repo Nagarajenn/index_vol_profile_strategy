@@ -1,7 +1,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.routers import dashboard, levels_detail, market_intelligence, market_transition, symbols, volume_intelligence, volume_profile
+from app.api.v1.routers import (
+    dashboard,
+    levels_detail,
+    market_intelligence,
+    market_transition,
+    quant_features,
+    symbols,
+    volume_intelligence,
+    volume_profile,
+)
 from app.core.config import settings
 from app.exceptions import register_exception_handlers
 
@@ -26,6 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(volume_intelligence.router, prefix="/api/v1", tags=["volume-intelligence"])
     app.include_router(market_intelligence.router, prefix="/api/v1", tags=["market-intelligence"])
     app.include_router(market_transition.router, prefix="/api/v1", tags=["market-transition"])
+    app.include_router(quant_features.router, prefix="/api/v1", tags=["quant-features"])
 
     return app
 

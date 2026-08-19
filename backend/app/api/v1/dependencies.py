@@ -7,10 +7,12 @@ from app.repositories.levels_snapshot_repository import LevelsSnapshotRepository
 from app.repositories.market_intelligence_repository import MarketIntelligenceRepository
 from app.repositories.market_transition_repository import MarketTransitionRepository
 from app.repositories.option_chain_repository import OptionChainRepository
+from app.repositories.quant_feature_repository import QuantFeatureRepository
 from app.services.dashboard_service import DashboardService
 from app.services.live_transition_advisor_service import LiveTransitionAdvisorService
 from app.services.market_intelligence_service import MarketIntelligenceService
 from app.services.market_transition_service import MarketTransitionService
+from app.services.quant_feature_service import QuantFeatureService
 from app.services.volume_intelligence_service import VolumeIntelligenceService
 from app.services.volume_profile_intelligence_service import VolumeProfileIntelligenceService
 
@@ -69,6 +71,16 @@ def get_market_transition_service(
     repo: MarketTransitionRepository = Depends(get_market_transition_repository),
 ) -> MarketTransitionService:
     return MarketTransitionService(repo)
+
+
+def get_quant_feature_repository(session: AsyncSession = Depends(get_db_session)) -> QuantFeatureRepository:
+    return QuantFeatureRepository(session)
+
+
+def get_quant_feature_service(
+    repo: QuantFeatureRepository = Depends(get_quant_feature_repository),
+) -> QuantFeatureService:
+    return QuantFeatureService(repo)
 
 
 def get_live_transition_advisor_service(
