@@ -29,7 +29,8 @@ from market_transition.expiry_calendar import build_expiry_calendar
 from option_chain.summary import summarize_option_chain
 
 from . import engine
-from .cutoff import historical_by_date_before, truncate_candles
+from .cutoff import group_by_date, historical_by_date_before, truncate_candles
+from .price_features import compute_price_volatility_features
 from .versioning import FEATURE_VERSION
 
 logger = logging.getLogger(__name__)
@@ -37,14 +38,7 @@ logger = logging.getLogger(__name__)
 EXPIRY_CALENDAR_PAST_BUFFER_DAYS = 40
 EXPIRY_CALENDAR_FUTURE_BUFFER_DAYS = 40
 NEWS_LOOKUP_PAST_BUFFER_DAYS = 1
-
-
-def _group_by_date(candles: pd.DataFrame) -> dict[date, pd.DataFrame]:
-    if candles.empty:
-        return {}
-    return {
-        d: g.reset_index(drop=True) for d, g in candles.groupby(candles["timestamp"].dt.date)
-    }
+LABEL_RECENT_DAYS_DEFAULT = 1
 
 
 def _prior_day_context(by_date: dict[date, pd.DataFrame], session_date: date) -> tuple[pd.DataFrame | None, dict | None]:
@@ -73,7 +67,7 @@ def run_market_and_outcome_backfill(
     if candles.empty:
         logger.warning("No raw_candles found for %s in [%s, %s]", symbol, fetch_start, end_date)
         return 0
-    by_date = _group_by_date(candles)
+    by_date = group_by_date(candles)
 
     trading_days = sorted(d for d in by_date if start_date <= d <= end_date)
     if not trading_days:
@@ -148,6 +142,44 @@ def run_market_and_outcome_backfill(
     else:
         db_writer.finish_quant_feature_run(run_id, written, "completed", datetime.now(IST))
 
+    return written
+
+
+def label_recent_days(
+    symbol: str,
+    days_back: int = LABEL_RECENT_DAYS_DEFAULT,
+    feature_version: str = FEATURE_VERSION,
+) -> int:
+    """The lagging pass live incremental mode needs: a row written live at
+    (say) 10:00am can't be labeled with its 30m-forward outcome until 10:30am
+    has actually happened, so labeling for live-written rows runs here,
+    separately and later, rather than inside run_snapshot.py itself. Re-runs
+    (and re-upserts) labels for the last `days_back` calendar days' worth of
+    raw_candles -- idempotent and safe to call repeatedly, same discipline as
+    pipeline/catch_up_today.py. `atr_at_t` is recomputed fresh per row
+    (a cheap, pure function of that row's own candles) rather than read back
+    from quant_market_features, so this has no dependency on that table
+    already being populated for the day.
+    """
+    end_date = date.today()
+    start_date = end_date - timedelta(days=days_back)
+
+    candles = db_reader.load_raw_candles(symbol, start_date, end_date)
+    if candles.empty:
+        return 0
+    by_date = group_by_date(candles)
+
+    written = 0
+    for day, day_df in by_date.items():
+        for t_index in range(len(day_df)):
+            ts = day_df["timestamp"].iloc[t_index]
+            today_candles = truncate_candles(day_df, ts)
+            atr_at_t = compute_price_volatility_features(today_candles, prior_day_close=None).atr_14
+            outcome_row = engine.compute_forward_outcomes_row(symbol, ts, day_df, t_index, atr_at_t, feature_version=feature_version)
+            db_writer.insert_quant_forward_outcomes_row(outcome_row)
+            written += 1
+
+    logger.info("quant_features label_recent_days: %s wrote %d forward-outcome rows across %d day(s)", symbol, written, len(by_date))
     return written
 
 

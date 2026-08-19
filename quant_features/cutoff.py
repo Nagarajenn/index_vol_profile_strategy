@@ -22,6 +22,14 @@ def truncate_candles(candles: pd.DataFrame, cutoff: pd.Timestamp) -> pd.DataFram
     return candles[candles["timestamp"] <= cutoff].reset_index(drop=True)
 
 
+def group_by_date(candles: pd.DataFrame) -> dict[date, pd.DataFrame]:
+    """{date: candles} for a multi-day 1-min candle DataFrame -- shared by
+    both the batch backfill and the live/labeling paths."""
+    if candles.empty:
+        return {}
+    return {d: g.reset_index(drop=True) for d, g in candles.groupby(candles["timestamp"].dt.date)}
+
+
 def historical_by_date_before(historical_by_date: dict[date, pd.DataFrame], session_date: date) -> dict[date, pd.DataFrame]:
     """Filters a {date: candles} dict to strictly-prior trading days -- the
     caller-side data-hygiene guarantee every wrapped module already assumes

@@ -13,6 +13,7 @@ from decision.decision_card import build_decision_card
 from dhan_client.client import fetch_daily_candles, fetch_intraday_candles
 from option_chain.fetch import get_option_chain
 from option_chain.summary import summarize_option_chain
+from quant_features import live as quant_live
 
 logger = logging.getLogger(__name__)
 
@@ -159,6 +160,22 @@ def run_snapshot(
         )
 
     db_writer.insert_levels_snapshot(levels, card, mode)
+
+    if mode == "live":
+        try:
+            quant_live.write_live_quant_features(
+                symbol,
+                day_candles_1min,
+                prior_day_candles_1min=prior_day_candles_1min,
+                prior_day_ohlc=prior_day_ohlc,
+                option_chain=option_chain,
+                option_summary=option_summary,
+            )
+        except Exception:
+            # Additive/informational only -- must never break the core
+            # trading-decision snapshot above, same discipline every other
+            # analytics add-on in this app follows (VIE, MTI, etc.).
+            logger.exception("Quant feature store live write failed for %s", symbol)
 
     today_poc = levels.today_vp.poc if levels.today_vp else None
     should_render, trigger = should_render_chart(

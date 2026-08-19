@@ -6,10 +6,24 @@ from config.instruments import INSTRUMENTS
 from config.settings import IST, LIVE_LOOP_INTERVAL_MIN, SESSION_CLOSE, SESSION_OPEN
 from pipeline.run_snapshot import run_snapshot
 from pipeline.trading_calendar import is_trading_day
+from quant_features.backfill import label_recent_days
 
 logger = logging.getLogger(__name__)
 
 DATA_LAG_BUFFER_SEC = 15  # let Dhan finish publishing the candle before we fetch it
+
+
+def _label_today(symbols: list[str]) -> None:
+    """Runs once, right as the process is about to exit for the day -- by
+    now every horizon (up to 30m) for every minute of today's session has
+    genuinely elapsed, so this is the natural point to label the rows
+    write_live_quant_features() wrote live throughout the day. Additive
+    only -- never blocks process exit on failure."""
+    for symbol in symbols:
+        try:
+            label_recent_days(symbol)
+        except Exception:
+            logger.exception("quant_features label_recent_days failed for %s", symbol)
 
 
 def _next_boundary(now: datetime, interval_min: int) -> datetime:
@@ -77,6 +91,7 @@ def run_live_loop(
         if now.time() > session_close_t:
             if run_single_session:
                 logger.info("After market close - today's session is done, exiting")
+                _label_today(symbols)
                 return
             nxt = today + timedelta(days=1)
             while not is_trading_day(nxt):
