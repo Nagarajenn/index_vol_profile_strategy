@@ -3,7 +3,7 @@ from datetime import date
 import pandas as pd
 import pytest
 
-from market_transition.cas_transition import extract_cas_transition_record
+from market_transition.cas_transition import extract_cas_transition_record, window_volume
 from tests.fixtures.synthetic_candles import make_candles
 
 BIN_SIZE = 25.0
@@ -81,3 +81,38 @@ def test_close_1459_is_the_pivot_close():
     record = extract_cas_transition_record("NIFTY", date(2026, 8, 10), candles, None, {}, BIN_SIZE, None)
     assert record is not None
     assert record.outcome.close_1459 == pytest.approx(112.5)
+
+
+def test_stray_post_close_candle_does_not_corrupt_market_close():
+    # A zero-volume echo candle after the real 15:40 close (observed in
+    # real data) must never be picked up as market_close.
+    rows = {
+        "14:31": 100.0, "14:45": 105.0, "14:59": 110.0,
+        "15:00": 110.0, "15:20": 115.0, "15:39": 120.0,
+        "16:25": 999.0,  # stray post-close echo -- must be excluded
+    }
+    candles = _session(rows)
+    record = extract_cas_transition_record("NIFTY", date(2026, 8, 10), candles, None, {}, BIN_SIZE, None)
+    assert record is not None
+    assert record.outcome.market_close == pytest.approx(120.0)
+
+
+def test_window_volume_sums_only_within_bounds():
+    from datetime import time
+
+    rows = [
+        {"time": "14:31", "o": 100, "h": 100, "l": 100, "c": 100, "v": 10},
+        {"time": "14:45", "o": 100, "h": 100, "l": 100, "c": 100, "v": 20},
+        {"time": "14:59", "o": 100, "h": 100, "l": 100, "c": 100, "v": 30},
+        {"time": "15:20", "o": 100, "h": 100, "l": 100, "c": 100, "v": 999},  # outside the window
+    ]
+    candles = make_candles(rows)
+    total = window_volume(candles, time(14, 31), time(14, 59))
+    assert total == pytest.approx(60.0)
+
+
+def test_window_volume_none_when_no_candles_in_range():
+    from datetime import time
+
+    candles = _session({"09:15": 100.0})
+    assert window_volume(candles, time(14, 31), time(14, 59)) is None

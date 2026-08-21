@@ -10,10 +10,14 @@ pivot point is a less meaningful place to draw the "before vs after" line.
 
 This module re-frames the same continuation/reversal/neutral question as a
 TREND comparison between two windows instead of a point-to-point move:
-  - Pre-window:  14:30-14:59 (the trend heading into 3pm)
-  - Post-window: 15:00 through the session's actual last candle (now
-    naturally 15:39/15:40) -- the trend across the whole post-3pm regime,
-    CAS mechanics included.
+  - Pre-window:  14:31-14:59 (the trend heading into 3pm, baselined against
+    the 14:31 price)
+  - Post-window: 15:00-15:39 (the trend across the new post-3pm regime,
+    CAS mechanics included -- explicitly capped at 15:39 rather than "the
+    session's last candle": a handful of days carry a stray zero-volume
+    candle timestamped after the real 15:40 close (Dhan echoing the last
+    traded price once the session has actually ended), which would
+    otherwise corrupt market_close if picked up as "the last candle").
 
 Deliberately reuses every existing building block unmodified:
 market_transition.feature_extraction.compute_pre_window_features (via its
@@ -37,9 +41,22 @@ import pandas as pd
 from market_transition.feature_extraction import _direction, _time_between, compute_pre_window_features
 from market_transition.models import DailyTransitionRecord, ExpiryType, TransitionOutcome
 
-CAS_PRE_WINDOW_START = time(14, 30)
+CAS_PRE_WINDOW_START = time(14, 31)
 CAS_PRE_WINDOW_END = time(14, 59)
 CAS_POST_WINDOW_START = time(15, 0)
+CAS_POST_WINDOW_END = time(15, 39)
+
+
+def window_volume(today_candles: pd.DataFrame, start: time, end: time) -> float | None:
+    """Total traded volume in [start, end] -- a separate, deliberately
+    small helper (not threaded through TransitionOutcome, which is shared
+    with the original, unmodified pipeline) so callers can compare how
+    much volume traded pre-3pm vs post-3pm alongside the direction/outcome
+    call above."""
+    window = _time_between(today_candles, start, end)
+    if window.empty:
+        return None
+    return float(window["volume"].sum())
 
 
 def extract_cas_transition_record(
@@ -60,7 +77,7 @@ def extract_cas_transition_record(
         return None
 
     pre_window = _time_between(today_candles, CAS_PRE_WINDOW_START, CAS_PRE_WINDOW_END)
-    post_window = today_candles[today_candles["timestamp"].dt.time >= CAS_POST_WINDOW_START]
+    post_window = _time_between(today_candles, CAS_POST_WINDOW_START, CAS_POST_WINDOW_END)
     if pre_window.empty or post_window.empty:
         return None
 
@@ -77,12 +94,12 @@ def extract_cas_transition_record(
     if features is None:
         return None
 
-    close_1430 = float(pre_window["close"].iloc[0])
+    baseline_1431 = float(pre_window["close"].iloc[0])
     close_1459 = float(pre_window["close"].iloc[-1])
     market_close = float(post_window["close"].iloc[-1])
 
-    pre_trend_move = close_1459 - close_1430
-    pre_trend_direction = _direction(pre_trend_move, close_1430)
+    pre_trend_move = close_1459 - baseline_1431
+    pre_trend_direction = _direction(pre_trend_move, baseline_1431)
     post_trend_move = market_close - close_1459
 
     if pre_trend_direction == "flat":
