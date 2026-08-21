@@ -373,3 +373,44 @@ def insert_mti_factor_correlation(symbol: str, result) -> None:
             _jsonb(result.category_breakdown) if result.category_breakdown else None,
         ),
     )
+
+
+def insert_cas_daily_transition(record) -> None:
+    """`record` is a market_transition.cas_transition.CasDailyTransition."""
+    execute(
+        """
+        INSERT INTO mti_cas_daily_transitions (
+            symbol, session_date, close_1431, close_1459, close_1539,
+            pre_direction, post_direction, conclusion, outcome_magnitude,
+            pre_window_volume, post_window_pre_auction_volume, volume_ratio,
+            pre_window_points_move, post_window_points_move,
+            pcr_1459, institutional_bias_label_1459, institutional_bias_score_1459,
+            expiry_type, day_of_week, old_methodology_outcome, old_methodology_outcome_magnitude,
+            data_quality_flag
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (symbol, session_date) DO UPDATE SET
+            close_1431 = EXCLUDED.close_1431, close_1459 = EXCLUDED.close_1459, close_1539 = EXCLUDED.close_1539,
+            pre_direction = EXCLUDED.pre_direction, post_direction = EXCLUDED.post_direction,
+            conclusion = EXCLUDED.conclusion, outcome_magnitude = EXCLUDED.outcome_magnitude,
+            pre_window_volume = EXCLUDED.pre_window_volume,
+            post_window_pre_auction_volume = EXCLUDED.post_window_pre_auction_volume,
+            volume_ratio = EXCLUDED.volume_ratio,
+            pre_window_points_move = EXCLUDED.pre_window_points_move,
+            post_window_points_move = EXCLUDED.post_window_points_move,
+            pcr_1459 = EXCLUDED.pcr_1459, institutional_bias_label_1459 = EXCLUDED.institutional_bias_label_1459,
+            institutional_bias_score_1459 = EXCLUDED.institutional_bias_score_1459,
+            expiry_type = EXCLUDED.expiry_type, day_of_week = EXCLUDED.day_of_week,
+            old_methodology_outcome = EXCLUDED.old_methodology_outcome,
+            old_methodology_outcome_magnitude = EXCLUDED.old_methodology_outcome_magnitude,
+            data_quality_flag = EXCLUDED.data_quality_flag, computed_at = now()
+        """,
+        (
+            record.symbol, record.session_date, record.close_1431, record.close_1459, record.close_1539,
+            record.pre_direction, record.post_direction, record.conclusion, record.outcome_magnitude,
+            record.pre_window_volume, record.post_window_pre_auction_volume, record.volume_ratio,
+            record.pre_window_points_move, record.post_window_points_move,
+            record.pcr_1459, record.institutional_bias_label_1459, record.institutional_bias_score_1459,
+            record.expiry_type, record.day_of_week, record.old_methodology_outcome, record.old_methodology_outcome_magnitude,
+            record.data_quality_flag,
+        ),
+    )

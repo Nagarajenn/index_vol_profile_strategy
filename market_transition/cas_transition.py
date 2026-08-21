@@ -19,6 +19,16 @@ TREND comparison between two windows instead of a point-to-point move:
     traded price once the session has actually ended), which would
     otherwise corrupt market_close if picked up as "the last candle").
 
+Volume is a separate story (confirmed 2026-08-21 across multiple post-CAS
+days/symbols): Dhan's 1-minute feed keeps reporting genuine, moving prices
+all the way through 15:39, but its per-minute VOLUME field freezes at a
+single value starting exactly at 15:15 -- the documented start of NSE's
+Closing Auction Session -- and stays frozen through session close. So
+price-based direction/outcome calls use the full 15:00-15:39 post-window,
+but volume is only ever summed through 15:14 (POST_VOLUME_RELIABLE_END)
+and reported as "pre-auction volume" -- it does not, and cannot yet, claim
+to cover the full post-window the way the price side does.
+
 Deliberately reuses every existing building block unmodified:
 market_transition.feature_extraction.compute_pre_window_features (via its
 new pre_window_start parameter), market_transition.statistics.
@@ -34,6 +44,7 @@ scripts/run_cas_transition_analysis.py -- not a replacement, until/unless
 its findings are deliberately promoted later.
 """
 
+from dataclasses import dataclass
 from datetime import date, time
 
 import pandas as pd
@@ -41,10 +52,28 @@ import pandas as pd
 from market_transition.feature_extraction import _direction, _time_between, compute_pre_window_features
 from market_transition.models import DailyTransitionRecord, ExpiryType, TransitionOutcome
 
+CAS_EFFECTIVE_DATE = date(2026, 8, 3)  # NSE's Closing Auction Session framework start date
+
 CAS_PRE_WINDOW_START = time(14, 31)
 CAS_PRE_WINDOW_END = time(14, 59)
 CAS_POST_WINDOW_START = time(15, 0)
 CAS_POST_WINDOW_END = time(15, 39)
+
+# NSE's Closing Auction Session starts at 15:15; Dhan's 1-min volume field
+# is not reliable from that point through close (see module docstring), so
+# post-window volume is only ever summed through this cutoff.
+POST_VOLUME_RELIABLE_END = time(15, 14)
+
+# >= this many consecutive candles sharing an identical (close, volume) pair
+# within a RELIABLE window (pre-window, or post-window through 15:14) flags
+# a day's data as suspect -- discovered 2026-08-21: 3 NIFTY days had 10-13
+# minutes frozen at one value well before the auction even started (a
+# stuck/duplicated Dhan fetch, not the expected post-15:15 volume freeze),
+# inflating volume by 10-50x and potentially corrupting the direction call
+# too. Deliberately never checked against 15:15-15:39, which is *always*
+# volume-frozen post-CAS and would trip this on every single day for no
+# useful signal.
+STUCK_CANDLE_MIN_RUN = 5
 
 
 def window_volume(today_candles: pd.DataFrame, start: time, end: time) -> float | None:
@@ -129,3 +158,126 @@ def extract_cas_transition_record(
     )
 
     return DailyTransitionRecord(symbol=symbol, session_date=session_date, features=features, outcome=outcome_record)
+
+
+@dataclass
+class CasDailyTransition:
+    """One persisted row: the CAS-adjusted call for one symbol/session_date,
+    the same day's outcome under the original (unmodified) methodology for
+    side-by-side comparison, and the option-chain context at ~14:59."""
+
+    symbol: str
+    session_date: date
+    close_1431: float | None
+    close_1459: float | None
+    close_1539: float | None
+    pre_direction: str | None
+    post_direction: str | None
+    conclusion: str
+    outcome_magnitude: float
+    pre_window_volume: float | None
+    post_window_pre_auction_volume: float | None
+    volume_ratio: float | None
+    pre_window_points_move: float | None
+    post_window_points_move: float | None
+    pcr_1459: float | None
+    institutional_bias_label_1459: str | None
+    institutional_bias_score_1459: int | None
+    expiry_type: str | None
+    day_of_week: int
+    old_methodology_outcome: str | None
+    old_methodology_outcome_magnitude: float | None
+    data_quality_flag: str | None = None
+
+
+def _points_move(window: pd.DataFrame, direction: str, baseline: float) -> float | None:
+    """Points gained toward `direction` using the best print actually
+    reached in `window` (its high for "up", its low for "down"), not just
+    the window's close-to-close net move -- answers "how far did it
+    actually run in its own direction" rather than "where did it end up"."""
+    if window.empty:
+        return None
+    if direction == "up":
+        return float(window["high"].max() - baseline)
+    if direction == "down":
+        return float(baseline - window["low"].min())
+    return 0.0
+
+
+def _has_stuck_candles(window: pd.DataFrame, min_run: int = STUCK_CANDLE_MIN_RUN) -> bool:
+    if window.empty or len(window) < min_run:
+        return False
+    same_as_prev = (window["close"] == window["close"].shift()) & (window["volume"] == window["volume"].shift())
+    run_id = (~same_as_prev).cumsum()
+    run_length = same_as_prev.groupby(run_id).cumsum() + 1
+    return bool((run_length >= min_run).any())
+
+
+def build_cas_daily_transition(
+    symbol: str,
+    session_date: date,
+    today_candles: pd.DataFrame,
+    prior_day_candles: pd.DataFrame | None,
+    historical_by_date: dict[date, pd.DataFrame],
+    bin_size: float,
+    expiry_type: ExpiryType | None,
+    old_outcome: str | None = None,
+    old_outcome_magnitude: float | None = None,
+    option_context: dict | None = None,
+) -> CasDailyTransition | None:
+    """`option_context`, if supplied, is {"pcr": float|None, "bias_label":
+    str, "bias_score": int|None} -- already resolved by the caller from an
+    option_chain_summary snapshot near 14:59 (this module has no DB access
+    of its own, same discipline as the rest of market_transition/)."""
+    record = extract_cas_transition_record(
+        symbol, session_date, today_candles, prior_day_candles, historical_by_date, bin_size, expiry_type
+    )
+    if record is None:
+        return None
+
+    pre_window = _time_between(today_candles, CAS_PRE_WINDOW_START, CAS_PRE_WINDOW_END)
+    post_window = _time_between(today_candles, CAS_POST_WINDOW_START, CAS_POST_WINDOW_END)
+    post_reliable_window = _time_between(today_candles, CAS_POST_WINDOW_START, POST_VOLUME_RELIABLE_END)
+    pre_vol = window_volume(today_candles, CAS_PRE_WINDOW_START, CAS_PRE_WINDOW_END)
+    post_vol = window_volume(today_candles, CAS_POST_WINDOW_START, POST_VOLUME_RELIABLE_END)
+    vol_ratio = (post_vol / pre_vol) if (pre_vol and post_vol) else None
+
+    post_direction = _direction(record.outcome.post_transition_move, record.outcome.close_1459)
+
+    baseline_1431 = float(pre_window["close"].iloc[0]) if not pre_window.empty else None
+    pre_points_move = (
+        _points_move(pre_window, record.outcome.transition_direction, baseline_1431) if baseline_1431 is not None else None
+    )
+    # Price stays reliable through 15:39 (only volume freezes at 15:15), so
+    # the post-window points move uses the FULL post_window, not the
+    # volume-reliable-only slice.
+    post_points_move = _points_move(post_window, post_direction, record.outcome.close_1459)
+
+    quality_flag = (
+        "stuck_candle_run_detected" if (_has_stuck_candles(pre_window) or _has_stuck_candles(post_reliable_window)) else None
+    )
+
+    return CasDailyTransition(
+        symbol=symbol,
+        session_date=session_date,
+        close_1431=baseline_1431,
+        close_1459=record.outcome.close_1459,
+        close_1539=record.outcome.market_close,
+        pre_direction=record.outcome.transition_direction,
+        post_direction=post_direction,
+        conclusion=record.outcome.outcome,
+        outcome_magnitude=record.outcome.outcome_magnitude,
+        pre_window_volume=pre_vol,
+        post_window_pre_auction_volume=post_vol,
+        volume_ratio=vol_ratio,
+        pre_window_points_move=pre_points_move,
+        post_window_points_move=post_points_move,
+        pcr_1459=(option_context or {}).get("pcr"),
+        institutional_bias_label_1459=(option_context or {}).get("bias_label"),
+        institutional_bias_score_1459=(option_context or {}).get("bias_score"),
+        expiry_type=expiry_type,
+        day_of_week=session_date.weekday(),
+        old_methodology_outcome=old_outcome,
+        old_methodology_outcome_magnitude=old_outcome_magnitude,
+        data_quality_flag=quality_flag,
+    )

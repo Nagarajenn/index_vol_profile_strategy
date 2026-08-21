@@ -9,7 +9,15 @@ to satisfy the shape (structural typing), no explicit inheritance required.
 from datetime import datetime
 from typing import Protocol
 
-from app.models import ClassifiedEvent, LevelsSnapshot, MtiDailyTransition, MtiFactorCorrelation, OptionChainSummary, RawCandle
+from app.models import (
+    CasDailyTransition,
+    ClassifiedEvent,
+    LevelsSnapshot,
+    MtiDailyTransition,
+    MtiFactorCorrelation,
+    OptionChainSummary,
+    RawCandle,
+)
 
 
 class LevelsSnapshotRepositoryProtocol(Protocol):
@@ -34,3 +42,4 @@ class MarketIntelligenceRepositoryProtocol(Protocol):
 class MarketTransitionRepositoryProtocol(Protocol):
     async def list_daily(self, symbol: str, limit: int = 200) -> list[MtiDailyTransition]: ...
     async def list_correlations(self, symbol: str) -> list[MtiFactorCorrelation]: ...
+    async def list_cas_daily(self, symbol: str, limit: int = 60) -> list[CasDailyTransition]: ...

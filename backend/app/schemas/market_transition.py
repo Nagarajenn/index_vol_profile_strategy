@@ -126,3 +126,46 @@ class LiveAdvisoryDTO(BaseModel):
     news_risk_score: int | None
     news_sentiment: Literal["Bullish", "Bearish", "Neutral"] | None
     explanation: str
+
+
+# ---------------------------------------------------------------------------
+# CAS Intelligence -- served by GET /api/v1/market-transition/{symbol}/
+# cas-intelligence. Additive, parallel re-analysis of the 3pm transition
+# under NSE's post-2026-08-03 Closing Auction Session framework (see
+# market_transition/cas_transition.py) -- does not replace the research/
+# live-advisor endpoints above, which remain the source of truth.
+# ---------------------------------------------------------------------------
+class CasDailyResultDTO(BaseModel):
+    session_date: date
+    close_1431: float | None
+    close_1459: float | None
+    close_1539: float | None
+    pre_direction: Literal["up", "down", "flat"] | None
+    post_direction: Literal["up", "down", "flat"] | None
+    conclusion: Literal["continuation", "reversal", "neutral"]
+    outcome_magnitude: float | None
+    pre_window_volume: float | None
+    post_window_pre_auction_volume: float | None
+    volume_ratio: float | None
+    pre_window_points_move: float | None
+    post_window_points_move: float | None
+    pcr_1459: float | None
+    institutional_bias_label_1459: str | None
+    institutional_bias_score_1459: int | None
+    expiry_type: str | None
+    day_of_week: int | None
+    old_methodology_outcome: Literal["continuation", "reversal", "neutral"] | None
+    old_methodology_outcome_magnitude: float | None
+    data_quality_flag: str | None
+    computed_at: datetime
+
+
+class CasIntelligenceResponseDTO(BaseModel):
+    symbol: str
+    total_days_analyzed: int
+    # Agreement between this row's conclusion and old_methodology_outcome,
+    # over days where both exist -- computed at read time (not stored), see
+    # CasIntelligenceService for the exact rule.
+    agreement_count: int
+    agreement_pct: float | None
+    daily_results: list[CasDailyResultDTO]

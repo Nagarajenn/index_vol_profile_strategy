@@ -1,6 +1,8 @@
-from app.models import MtiDailyTransition, MtiFactorCorrelation
+from app.models import CasDailyTransition, MtiDailyTransition, MtiFactorCorrelation
 from app.repositories.protocols import MarketTransitionRepositoryProtocol
 from app.schemas.market_transition import (
+    CasDailyResultDTO,
+    CasIntelligenceResponseDTO,
     ContributingFactorDTO,
     MtiDailyResultDTO,
     MtiFactorCorrelationDTO,
@@ -83,6 +85,48 @@ class MarketTransitionService:
             computed_at=row.computed_at,
             predicted_outcome=predicted_outcome,
             forecast_correct=forecast_correct,
+        )
+
+    async def get_cas_intelligence(self, symbol: str, limit: int = 60) -> CasIntelligenceResponseDTO:
+        rows = await self._repo.list_cas_daily(symbol, limit)
+        daily_results = [self._to_cas_dto(r) for r in rows]
+
+        comparable = [d for d in daily_results if d.old_methodology_outcome is not None]
+        agreement_count = sum(1 for d in comparable if d.conclusion == d.old_methodology_outcome)
+
+        return CasIntelligenceResponseDTO(
+            symbol=symbol,
+            total_days_analyzed=len(daily_results),
+            agreement_count=agreement_count,
+            agreement_pct=round(agreement_count / len(comparable) * 100, 1) if comparable else None,
+            daily_results=daily_results,
+        )
+
+    @staticmethod
+    def _to_cas_dto(row: CasDailyTransition) -> CasDailyResultDTO:
+        return CasDailyResultDTO(
+            session_date=row.session_date,
+            close_1431=row.close_1431,
+            close_1459=row.close_1459,
+            close_1539=row.close_1539,
+            pre_direction=row.pre_direction,
+            post_direction=row.post_direction,
+            conclusion=row.conclusion,
+            outcome_magnitude=row.outcome_magnitude,
+            pre_window_volume=row.pre_window_volume,
+            post_window_pre_auction_volume=row.post_window_pre_auction_volume,
+            volume_ratio=row.volume_ratio,
+            pre_window_points_move=row.pre_window_points_move,
+            post_window_points_move=row.post_window_points_move,
+            pcr_1459=row.pcr_1459,
+            institutional_bias_label_1459=row.institutional_bias_label_1459,
+            institutional_bias_score_1459=row.institutional_bias_score_1459,
+            expiry_type=row.expiry_type,
+            day_of_week=row.day_of_week,
+            old_methodology_outcome=row.old_methodology_outcome,
+            old_methodology_outcome_magnitude=row.old_methodology_outcome_magnitude,
+            data_quality_flag=row.data_quality_flag,
+            computed_at=row.computed_at,
         )
 
     @staticmethod

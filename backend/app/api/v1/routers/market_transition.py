@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.api.v1.dependencies import get_live_transition_advisor_service, get_market_transition_service
-from app.schemas.market_transition import LiveAdvisoryDTO, MtiResearchResponseDTO
+from app.schemas.market_transition import CasIntelligenceResponseDTO, LiveAdvisoryDTO, MtiResearchResponseDTO
 from app.services.live_transition_advisor_service import LiveTransitionAdvisorService
 from app.services.market_transition_service import MarketTransitionService
 
@@ -32,3 +32,21 @@ async def get_live_transition_advisor(
     Read-only, independent of the trading decision engine.
     """
     return await service.get_live_advisory(symbol)
+
+
+@router.get("/market-transition/{symbol}/cas-intelligence", response_model=CasIntelligenceResponseDTO)
+async def get_cas_intelligence(
+    symbol: str, service: MarketTransitionService = Depends(get_market_transition_service)
+) -> CasIntelligenceResponseDTO:
+    """CAS Intelligence: the 3pm transition re-analyzed under NSE's
+    post-2026-08-03 Closing Auction Session framework (14:31-14:59 pre-
+    window trend vs. 15:00-15:39 post-window trend), alongside each day's
+    outcome under the original (unmodified) methodology for comparison, and
+    option-chain context (PCR, institutional bias) at ~14:59. Additive/
+    parallel research view -- does not feed the trading decision engine or
+    replace /research or /live-advisor above. Volume is only reported
+    through 15:14 (post_window_pre_auction_volume): Dhan's 1-min feed does
+    not report reliable per-minute volume once the Closing Auction Session
+    begins at 15:15.
+    """
+    return await service.get_cas_intelligence(symbol)

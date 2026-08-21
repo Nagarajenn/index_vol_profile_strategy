@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import MtiDailyTransition, MtiFactorCorrelation
+from app.models import CasDailyTransition, MtiDailyTransition, MtiFactorCorrelation
 
 
 class MarketTransitionRepository:
@@ -22,3 +22,13 @@ class MarketTransitionRepository:
         stmt = select(MtiFactorCorrelation).where(MtiFactorCorrelation.symbol == symbol)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+    async def list_cas_daily(self, symbol: str, limit: int = 60) -> list[CasDailyTransition]:
+        stmt = (
+            select(CasDailyTransition)
+            .where(CasDailyTransition.symbol == symbol)
+            .order_by(CasDailyTransition.session_date.desc())
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        return list(reversed(result.scalars().all()))

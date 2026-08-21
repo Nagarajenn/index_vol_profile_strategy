@@ -139,3 +139,52 @@ def load_levels_for_backtest(symbol: str, start_date: date | None = None, end_da
     )
     df = df.drop(columns=sub_cols)
     return df
+
+
+def get_option_summary_near(symbol: str, session_date: date, at_or_before: str = "14:59:00") -> dict | None:
+    """Latest option_chain_summary snapshot for `symbol` on `session_date`
+    at/before `at_or_before` -- used by scripts/run_cas_intelligence.py to
+    build the ~14:59 option-chain context (PCR, institutional bias) for
+    each day's CAS Intelligence row."""
+    row = fetch_one(
+        """
+        SELECT fetched_at, spot, atm_strike, pcr, call_oi_change_near_atm, put_oi_change_near_atm,
+               total_call_oi, total_put_oi, atm_iv_call, atm_iv_put, max_call_oi_strike, max_put_oi_strike
+        FROM option_chain_summary
+        WHERE symbol = %s AND fetched_at::date = %s AND fetched_at::time <= %s
+        ORDER BY fetched_at DESC LIMIT 1
+        """,
+        (symbol, session_date, at_or_before),
+    )
+    if row is None:
+        return None
+    columns = [
+        "fetched_at", "spot", "atm_strike", "pcr", "call_oi_change_near_atm", "put_oi_change_near_atm",
+        "total_call_oi", "total_put_oi", "atm_iv_call", "atm_iv_put", "max_call_oi_strike", "max_put_oi_strike",
+    ]
+    return dict(zip(columns, row))
+
+
+_CAS_DAILY_COLUMNS = [
+    "symbol", "session_date", "close_1431", "close_1459", "close_1539",
+    "pre_direction", "post_direction", "conclusion", "outcome_magnitude",
+    "pre_window_volume", "post_window_pre_auction_volume", "volume_ratio",
+    "pre_window_points_move", "post_window_points_move",
+    "pcr_1459", "institutional_bias_label_1459", "institutional_bias_score_1459",
+    "expiry_type", "day_of_week", "old_methodology_outcome", "old_methodology_outcome_magnitude",
+    "data_quality_flag", "computed_at",
+]
+
+
+def load_cas_daily_transitions(symbol: str, limit: int = 60) -> list[dict]:
+    """Most recent `limit` CAS Intelligence rows for `symbol`, ascending by
+    session_date (chronological, matching how a comparison table reads)."""
+    rows = fetch_all(
+        f"""
+        SELECT {', '.join(_CAS_DAILY_COLUMNS)} FROM mti_cas_daily_transitions
+        WHERE symbol = %s ORDER BY session_date DESC LIMIT %s
+        """,
+        (symbol, limit),
+    )
+    rows = list(reversed(rows))
+    return [dict(zip(_CAS_DAILY_COLUMNS, r)) for r in rows]

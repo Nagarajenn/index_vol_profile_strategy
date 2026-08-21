@@ -233,3 +233,49 @@ CREATE TABLE IF NOT EXISTS mti_factor_correlations (
     UNIQUE (symbol, factor_name, target)
 );
 CREATE INDEX IF NOT EXISTS idx_mti_correlations_symbol ON mti_factor_correlations (symbol);
+
+-- CAS Intelligence (see market_transition/cas_transition.py): additive,
+-- parallel re-analysis of the 3pm transition under NSE's post-2026-08-03
+-- Closing Auction Session framework. One row per symbol/session_date,
+-- recomputed and upserted on each daily run -- entirely independent of
+-- mti_daily_transitions/mti_factor_correlations (the original methodology,
+-- still the source of truth for the Live Advisor and the existing
+-- dashboard read). old_methodology_* columns carry the same day's outcome
+-- under the original engine, purely for side-by-side comparison.
+CREATE TABLE IF NOT EXISTS mti_cas_daily_transitions (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    close_1431 DOUBLE PRECISION,
+    close_1459 DOUBLE PRECISION,
+    close_1539 DOUBLE PRECISION,
+    pre_direction TEXT,
+    post_direction TEXT,
+    conclusion TEXT NOT NULL CHECK (conclusion IN ('continuation', 'reversal', 'neutral')),
+    outcome_magnitude DOUBLE PRECISION,
+    pre_window_volume DOUBLE PRECISION,
+    -- Only summed through 15:14: NSE's Closing Auction Session starts at
+    -- 15:15 and Dhan's 1-min volume field is not reliable from that point
+    -- through close (confirmed 2026-08-21 -- price keeps moving genuinely,
+    -- volume freezes at one value). Never claims to cover 15:15-15:39.
+    post_window_pre_auction_volume DOUBLE PRECISION,
+    volume_ratio DOUBLE PRECISION,
+    -- Points gained toward the window's own direction using the best print
+    -- actually reached (high for "up", low for "down"), not just the
+    -- close-to-close net move -- price stays reliable through 15:39 (only
+    -- volume freezes at 15:15), so post_window_points_move uses the full
+    -- 15:00-15:39 window, unlike the volume columns above.
+    pre_window_points_move DOUBLE PRECISION,
+    post_window_points_move DOUBLE PRECISION,
+    pcr_1459 DOUBLE PRECISION,
+    institutional_bias_label_1459 TEXT,
+    institutional_bias_score_1459 SMALLINT,
+    expiry_type TEXT,
+    day_of_week SMALLINT,
+    old_methodology_outcome TEXT,
+    old_methodology_outcome_magnitude DOUBLE PRECISION,
+    data_quality_flag TEXT,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date)
+);
+CREATE INDEX IF NOT EXISTS idx_mti_cas_daily_symbol_date ON mti_cas_daily_transitions (symbol, session_date DESC);

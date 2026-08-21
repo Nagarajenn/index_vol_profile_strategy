@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 
+import { CasIntelligencePanel } from "../components/market-transition/CasIntelligencePanel";
 import { LiveAdvisorPanel } from "../components/market-transition/LiveAdvisorPanel";
 import { useMarketTransitionResearch } from "../hooks/useMarketTransitionResearch";
 import { useSymbolStore } from "../store/useSymbolStore";
@@ -287,6 +288,7 @@ export function MarketTransitionPage() {
             forecastHitCount={data.forecast_hit_count}
             forecastAccuracyPct={data.forecast_accuracy_pct}
           />
+          <CasIntelligencePanel symbol={data.symbol} />
         </>
       )}
     </Stack>

@@ -73,3 +73,43 @@ class MtiFactorCorrelation(Base):
     direction_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     category_breakdown: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class CasDailyTransition(Base):
+    """CAS Intelligence -- see market_transition/cas_transition.py. Entirely
+    additive/parallel to MtiDailyTransition above, not a replacement."""
+
+    __tablename__ = "mti_cas_daily_transitions"
+    __table_args__ = (
+        UniqueConstraint("symbol", "session_date", name="mti_cas_daily_transitions_symbol_session_date_key"),
+        CheckConstraint("conclusion IN ('continuation', 'reversal', 'neutral')", name="mti_cas_daily_transitions_conclusion_check"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    symbol: Mapped[str] = mapped_column(Text, nullable=False)
+    session_date: Mapped[date] = mapped_column(Date, nullable=False)
+
+    close_1431: Mapped[float | None] = mapped_column(Double, nullable=True)
+    close_1459: Mapped[float | None] = mapped_column(Double, nullable=True)
+    close_1539: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pre_direction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    post_direction: Mapped[str | None] = mapped_column(Text, nullable=True)
+    conclusion: Mapped[str] = mapped_column(Text, nullable=False)
+    outcome_magnitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+
+    pre_window_volume: Mapped[float | None] = mapped_column(Double, nullable=True)
+    post_window_pre_auction_volume: Mapped[float | None] = mapped_column(Double, nullable=True)
+    volume_ratio: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pre_window_points_move: Mapped[float | None] = mapped_column(Double, nullable=True)
+    post_window_points_move: Mapped[float | None] = mapped_column(Double, nullable=True)
+
+    pcr_1459: Mapped[float | None] = mapped_column(Double, nullable=True)
+    institutional_bias_label_1459: Mapped[str | None] = mapped_column(Text, nullable=True)
+    institutional_bias_score_1459: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+
+    expiry_type: Mapped[str | None] = mapped_column(Text, nullable=True)
+    day_of_week: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    old_methodology_outcome: Mapped[str | None] = mapped_column(Text, nullable=True)
+    old_methodology_outcome_magnitude: Mapped[float | None] = mapped_column(Double, nullable=True)
+    data_quality_flag: Mapped[str | None] = mapped_column(Text, nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

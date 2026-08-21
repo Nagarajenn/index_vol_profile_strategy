@@ -54,3 +54,39 @@ export interface MtiResearchResponseDTO {
   forecast_hit_count: number;
   forecast_accuracy_pct: number | null;
 }
+
+// CAS Intelligence -- additive, parallel re-analysis of the 3pm transition
+// under NSE's post-2026-08-03 Closing Auction Session framework. Does not
+// replace the fields above.
+export interface CasDailyResultDTO {
+  session_date: string;
+  close_1431: number | null;
+  close_1459: number | null;
+  close_1539: number | null;
+  pre_direction: "up" | "down" | "flat" | null;
+  post_direction: "up" | "down" | "flat" | null;
+  conclusion: "continuation" | "reversal" | "neutral";
+  outcome_magnitude: number | null;
+  pre_window_volume: number | null;
+  post_window_pre_auction_volume: number | null;
+  volume_ratio: number | null;
+  pre_window_points_move: number | null;
+  post_window_points_move: number | null;
+  pcr_1459: number | null;
+  institutional_bias_label_1459: string | null;
+  institutional_bias_score_1459: number | null;
+  expiry_type: string | null;
+  day_of_week: number | null;
+  old_methodology_outcome: "continuation" | "reversal" | "neutral" | null;
+  old_methodology_outcome_magnitude: number | null;
+  data_quality_flag: string | null;
+  computed_at: string;
+}
+
+export interface CasIntelligenceResponseDTO {
+  symbol: string;
+  total_days_analyzed: number;
+  agreement_count: number;
+  agreement_pct: number | null;
+  daily_results: CasDailyResultDTO[];
+}
