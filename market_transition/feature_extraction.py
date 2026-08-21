@@ -84,23 +84,29 @@ def compute_pre_window_features(
     expiry_type: ExpiryType | None,
     session_date: date,
     pre_window_end: time = PRE_WINDOW_END,
+    pre_window_start: time = PRE_WINDOW_START,
 ) -> PreWindowFeatures | None:
-    """The pre-transition feature set as of `pre_window_end` (defaults to
-    the historical engine's fixed 14:59 cutoff). Passing an earlier cutoff
-    -- e.g. "now" during a still-forming session -- computes the SAME kind
-    of features from partial, in-progress data. This is what the live
-    advisor uses; `extract_daily_transition_record` below is just this
-    function called with the default cutoff, plus the transition/outcome
-    that only exist once the day is complete.
+    """The pre-transition feature set over [pre_window_start, pre_window_end]
+    (defaults to the historical engine's fixed 14:00-14:59 window). Passing
+    an earlier `pre_window_end` -- e.g. "now" during a still-forming session
+    -- computes the SAME kind of features from partial, in-progress data.
+    This is what the live advisor uses; `extract_daily_transition_record`
+    below is just this function called with the default window, plus the
+    transition/outcome that only exist once the day is complete.
+    `pre_window_start` exists so an alternate window definition (see
+    market_transition/cas_transition.py, built for NSE's post-2026-08-03
+    Closing Auction Session framework) can reuse this function unmodified
+    rather than re-deriving developing POC/VWAP/regime/rotation logic a
+    second time.
     """
     if today_candles.empty:
         return None
 
-    pre_window = _time_between(today_candles, PRE_WINDOW_START, pre_window_end)
+    pre_window = _time_between(today_candles, pre_window_start, pre_window_end)
     if pre_window.empty:
         return None
 
-    session_at_start = _session_so_far(today_candles, PRE_WINDOW_START)
+    session_at_start = _session_so_far(today_candles, pre_window_start)
     session_at_end = _session_so_far(today_candles, pre_window_end)
     if session_at_start.empty or session_at_end.empty:
         return None
@@ -115,7 +121,7 @@ def compute_pre_window_features(
     vwap_distance = (close_end - vwap_end) if vwap_end is not None else None
     vwap_distance_pct = (vwap_distance / vwap_end * 100) if (vwap_distance is not None and vwap_end) else None
 
-    mid = _midpoint_time(PRE_WINDOW_START, pre_window_end)
+    mid = _midpoint_time(pre_window_start, pre_window_end)
     first_half = pre_window[pre_window["timestamp"].dt.time < mid]
     second_half = pre_window[pre_window["timestamp"].dt.time >= mid]
     volume_slope = None
