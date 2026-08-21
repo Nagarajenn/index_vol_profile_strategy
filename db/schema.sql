@@ -260,11 +260,11 @@ CREATE TABLE IF NOT EXISTS mti_cas_daily_transitions (
     -- volume freezes at one value). Never claims to cover 15:15-15:39.
     post_window_pre_auction_volume DOUBLE PRECISION,
     volume_ratio DOUBLE PRECISION,
-    -- Points gained toward the window's own direction using the best print
-    -- actually reached (high for "up", low for "down"), not just the
-    -- close-to-close net move -- price stays reliable through 15:39 (only
-    -- volume freezes at 15:15), so post_window_points_move uses the full
-    -- 15:00-15:39 window, unlike the volume columns above.
+    -- Signed points move using the best print actually reached (high for
+    -- "up", low for "down"; positive = ran up, negative = ran down), not
+    -- just the close-to-close net move -- price stays reliable through
+    -- 15:39 (only volume freezes at 15:15), so post_window_points_move
+    -- uses the full 15:00-15:39 window, unlike the volume columns above.
     pre_window_points_move DOUBLE PRECISION,
     post_window_points_move DOUBLE PRECISION,
     pcr_1459 DOUBLE PRECISION,

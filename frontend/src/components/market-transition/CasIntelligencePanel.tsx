@@ -21,7 +21,8 @@ function fmtVol(v: number | null): string {
 }
 
 function fmtPoints(v: number | null): string {
-  return v === null ? "N/A" : `+${v.toFixed(0)}`;
+  if (v === null) return "N/A";
+  return v > 0 ? `+${v.toFixed(0)}` : v.toFixed(0); // negative values already carry their own "-"
 }
 
 function CasDailyRow({ day }: { day: CasDailyResultDTO }) {
@@ -39,12 +40,12 @@ function CasDailyRow({ day }: { day: CasDailyResultDTO }) {
       <TableCell sx={{ textTransform: "capitalize" }}>{directionLabel(day.pre_direction)}</TableCell>
       <TableCell sx={{ textTransform: "capitalize" }}>{directionLabel(day.post_direction)}</TableCell>
       <TableCell align="right">
-        <Tooltip title="Points gained toward the pre-window's own direction, using the best print reached (high for up, low for down) -- not just the close-to-close move.">
+        <Tooltip title="Signed points move using the best print reached in the pre-window (high for up, low for down; positive = ran up, negative = ran down) -- not just the close-to-close move.">
           <span>{fmtPoints(day.pre_window_points_move)}</span>
         </Tooltip>
       </TableCell>
       <TableCell align="right">
-        <Tooltip title="Points gained toward the post-window's own direction, using the best print reached between 15:00-15:39 -- price stays reliable through this window even though volume doesn't.">
+        <Tooltip title="Signed points move using the best print reached between 15:00-15:39 (positive = ran up, negative = ran down) -- price stays reliable through this window even though volume doesn't.">
           <span>{fmtPoints(day.post_window_points_move)}</span>
         </Tooltip>
       </TableCell>

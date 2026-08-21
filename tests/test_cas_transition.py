@@ -195,6 +195,27 @@ def test_points_move_uses_best_print_not_just_close_to_close():
     assert result.post_window_points_move == pytest.approx(131 - 100)
 
 
+def test_points_move_is_negative_for_a_down_move():
+    # A down day must report a NEGATIVE points_move, not the magnitude of
+    # the drop -- a UI showing "+114" next to "Down" would be misleading.
+    rows = []
+    for i in range(29):
+        hh, mm = 14, 31 + i
+        rows.append({"time": f"{hh:02d}:{mm:02d}", "o": 100, "h": 100.5, "l": 99.5, "c": 100, "v": 100})
+    post_prices = [90, 88, 60, 89, 88.5]  # dives to 60 mid-window
+    for i, p in enumerate(post_prices):
+        rows.append({"time": f"15:{i:02d}", "o": p, "h": p + 1, "l": p - 1, "c": p, "v": 100})
+    candles = make_candles(rows)
+
+    result = build_cas_daily_transition("NIFTY", date(2026, 8, 10), candles, None, {}, BIN_SIZE, None)
+    assert result is not None
+    assert result.post_direction == "down"
+    assert result.close_1459 == pytest.approx(100.0)
+    # low reached (59) minus close_1459 (100) -- negative, a genuine drop.
+    assert result.post_window_points_move == pytest.approx(59 - 100)
+    assert result.post_window_points_move < 0
+
+
 def test_points_move_none_direction_is_zero():
     candles = _full_minute_session(pre_start=100.0, pre_end=100.0, post_end=100.0)
     result = build_cas_daily_transition("NIFTY", date(2026, 8, 10), candles, None, {}, BIN_SIZE, None)

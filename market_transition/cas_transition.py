@@ -191,16 +191,19 @@ class CasDailyTransition:
 
 
 def _points_move(window: pd.DataFrame, direction: str, baseline: float) -> float | None:
-    """Points gained toward `direction` using the best print actually
-    reached in `window` (its high for "up", its low for "down"), not just
-    the window's close-to-close net move -- answers "how far did it
-    actually run in its own direction" rather than "where did it end up"."""
+    """Signed points move from `baseline` to the best print actually
+    reached in `window` (its high for "up", its low for "down") -- not
+    just the window's close-to-close net move, and NOT an unsigned
+    magnitude: positive means it ran up, negative means it ran down,
+    matching the sign a reader would expect from `direction`. Answers "how
+    far did it actually run" (using the best print reached) rather than
+    "where did it end up" (close-to-close)."""
     if window.empty:
         return None
     if direction == "up":
         return float(window["high"].max() - baseline)
     if direction == "down":
-        return float(baseline - window["low"].min())
+        return float(window["low"].min() - baseline)  # negative -- a genuine drop, not a magnitude
     return 0.0
 
 
