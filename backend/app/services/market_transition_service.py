@@ -45,7 +45,7 @@ class MarketTransitionService:
         )
 
     @staticmethod
-    def _to_correlation_dto(row: MtiFactorCorrelation) -> MtiFactorCorrelationDTO:
+    def _to_correlation_dto(row: MtiFactorCorrelation | CasFactorCorrelation) -> MtiFactorCorrelationDTO:
         return MtiFactorCorrelationDTO(
             factor_name=row.factor_name,
             factor_type=row.factor_type,
@@ -94,12 +94,17 @@ class MarketTransitionService:
         comparable = [d for d in daily_results if d.old_methodology_outcome is not None]
         agreement_count = sum(1 for d in comparable if d.conclusion == d.old_methodology_outcome)
 
+        correlation_rows = await self._repo.list_cas_correlations(symbol)
+        correlations = [self._to_correlation_dto(r) for r in correlation_rows]
+        correlations.sort(key=lambda c: (c.p_value is None, c.p_value if c.p_value is not None else 1.0))
+
         return CasIntelligenceResponseDTO(
             symbol=symbol,
             total_days_analyzed=len(daily_results),
             agreement_count=agreement_count,
             agreement_pct=round(agreement_count / len(comparable) * 100, 1) if comparable else None,
             daily_results=daily_results,
+            correlations=correlations,
         )
 
     @staticmethod

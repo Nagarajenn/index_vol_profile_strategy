@@ -279,3 +279,25 @@ CREATE TABLE IF NOT EXISTS mti_cas_daily_transitions (
     UNIQUE (symbol, session_date)
 );
 CREATE INDEX IF NOT EXISTS idx_mti_cas_daily_symbol_date ON mti_cas_daily_transitions (symbol, session_date DESC);
+
+-- CAS factor-correlation study (see market_transition/cas_statistics.py) --
+-- the same statistical machinery as mti_factor_correlations, reused
+-- unmodified, applied to the CAS-adjusted outcome plus the new option/
+-- volume/points-move dimensions mti_cas_daily_transitions introduced.
+-- Overwritten (upserted) each daily run, same convention as the original.
+CREATE TABLE IF NOT EXISTS mti_cas_factor_correlations (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    factor_name TEXT NOT NULL,
+    factor_type TEXT NOT NULL CHECK (factor_type IN ('continuous', 'categorical')),
+    target TEXT NOT NULL CHECK (target IN ('reversal', 'magnitude')),
+    n_days INTEGER NOT NULL,
+    statistic DOUBLE PRECISION,
+    p_value DOUBLE PRECISION,
+    confidence_label TEXT NOT NULL,
+    direction_note TEXT,
+    category_breakdown JSONB,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, factor_name, target)
+);
+CREATE INDEX IF NOT EXISTS idx_mti_cas_correlations_symbol ON mti_cas_factor_correlations (symbol);

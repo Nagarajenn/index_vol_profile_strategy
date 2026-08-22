@@ -89,4 +89,5 @@ export interface CasIntelligenceResponseDTO {
   agreement_count: number;
   agreement_pct: number | null;
   daily_results: CasDailyResultDTO[];
+  correlations: MtiFactorCorrelationDTO[];
 }

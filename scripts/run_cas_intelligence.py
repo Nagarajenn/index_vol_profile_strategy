@@ -26,7 +26,8 @@ from analytics.institutional_bias import classify_institutional_bias
 from config.instruments import INSTRUMENTS
 from db import reader as db_reader
 from db import writer as db_writer
-from market_transition.cas_transition import CAS_EFFECTIVE_DATE, build_cas_daily_transition
+from market_transition.cas_statistics import run_cas_correlation_study
+from market_transition.cas_transition import CAS_EFFECTIVE_DATE, build_cas_daily_transition, extract_cas_transition_record
 from market_transition.feature_extraction import extract_daily_transition_record
 from market_transition.research import extract_all_records
 from option_chain.summary import OptionChainSummary
@@ -56,7 +57,7 @@ def _split_by_date(candles):
     return {d: g.reset_index(drop=True) for d, g in candles.groupby(candles["timestamp"].dt.date)}
 
 
-def run_symbol(symbol: str) -> int:
+def run_symbol(symbol: str) -> tuple[int, int]:
     bin_size = INSTRUMENTS[symbol]["volume_profile_bin_size"]
     candles = db_reader.load_raw_candles(symbol)
     by_date = _split_by_date(candles)
@@ -65,6 +66,7 @@ def run_symbol(symbol: str) -> int:
     old_by_date = {r.session_date: r for r in old_records}
 
     written = 0
+    cas_rows = []
     for session_date, day_candles in sorted(by_date.items()):
         if session_date < CAS_EFFECTIVE_DATE:
             continue
@@ -93,11 +95,22 @@ def run_symbol(symbol: str) -> int:
             continue
 
         db_writer.insert_cas_daily_transition(record)
+        cas_rows.append(record)
         written += 1
         if record.data_quality_flag:
             logger.warning("%s %s: %s", symbol, session_date, record.data_quality_flag)
 
-    return written
+    # Correlation study: reuses the SAME CAS-windowed records the loop above
+    # was built from (recomputed once more here rather than threaded out of
+    # the loop -- this script already recomputes old_records/per-day records
+    # independently, and a once-daily run has no real cost pressure).
+    cas_records = extract_all_records(symbol, candles, bin_size, extract_fn=extract_cas_transition_record)
+    cas_records = [r for r in cas_records if r.session_date >= CAS_EFFECTIVE_DATE]
+    correlations = run_cas_correlation_study(cas_records, cas_rows)
+    for c in correlations:
+        db_writer.insert_cas_factor_correlation(symbol, c)
+
+    return written, len(correlations)
 
 
 def main():
@@ -107,8 +120,8 @@ def main():
 
     for symbol in args.symbols:
         t0 = time_module.monotonic()
-        written = run_symbol(symbol)
-        print(f"{symbol}: wrote {written} CAS Intelligence rows in {time_module.monotonic() - t0:.1f}s")
+        written, n_correlations = run_symbol(symbol)
+        print(f"{symbol}: wrote {written} CAS Intelligence rows and {n_correlations} factor correlations in {time_module.monotonic() - t0:.1f}s")
 
 
 if __name__ == "__main__":

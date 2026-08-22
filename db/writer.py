@@ -414,3 +414,26 @@ def insert_cas_daily_transition(record) -> None:
             record.data_quality_flag,
         ),
     )
+
+
+def insert_cas_factor_correlation(symbol: str, result) -> None:
+    """`result` is a market_transition.models.FactorCorrelationResult, same
+    shape insert_mti_factor_correlation writes -- just a different table."""
+    execute(
+        """
+        INSERT INTO mti_cas_factor_correlations (
+            symbol, factor_name, factor_type, target, n_days, statistic, p_value,
+            confidence_label, direction_note, category_breakdown
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (symbol, factor_name, target) DO UPDATE SET
+            factor_type = EXCLUDED.factor_type, n_days = EXCLUDED.n_days,
+            statistic = EXCLUDED.statistic, p_value = EXCLUDED.p_value,
+            confidence_label = EXCLUDED.confidence_label, direction_note = EXCLUDED.direction_note,
+            category_breakdown = EXCLUDED.category_breakdown, computed_at = now()
+        """,
+        (
+            symbol, result.factor_name, result.factor_type, result.target, result.n,
+            result.statistic, result.p_value, result.confidence_label, result.direction_note,
+            _jsonb(result.category_breakdown) if result.category_breakdown else None,
+        ),
+    )

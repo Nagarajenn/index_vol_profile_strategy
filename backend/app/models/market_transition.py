@@ -75,6 +75,32 @@ class MtiFactorCorrelation(Base):
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
+class CasFactorCorrelation(Base):
+    """CAS-adjusted factor correlation study -- see
+    market_transition/cas_statistics.py. Same shape as MtiFactorCorrelation
+    above, entirely separate table/study."""
+
+    __tablename__ = "mti_cas_factor_correlations"
+    __table_args__ = (
+        UniqueConstraint("symbol", "factor_name", "target", name="mti_cas_factor_correlations_symbol_factor_name_target_key"),
+        CheckConstraint("factor_type IN ('continuous', 'categorical')", name="mti_cas_factor_correlations_factor_type_check"),
+        CheckConstraint("target IN ('reversal', 'magnitude')", name="mti_cas_factor_correlations_target_check"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    symbol: Mapped[str] = mapped_column(Text, nullable=False)
+    factor_name: Mapped[str] = mapped_column(Text, nullable=False)
+    factor_type: Mapped[str] = mapped_column(Text, nullable=False)
+    target: Mapped[str] = mapped_column(Text, nullable=False)
+    n_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    statistic: Mapped[float | None] = mapped_column(Double, nullable=True)
+    p_value: Mapped[float | None] = mapped_column(Double, nullable=True)
+    confidence_label: Mapped[str] = mapped_column(Text, nullable=False)
+    direction_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    category_breakdown: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class CasDailyTransition(Base):
     """CAS Intelligence -- see market_transition/cas_transition.py. Entirely
     additive/parallel to MtiDailyTransition above, not a replacement."""

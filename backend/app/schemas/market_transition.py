@@ -169,3 +169,7 @@ class CasIntelligenceResponseDTO(BaseModel):
     agreement_count: int
     agreement_pct: float | None
     daily_results: list[CasDailyResultDTO]
+    # Factor-correlation study over the CAS-adjusted outcome -- see
+    # market_transition/cas_statistics.py. Same MtiFactorCorrelationDTO
+    # shape as the original engine's study, just a separate result set.
+    correlations: list[MtiFactorCorrelationDTO]
