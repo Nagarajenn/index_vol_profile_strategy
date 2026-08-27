@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from config.instruments import INSTRUMENTS
 from config.settings import IST, LIVE_LOOP_INTERVAL_MIN, SESSION_CLOSE, SESSION_OPEN
+from dhan_client.client import reset_client
 from pipeline.run_snapshot import run_snapshot
 from pipeline.trading_calendar import is_trading_day
 
@@ -91,6 +92,12 @@ def run_live_loop(
                 run_snapshot(symbol, mode="live")  # logs its own summary line
             except Exception:
                 logger.exception("Live snapshot failed for %s", symbol)
+                # A broken connection inside the cached Dhan client otherwise
+                # fails identically on every remaining tick for the rest of
+                # the session (observed repeatedly in production) -- drop it
+                # so the next tick rebuilds a fresh one instead of retrying
+                # the same dead connection until market close.
+                reset_client()
 
         iterations += 1
         if max_iterations is not None and iterations >= max_iterations:
