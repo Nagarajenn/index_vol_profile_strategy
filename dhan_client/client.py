@@ -21,6 +21,23 @@ def get_client():
     return _client
 
 
+def reset_client() -> None:
+    """Drop the cached client so the next get_client() rebuilds it from
+    scratch (a fresh underlying HTTP session/connection).
+
+    Needed because a long-running process (the live loop can run for a full
+    trading day) caches `_client` once at first use -- if its underlying
+    connection gets into a permanently broken state (observed repeatedly:
+    a socket-level PermissionError that then fails identically on every
+    subsequent call for the rest of the process's life), nothing ever
+    rebuilds it on its own. Call this from a caller's exception handler
+    after a failed request so the next attempt gets a clean connection
+    instead of retrying the same broken one forever.
+    """
+    global _client
+    _client = None
+
+
 def _unwrap(endpoint: str, response: dict) -> dict:
     if response.get("status") != "success":
         raise DhanAPIError(endpoint, response.get("remarks"))
