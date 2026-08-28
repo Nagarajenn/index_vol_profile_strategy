@@ -97,6 +97,42 @@ export function shockScoreColor(score: number): "default" | "info" | "warning" |
   return "default";
 }
 
+// Fixed pixel widths for the columns both tables share. Same column ORDER
+// alone isn't enough to keep them visually lined up -- these are two
+// separate <Table>s with different trailing columns (Vol accel/Regime/
+// Inst. bias/News risk here vs. Range exp./Shock there), so each table's
+// own auto-layout sizes its shared columns independently and they drift
+// apart. table-layout: fixed + identical explicit widths on every shared
+// column removes that drift, so "VWAP dist" sits directly above "VWAP
+// chg", "POC" above "POC chg", etc.
+const SHARED_COL_WIDTHS = {
+  time: 112,
+  close: 90,
+  priceChg: 84,
+  volume: 96,
+  rvol: 70,
+  dominance: 90,
+  vwap: 84,
+  poc: 84,
+  pcrChg: 84,
+  optPressure: 100,
+};
+
+const PRE_ONLY_COL_WIDTHS = { volAccel: 84, regime: 90, instBias: 110, newsRisk: 80 };
+const POST_ONLY_COL_WIDTHS = { rangeExp: 80, shock: 70 };
+
+const SHARED_TOTAL_WIDTH = Object.values(SHARED_COL_WIDTHS).reduce((a, b) => a + b, 0);
+// Explicit total table width, not "auto" -- with table-layout:fixed, an
+// "auto"-width table wider than its container gets shrunk by the CSS
+// shrink-to-fit algorithm, compressing every <col> below its declared
+// px value (proportionally, and by a DIFFERENT factor per table since
+// they have different trailing-column totals) -- which was the actual
+// cause of the misalignment the col-width fix alone didn't solve. An
+// explicit width forces the browser to honor it exactly and, if it
+// doesn't fit, scroll horizontally instead of silently compressing.
+const PRE_TABLE_WIDTH = SHARED_TOTAL_WIDTH + Object.values(PRE_ONLY_COL_WIDTHS).reduce((a, b) => a + b, 0);
+const POST_TABLE_WIDTH = SHARED_TOTAL_WIDTH + Object.values(POST_ONLY_COL_WIDTHS).reduce((a, b) => a + b, 0);
+
 // FORECAST INFORMATION -- 14:30-14:59, six 5-minute windows. Every field
 // here is knowable by the window's own end time; nothing from 15:00
 // onward appears in this table. `nowTime` (optional, "HH:MM") marks the
@@ -113,7 +149,37 @@ export function PreTransitionWindowsTable({
 }) {
   return (
     <TableContainer sx={{ maxHeight: maxTableHeight }}>
-      <Table size="small" stickyHeader>
+      {/* Column widths come from <colgroup>/<col>, not TableCell sx --
+          with table-layout:fixed, a TableCell's declared width can still
+          get silently overridden to fit its own header text. The table
+          itself gets an EXPLICIT pixel width (PRE_TABLE_WIDTH, the exact
+          sum of its own columns), not "auto" -- an "auto"-width table
+          wider than its container is shrunk by the CSS shrink-to-fit
+          algorithm, compressing every <col> below its declared px value
+          by a different factor per table (this one has 4 more trailing
+          columns than PostTransitionMinutesTable, so it alone hit that
+          cap) -- which was the actual cause of the misalignment. An
+          explicit width is honored exactly; the TableContainer scrolls
+          horizontally instead if it doesn't fit. Passed as a raw `style`
+          prop, not `sx`, since MUI's .MuiTable-root class sets width:100%
+          with higher specificity than an sx-emitted class. */}
+      <Table size="small" stickyHeader sx={{ tableLayout: "fixed" }} style={{ width: PRE_TABLE_WIDTH, maxWidth: "none" }}>
+        <colgroup>
+          <col style={{ width: SHARED_COL_WIDTHS.time }} />
+          <col style={{ width: SHARED_COL_WIDTHS.close }} />
+          <col style={{ width: SHARED_COL_WIDTHS.priceChg }} />
+          <col style={{ width: SHARED_COL_WIDTHS.volume }} />
+          <col style={{ width: SHARED_COL_WIDTHS.rvol }} />
+          <col style={{ width: SHARED_COL_WIDTHS.dominance }} />
+          <col style={{ width: SHARED_COL_WIDTHS.vwap }} />
+          <col style={{ width: SHARED_COL_WIDTHS.poc }} />
+          <col style={{ width: SHARED_COL_WIDTHS.pcrChg }} />
+          <col style={{ width: SHARED_COL_WIDTHS.optPressure }} />
+          <col style={{ width: PRE_ONLY_COL_WIDTHS.volAccel }} />
+          <col style={{ width: PRE_ONLY_COL_WIDTHS.regime }} />
+          <col style={{ width: PRE_ONLY_COL_WIDTHS.instBias }} />
+          <col style={{ width: PRE_ONLY_COL_WIDTHS.newsRisk }} />
+        </colgroup>
         <TableHead>
           <TableRow>
             <TableCell>Window</TableCell>
@@ -188,7 +254,25 @@ export function PostTransitionMinutesTable({
 }) {
   return (
     <TableContainer sx={{ maxHeight: maxTableHeight }}>
-      <Table size="small" stickyHeader>
+      {/* See the matching comment in PreTransitionWindowsTable for why
+          column widths are set via <colgroup>/<col> and why the table
+          gets an explicit pixel width (POST_TABLE_WIDTH) as a raw
+          `style` prop rather than `sx`/"auto". */}
+      <Table size="small" stickyHeader sx={{ tableLayout: "fixed" }} style={{ width: POST_TABLE_WIDTH, maxWidth: "none" }}>
+        <colgroup>
+          <col style={{ width: SHARED_COL_WIDTHS.time }} />
+          <col style={{ width: SHARED_COL_WIDTHS.close }} />
+          <col style={{ width: SHARED_COL_WIDTHS.priceChg }} />
+          <col style={{ width: SHARED_COL_WIDTHS.volume }} />
+          <col style={{ width: SHARED_COL_WIDTHS.rvol }} />
+          <col style={{ width: SHARED_COL_WIDTHS.dominance }} />
+          <col style={{ width: SHARED_COL_WIDTHS.vwap }} />
+          <col style={{ width: SHARED_COL_WIDTHS.poc }} />
+          <col style={{ width: SHARED_COL_WIDTHS.pcrChg }} />
+          <col style={{ width: SHARED_COL_WIDTHS.optPressure }} />
+          <col style={{ width: POST_ONLY_COL_WIDTHS.rangeExp }} />
+          <col style={{ width: POST_ONLY_COL_WIDTHS.shock }} />
+        </colgroup>
         <TableHead>
           <TableRow>
             <TableCell>Minute</TableCell>
