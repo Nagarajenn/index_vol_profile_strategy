@@ -3,10 +3,31 @@ import { Alert, Box, Chip, CircularProgress, Paper, Stack, Table, TableBody, Tab
 import { useCasIntelligence } from "../../hooks/useCasIntelligence";
 import type { CasDailyResultDTO, ConfidenceLabel, MtiFactorCorrelationDTO } from "../../types/marketTransition";
 
-function outcomeColor(outcome: "continuation" | "reversal" | "neutral"): "success" | "error" | "default" {
-  if (outcome === "continuation") return "success";
-  if (outcome === "reversal") return "error";
-  return "default";
+const TRANSITION_TYPE_LABELS: Record<CasDailyResultDTO["transition_type"], string> = {
+  CONTINUATION_UP: "Continuation (Up)",
+  CONTINUATION_DOWN: "Continuation (Down)",
+  REVERSAL_UP: "Reversal (Up)",
+  REVERSAL_DOWN: "Reversal (Down)",
+  POST_WINDOW_INITIATION_UP: "Post-Window Move (Up)",
+  POST_WINDOW_INITIATION_DOWN: "Post-Window Move (Down)",
+  NO_MATERIAL_TRANSITION: "No Material Transition",
+};
+
+function transitionTypeColor(t: CasDailyResultDTO["transition_type"]): "success" | "error" | "info" | "default" {
+  if (t === "CONTINUATION_UP" || t === "CONTINUATION_DOWN") return "success";
+  if (t === "REVERSAL_UP" || t === "REVERSAL_DOWN") return "error";
+  // A genuinely distinct 3rd category -- no pre-window trend to reverse or
+  // continue, but a real post-window move -- exactly what used to be
+  // indistinguishable from a quiet day under the old "Neutral" label.
+  if (t === "POST_WINDOW_INITIATION_UP" || t === "POST_WINDOW_INITIATION_DOWN") return "info";
+  return "default"; // NO_MATERIAL_TRANSITION
+}
+
+function magnitudeTierColor(tier: CasDailyResultDTO["magnitude_tier"]): "default" | "info" | "warning" | "error" {
+  if (tier === "EXTREME") return "error";
+  if (tier === "LARGE") return "warning";
+  if (tier === "MODERATE") return "info";
+  return "default"; // NORMAL or null
 }
 
 function confidenceColor(label: ConfidenceLabel | null): "success" | "primary" | "warning" | "default" {
@@ -105,7 +126,22 @@ function CasDailyRow({ day }: { day: CasDailyResultDTO }) {
         </Tooltip>
       </TableCell>
       <TableCell>
-        <Chip size="small" label={day.conclusion} color={outcomeColor(day.conclusion)} />
+        <Chip size="small" label={TRANSITION_TYPE_LABELS[day.transition_type]} color={transitionTypeColor(day.transition_type)} />
+      </TableCell>
+      <TableCell>
+        {day.magnitude_tier !== null ? (
+          <Tooltip
+            title={`${day.magnitude_pct_return !== null ? day.magnitude_pct_return.toFixed(2) : "N/A"}% return, ${
+              day.magnitude_atr_normalized !== null ? day.magnitude_atr_normalized.toFixed(2) : "N/A"
+            }x prior day's 14-day ATR`}
+          >
+            <Chip size="small" label={day.magnitude_tier} color={magnitudeTierColor(day.magnitude_tier)} variant="outlined" />
+          </Tooltip>
+        ) : (
+          <Typography variant="caption" color="text.secondary">
+            N/A
+          </Typography>
+        )}
       </TableCell>
       <TableCell>
         <Stack direction="row" spacing={0.5} sx={{ alignItems: "center" }}>
@@ -141,6 +177,9 @@ export function CasIntelligencePanel({ symbol }: { symbol: string }) {
         Re-frames the 3pm transition for NSE's post-2026-08-03 Closing Auction Session: trend from 14:31-14:59 vs.
         trend from 15:00-15:39, compared against the same day's call under the original (unchanged) methodology
         (see the "Original engine" column below). Additive research view -- never feeds the trading decision engine.{" "}
+        <strong>Pre-window state and post-window outcome are classified independently</strong> -- a flat pre-window
+        no longer hides a large post-window move under "Neutral" (see Transition Type); Magnitude is
+        volatility-normalized against the prior day's 14-day ATR, not just raw points.{" "}
         <strong>Post-window volume only covers 14:31-14:59 vs. 15:00-15:14</strong> ("pre-auction volume"): Dhan's
         1-minute feed does not report reliable volume once the Closing Auction Session begins at 15:15, even though
         price keeps moving genuinely through it.
@@ -185,7 +224,8 @@ export function CasIntelligencePanel({ symbol }: { symbol: string }) {
                   <TableCell>Post (15:00-15:39)</TableCell>
                   <TableCell align="right">Pre pts</TableCell>
                   <TableCell align="right">Post pts</TableCell>
-                  <TableCell>Conclusion</TableCell>
+                  <TableCell>Transition Type</TableCell>
+                  <TableCell>Magnitude</TableCell>
                   <TableCell>Original engine</TableCell>
                   <TableCell align="right">Pre-vol</TableCell>
                   <TableCell align="right">Post-vol (pre-auction)</TableCell>

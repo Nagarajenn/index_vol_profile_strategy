@@ -386,8 +386,8 @@ def insert_cas_daily_transition(record) -> None:
             pre_window_points_move, post_window_points_move,
             pcr_1459, institutional_bias_label_1459, institutional_bias_score_1459,
             expiry_type, day_of_week, old_methodology_outcome, old_methodology_outcome_magnitude,
-            data_quality_flag
-        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            data_quality_flag, transition_type, magnitude_pct_return, magnitude_atr_normalized, magnitude_tier
+        ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
         ON CONFLICT (symbol, session_date) DO UPDATE SET
             close_1431 = EXCLUDED.close_1431, close_1459 = EXCLUDED.close_1459, close_1539 = EXCLUDED.close_1539,
             pre_direction = EXCLUDED.pre_direction, post_direction = EXCLUDED.post_direction,
@@ -402,7 +402,12 @@ def insert_cas_daily_transition(record) -> None:
             expiry_type = EXCLUDED.expiry_type, day_of_week = EXCLUDED.day_of_week,
             old_methodology_outcome = EXCLUDED.old_methodology_outcome,
             old_methodology_outcome_magnitude = EXCLUDED.old_methodology_outcome_magnitude,
-            data_quality_flag = EXCLUDED.data_quality_flag, computed_at = now()
+            data_quality_flag = EXCLUDED.data_quality_flag,
+            transition_type = EXCLUDED.transition_type,
+            magnitude_pct_return = EXCLUDED.magnitude_pct_return,
+            magnitude_atr_normalized = EXCLUDED.magnitude_atr_normalized,
+            magnitude_tier = EXCLUDED.magnitude_tier,
+            computed_at = now()
         """,
         (
             record.symbol, record.session_date, record.close_1431, record.close_1459, record.close_1539,
@@ -411,7 +416,8 @@ def insert_cas_daily_transition(record) -> None:
             record.pre_window_points_move, record.post_window_points_move,
             record.pcr_1459, record.institutional_bias_label_1459, record.institutional_bias_score_1459,
             record.expiry_type, record.day_of_week, record.old_methodology_outcome, record.old_methodology_outcome_magnitude,
-            record.data_quality_flag,
+            record.data_quality_flag, record.transition_type, record.magnitude_pct_return,
+            record.magnitude_atr_normalized, record.magnitude_tier,
         ),
     )
 

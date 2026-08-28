@@ -80,6 +80,19 @@ export interface CasDailyResultDTO {
   old_methodology_outcome: "continuation" | "reversal" | "neutral" | null;
   old_methodology_outcome_magnitude: number | null;
   data_quality_flag: string | null;
+  // Independent-dimension reclassification (Phase 7A) -- additive, see
+  // market_transition/cas_transition.py. `conclusion` above is untouched.
+  transition_type:
+    | "CONTINUATION_UP"
+    | "CONTINUATION_DOWN"
+    | "REVERSAL_UP"
+    | "REVERSAL_DOWN"
+    | "POST_WINDOW_INITIATION_UP"
+    | "POST_WINDOW_INITIATION_DOWN"
+    | "NO_MATERIAL_TRANSITION";
+  magnitude_pct_return: number | null;
+  magnitude_atr_normalized: number | null;
+  magnitude_tier: "NORMAL" | "MODERATE" | "LARGE" | "EXTREME" | null;
   computed_at: string;
 }
 

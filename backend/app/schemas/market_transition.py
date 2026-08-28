@@ -157,6 +157,15 @@ class CasDailyResultDTO(BaseModel):
     old_methodology_outcome: Literal["continuation", "reversal", "neutral"] | None
     old_methodology_outcome_magnitude: float | None
     data_quality_flag: str | None
+    # Independent-dimension reclassification (Phase 7A) -- additive, see
+    # market_transition/cas_transition.py. `conclusion` above is untouched.
+    transition_type: Literal[
+        "CONTINUATION_UP", "CONTINUATION_DOWN", "REVERSAL_UP", "REVERSAL_DOWN",
+        "POST_WINDOW_INITIATION_UP", "POST_WINDOW_INITIATION_DOWN", "NO_MATERIAL_TRANSITION",
+    ]
+    magnitude_pct_return: float | None
+    magnitude_atr_normalized: float | None
+    magnitude_tier: Literal["NORMAL", "MODERATE", "LARGE", "EXTREME"] | None
     computed_at: datetime
 
 

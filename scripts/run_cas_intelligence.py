@@ -22,6 +22,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import config  # noqa: F401 -- truststore bootstrap, must import before any DB/HTTPS call
+from analytics.breakout_boxes import compute_atr
 from analytics.institutional_bias import classify_institutional_bias
 from config.instruments import INSTRUMENTS
 from db import reader as db_reader
@@ -57,6 +58,22 @@ def _split_by_date(candles):
     return {d: g.reset_index(drop=True) for d, g in candles.groupby(candles["timestamp"].dt.date)}
 
 
+def _daily_atr_by_date(candles, period: int = 14) -> dict:
+    """Resamples the already-loaded 1-min history into daily OHLC bars and
+    computes a rolling ATR(14) per day -- used to volatility-normalize each
+    day's transition magnitude (see cas_transition.classify_transition_magnitude).
+    Computed once per symbol from the same candles already in memory, no new
+    DB read. Each day's row in the returned dict is that day's own ATR
+    (i.e. including that day's own range) -- callers use the *prior*
+    trading day's value so the normalization never looks ahead."""
+    if candles.empty:
+        return {}
+    daily = candles.assign(session_date=candles["timestamp"].dt.date)
+    bars = daily.groupby("session_date").agg(open=("open", "first"), high=("high", "max"), low=("low", "min"), close=("close", "last"))
+    atr = compute_atr(bars, period=period)
+    return atr.to_dict()
+
+
 def run_symbol(symbol: str) -> tuple[int, int]:
     bin_size = INSTRUMENTS[symbol]["volume_profile_bin_size"]
     candles = db_reader.load_raw_candles(symbol)
@@ -64,6 +81,7 @@ def run_symbol(symbol: str) -> tuple[int, int]:
 
     old_records = extract_all_records(symbol, candles, bin_size, extract_fn=extract_daily_transition_record)
     old_by_date = {r.session_date: r for r in old_records}
+    atr_by_date = _daily_atr_by_date(candles)
 
     written = 0
     cas_rows = []
@@ -78,6 +96,9 @@ def run_symbol(symbol: str) -> tuple[int, int]:
 
         old = old_by_date.get(session_date)
         expiry_type = old.features.expiry_type if old else None
+        # Prior trading day's ATR, never today's own (still-forming) bar --
+        # so the magnitude normalization never looks ahead.
+        atr_14 = atr_by_date.get(prior_dates[-1]) if prior_dates else None
 
         record = build_cas_daily_transition(
             symbol,
@@ -90,6 +111,7 @@ def run_symbol(symbol: str) -> tuple[int, int]:
             old_outcome=old.outcome.outcome if old else None,
             old_outcome_magnitude=old.outcome.outcome_magnitude if old else None,
             option_context=_option_context(symbol, session_date),
+            atr_14=atr_14,
         )
         if record is None:
             continue

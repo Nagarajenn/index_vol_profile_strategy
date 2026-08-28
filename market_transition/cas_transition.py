@@ -46,11 +46,23 @@ its findings are deliberately promoted later.
 
 from dataclasses import dataclass
 from datetime import date, time
+from typing import Literal
 
 import pandas as pd
 
 from market_transition.feature_extraction import _direction, _time_between, compute_pre_window_features
 from market_transition.models import DailyTransitionRecord, ExpiryType, TransitionOutcome
+
+TransitionType = Literal[
+    "CONTINUATION_UP",
+    "CONTINUATION_DOWN",
+    "REVERSAL_UP",
+    "REVERSAL_DOWN",
+    "POST_WINDOW_INITIATION_UP",
+    "POST_WINDOW_INITIATION_DOWN",
+    "NO_MATERIAL_TRANSITION",
+]
+MagnitudeTier = Literal["NORMAL", "MODERATE", "LARGE", "EXTREME"]
 
 CAS_EFFECTIVE_DATE = date(2026, 8, 3)  # NSE's Closing Auction Session framework start date
 
@@ -74,6 +86,63 @@ POST_VOLUME_RELIABLE_END = time(15, 14)
 # volume-frozen post-CAS and would trip this on every single day for no
 # useful signal.
 STUCK_CANDLE_MIN_RUN = 5
+
+
+def classify_transition_type(pre_direction: str, post_direction: str) -> TransitionType:
+    """Independent-dimension classification: pre-window state and
+    post-window outcome are never conflated the way the old `conclusion`
+    field's short-circuit does (a flat pre-window used to force "neutral"
+    outright, regardless of how large the post-window move actually was --
+    e.g. 2026-08-27: pre flat, post -312pts, reported "Neutral"). This
+    function only ever looks at the two directions actually passed in.
+
+    The two combinations not named in the original spec table (up->flat,
+    down->flat) fold into NO_MATERIAL_TRANSITION on the same principle as
+    flat->flat: the gate is "did the post-window move materially", not
+    "was there a pre-window trend" -- a stalled pre-trend with a flat
+    post-window genuinely has nothing material to report either way.
+    """
+    if post_direction == "flat":
+        return "NO_MATERIAL_TRANSITION"
+    if pre_direction == "flat":
+        return "POST_WINDOW_INITIATION_UP" if post_direction == "up" else "POST_WINDOW_INITIATION_DOWN"
+    if pre_direction == post_direction:
+        return "CONTINUATION_UP" if post_direction == "up" else "CONTINUATION_DOWN"
+    return "REVERSAL_UP" if post_direction == "up" else "REVERSAL_DOWN"
+
+
+# ATR-multiple tier boundaries: NORMAL below 0.5x, MODERATE below 1.0x, LARGE
+# below 2.0x, else EXTREME -- same scale as quant_features' own
+# LABEL_ATR_THRESHOLD=0.5 precedent for an ATR-normalized Up/Down/Flat call.
+# Documented starting defaults, tunable later once enough post-CAS days exist
+# to see where these tiers actually fall on the real distribution.
+MAGNITUDE_TIER_ATR_THRESHOLDS = (0.5, 1.0, 2.0)
+
+
+def classify_transition_magnitude(
+    post_points_move: float | None, baseline_1431: float | None, atr_14: float | None
+) -> tuple[float | None, float | None, MagnitudeTier | None]:
+    """Returns (pct_return, atr_normalized, tier). atr_normalized (volatility-
+    adjusted) is the primary signal per the redesign spec; pct_return is
+    always returned alongside for transparency even when ATR is unavailable.
+    Never fabricates a tier from a missing/zero ATR or baseline -- returns
+    None for the fields that can't be honestly computed rather than guessing."""
+    if post_points_move is None:
+        return None, None, None
+    pct_return = (post_points_move / baseline_1431) * 100 if baseline_1431 else None
+    if not atr_14:
+        return pct_return, None, None
+    atr_normalized = abs(post_points_move) / atr_14
+    lo, mid, hi = MAGNITUDE_TIER_ATR_THRESHOLDS
+    if atr_normalized >= hi:
+        tier: MagnitudeTier = "EXTREME"
+    elif atr_normalized >= mid:
+        tier = "LARGE"
+    elif atr_normalized >= lo:
+        tier = "MODERATE"
+    else:
+        tier = "NORMAL"
+    return pct_return, atr_normalized, tier
 
 
 def window_volume(today_candles: pd.DataFrame, start: time, end: time) -> float | None:
@@ -188,6 +257,15 @@ class CasDailyTransition:
     old_methodology_outcome: str | None
     old_methodology_outcome_magnitude: float | None
     data_quality_flag: str | None = None
+    # Independent-dimension classification (additive -- `conclusion` above
+    # is untouched and still powers the existing correlation study/agreement
+    # comparison unchanged; these are the new, richer fields the dashboard
+    # now displays). Defaults keep every pre-existing test fixture/call site
+    # that doesn't pass these still valid.
+    transition_type: str = "NO_MATERIAL_TRANSITION"
+    magnitude_pct_return: float | None = None
+    magnitude_atr_normalized: float | None = None
+    magnitude_tier: str | None = None
 
 
 def _points_move(window: pd.DataFrame, direction: str, baseline: float) -> float | None:
@@ -227,11 +305,16 @@ def build_cas_daily_transition(
     old_outcome: str | None = None,
     old_outcome_magnitude: float | None = None,
     option_context: dict | None = None,
+    atr_14: float | None = None,
 ) -> CasDailyTransition | None:
     """`option_context`, if supplied, is {"pcr": float|None, "bias_label":
     str, "bias_score": int|None} -- already resolved by the caller from an
     option_chain_summary snapshot near 14:59 (this module has no DB access
-    of its own, same discipline as the rest of market_transition/)."""
+    of its own, same discipline as the rest of market_transition/).
+
+    `atr_14`, if supplied, is the prior trading day's 14-day daily ATR --
+    also resolved by the caller (this module does no candle resampling of
+    its own), used only to volatility-normalize the transition magnitude."""
     record = extract_cas_transition_record(
         symbol, session_date, today_candles, prior_day_candles, historical_by_date, bin_size, expiry_type
     )
@@ -260,6 +343,11 @@ def build_cas_daily_transition(
         "stuck_candle_run_detected" if (_has_stuck_candles(pre_window) or _has_stuck_candles(post_reliable_window)) else None
     )
 
+    transition_type = classify_transition_type(record.outcome.transition_direction, post_direction)
+    magnitude_pct_return, magnitude_atr_normalized, magnitude_tier = classify_transition_magnitude(
+        post_points_move, baseline_1431, atr_14
+    )
+
     return CasDailyTransition(
         symbol=symbol,
         session_date=session_date,
@@ -283,4 +371,8 @@ def build_cas_daily_transition(
         old_methodology_outcome=old_outcome,
         old_methodology_outcome_magnitude=old_outcome_magnitude,
         data_quality_flag=quality_flag,
+        transition_type=transition_type,
+        magnitude_pct_return=magnitude_pct_return,
+        magnitude_atr_normalized=magnitude_atr_normalized,
+        magnitude_tier=magnitude_tier,
     )

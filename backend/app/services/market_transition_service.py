@@ -131,6 +131,10 @@ class MarketTransitionService:
             old_methodology_outcome=row.old_methodology_outcome,
             old_methodology_outcome_magnitude=row.old_methodology_outcome_magnitude,
             data_quality_flag=row.data_quality_flag,
+            transition_type=row.transition_type,
+            magnitude_pct_return=row.magnitude_pct_return,
+            magnitude_atr_normalized=row.magnitude_atr_normalized,
+            magnitude_tier=row.magnitude_tier,
             computed_at=row.computed_at,
         )
 

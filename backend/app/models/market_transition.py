@@ -109,6 +109,11 @@ class CasDailyTransition(Base):
     __table_args__ = (
         UniqueConstraint("symbol", "session_date", name="mti_cas_daily_transitions_symbol_session_date_key"),
         CheckConstraint("conclusion IN ('continuation', 'reversal', 'neutral')", name="mti_cas_daily_transitions_conclusion_check"),
+        CheckConstraint(
+            "transition_type IN ('CONTINUATION_UP', 'CONTINUATION_DOWN', 'REVERSAL_UP', 'REVERSAL_DOWN', "
+            "'POST_WINDOW_INITIATION_UP', 'POST_WINDOW_INITIATION_DOWN', 'NO_MATERIAL_TRANSITION')",
+            name="mti_cas_daily_transitions_transition_type_check",
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -138,4 +143,13 @@ class CasDailyTransition(Base):
     old_methodology_outcome: Mapped[str | None] = mapped_column(Text, nullable=True)
     old_methodology_outcome_magnitude: Mapped[float | None] = mapped_column(Double, nullable=True)
     data_quality_flag: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Independent-dimension reclassification (Phase 7A) -- additive, see
+    # market_transition/cas_transition.py::classify_transition_type/
+    # classify_transition_magnitude. `conclusion` above is untouched.
+    transition_type: Mapped[str] = mapped_column(Text, nullable=False)
+    magnitude_pct_return: Mapped[float | None] = mapped_column(Double, nullable=True)
+    magnitude_atr_normalized: Mapped[float | None] = mapped_column(Double, nullable=True)
+    magnitude_tier: Mapped[str | None] = mapped_column(Text, nullable=True)
+
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

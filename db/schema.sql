@@ -275,6 +275,19 @@ CREATE TABLE IF NOT EXISTS mti_cas_daily_transitions (
     old_methodology_outcome TEXT,
     old_methodology_outcome_magnitude DOUBLE PRECISION,
     data_quality_flag TEXT,
+    -- Independent-dimension reclassification (Phase 7A): `conclusion` above
+    -- stays untouched (still powers the correlation study/agreement
+    -- comparison unchanged) -- these are additive, richer fields so a flat
+    -- pre-window + large post-window move is no longer indistinguishable
+    -- from a genuinely quiet day (see market_transition/cas_transition.py::
+    -- classify_transition_type/classify_transition_magnitude).
+    transition_type TEXT NOT NULL DEFAULT 'NO_MATERIAL_TRANSITION' CHECK (transition_type IN (
+        'CONTINUATION_UP', 'CONTINUATION_DOWN', 'REVERSAL_UP', 'REVERSAL_DOWN',
+        'POST_WINDOW_INITIATION_UP', 'POST_WINDOW_INITIATION_DOWN', 'NO_MATERIAL_TRANSITION'
+    )),
+    magnitude_pct_return DOUBLE PRECISION,
+    magnitude_atr_normalized DOUBLE PRECISION,
+    magnitude_tier TEXT CHECK (magnitude_tier IN ('NORMAL', 'MODERATE', 'LARGE', 'EXTREME') OR magnitude_tier IS NULL),
     computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (symbol, session_date)
 );

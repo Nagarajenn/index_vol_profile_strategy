@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from app.models import MtiDailyTransition, MtiFactorCorrelation
+from app.models import CasDailyTransition, MtiDailyTransition, MtiFactorCorrelation
 from app.services.market_transition_service import MarketTransitionService
 
 
@@ -56,16 +56,50 @@ def _correlation_row(factor_name: str, target: str, p_value: float | None) -> Mt
     )
 
 
+def _cas_daily_row(
+    session_date: date,
+    transition_type: str = "NO_MATERIAL_TRANSITION",
+    magnitude_tier: str | None = None,
+    conclusion: str = "neutral",
+    old_methodology_outcome: str | None = None,
+) -> CasDailyTransition:
+    return CasDailyTransition(
+        symbol="NIFTY",
+        session_date=session_date,
+        close_1431=100, close_1459=100, close_1539=90,
+        pre_direction="flat", post_direction="down",
+        conclusion=conclusion,
+        outcome_magnitude=10,
+        pre_window_volume=1000, post_window_pre_auction_volume=2000, volume_ratio=2.0,
+        pre_window_points_move=0, post_window_points_move=-10,
+        pcr_1459=0.9, institutional_bias_label_1459="Neutral", institutional_bias_score_1459=0,
+        expiry_type=None, day_of_week=session_date.weekday(),
+        old_methodology_outcome=old_methodology_outcome, old_methodology_outcome_magnitude=None,
+        data_quality_flag=None,
+        transition_type=transition_type,
+        magnitude_pct_return=-10.0, magnitude_atr_normalized=1.5, magnitude_tier=magnitude_tier,
+        computed_at=datetime.now(timezone.utc),
+    )
+
+
 class _FakeRepo:
-    def __init__(self, daily, correlations) -> None:
+    def __init__(self, daily, correlations, cas_daily=None, cas_correlations=None) -> None:
         self._daily = daily
         self._correlations = correlations
+        self._cas_daily = cas_daily or []
+        self._cas_correlations = cas_correlations or []
 
     async def list_daily(self, symbol: str, limit: int = 200):
         return self._daily[:limit]
 
     async def list_correlations(self, symbol: str):
         return self._correlations
+
+    async def list_cas_daily(self, symbol: str, limit: int = 60):
+        return self._cas_daily[:limit]
+
+    async def list_cas_correlations(self, symbol: str):
+        return self._cas_correlations
 
 
 @pytest.mark.asyncio
@@ -203,3 +237,39 @@ async def test_forecast_accuracy_aggregates_across_multiple_days():
     assert result.forecast_evaluable_days == 3
     assert result.forecast_hit_count == 2
     assert result.forecast_accuracy_pct == pytest.approx(66.7, abs=0.1)
+
+
+@pytest.mark.asyncio
+async def test_get_cas_intelligence_maps_transition_type_and_magnitude_fields():
+    # The regression this reclassification fixes: a flat-pre/large-post day
+    # keeps `conclusion="neutral"` (untouched) but must surface the richer
+    # transition_type/magnitude fields through the DTO unchanged.
+    cas_daily = [
+        _cas_daily_row(
+            date(2026, 8, 27), transition_type="POST_WINDOW_INITIATION_DOWN", magnitude_tier="MODERATE",
+            conclusion="neutral", old_methodology_outcome="reversal",
+        )
+    ]
+    service = MarketTransitionService(_FakeRepo([], [], cas_daily=cas_daily))
+
+    result = await service.get_cas_intelligence("NIFTY")
+
+    assert result.total_days_analyzed == 1
+    dto = result.daily_results[0]
+    assert dto.conclusion == "neutral"
+    assert dto.transition_type == "POST_WINDOW_INITIATION_DOWN"
+    assert dto.magnitude_tier == "MODERATE"
+    assert dto.magnitude_pct_return == pytest.approx(-10.0)
+    assert dto.magnitude_atr_normalized == pytest.approx(1.5)
+    # agreement comparison (unrelated to this phase) still works off `conclusion`/`old_methodology_outcome`
+    assert result.agreement_count == 0  # neutral != reversal
+
+
+@pytest.mark.asyncio
+async def test_get_cas_intelligence_magnitude_tier_none_when_atr_unavailable():
+    cas_daily = [_cas_daily_row(date(2026, 8, 27), magnitude_tier=None)]
+    service = MarketTransitionService(_FakeRepo([], [], cas_daily=cas_daily))
+
+    result = await service.get_cas_intelligence("NIFTY")
+
+    assert result.daily_results[0].magnitude_tier is None
