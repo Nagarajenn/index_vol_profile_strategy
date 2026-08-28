@@ -4,6 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
+    CasCohortCategorical,
+    CasCohortFeatureStat,
     CasDailyTransition,
     CasFactorCorrelation,
     CasPostTransitionMinute,
@@ -76,5 +78,19 @@ class MarketTransitionRepository:
             .where(CasTransitionForecast.symbol == symbol, CasTransitionForecast.session_date == session_date)
             .order_by(CasTransitionForecast.checkpoint_time)
         )
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    # --- Phase 7C: historical cohorts + pre-3pm warning-indicator stats,
+    # symbol-wide (not per-day) -- recomputed by scripts/run_cas_cohort_
+    # analysis.py against the full CAS-era history each run.
+
+    async def list_cohort_feature_stats(self, symbol: str) -> list[CasCohortFeatureStat]:
+        stmt = select(CasCohortFeatureStat).where(CasCohortFeatureStat.symbol == symbol)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_cohort_categorical(self, symbol: str) -> list[CasCohortCategorical]:
+        stmt = select(CasCohortCategorical).where(CasCohortCategorical.symbol == symbol)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())

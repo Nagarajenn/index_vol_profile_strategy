@@ -190,3 +190,47 @@ export interface CasWindowedDetailResponseDTO {
   post_transition_minutes: PostTransitionMinuteDTO[];
   forecasts: TransitionForecastDTO[];
 }
+
+// Phase 7C: historical cohorts + pre-3pm warning-indicator statistics --
+// cohort-vs-rest comparison, complementary to the factor-correlation study
+// above (CasIntelligenceResponseDTO.correlations), not a replacement.
+export type CohortName =
+  | "FLAT_LARGE_UP"
+  | "FLAT_LARGE_DOWN"
+  | "UP_REVERSAL_DOWN"
+  | "DOWN_REVERSAL_UP"
+  | "UP_CONTINUATION"
+  | "DOWN_CONTINUATION"
+  | "FLAT_NO_MATERIAL_MOVE";
+
+export interface CohortFeatureStatDTO {
+  feature_name: string;
+  n: number;
+  median: number | null;
+  mean: number | null;
+  percentile_within_full_sample: number | null;
+  effect_size: number | null;
+  statistic: number | null;
+  p_value: number | null;
+  confidence_label: ConfidenceLabel;
+  direction_note: string | null;
+}
+
+export interface CohortCategoricalDTO {
+  feature_name: string;
+  n: number;
+  category_counts: Record<string, number>;
+  full_sample_category_counts: Record<string, number>;
+}
+
+export interface CohortResultDTO {
+  cohort: CohortName;
+  n_days: number;
+  features: CohortFeatureStatDTO[];
+  categorical: CohortCategoricalDTO[];
+}
+
+export interface CasCohortAnalysisResponseDTO {
+  symbol: string;
+  cohorts: CohortResultDTO[];
+}

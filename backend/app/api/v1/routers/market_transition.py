@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.v1.dependencies import get_live_transition_advisor_service, get_market_transition_service
 from app.schemas.market_transition import (
+    CasCohortAnalysisResponseDTO,
     CasIntelligenceResponseDTO,
     CasWindowedDetailResponseDTO,
     LiveAdvisoryDTO,
@@ -77,3 +78,21 @@ async def get_cas_windowed_detail(
     renders this response.
     """
     return await service.get_cas_windowed_detail(symbol, session_date)
+
+
+@router.get("/market-transition/{symbol}/cas-cohort-analysis", response_model=CasCohortAnalysisResponseDTO)
+async def get_cas_cohort_analysis(
+    symbol: str, service: MarketTransitionService = Depends(get_market_transition_service)
+) -> CasCohortAnalysisResponseDTO:
+    """Phase 7C: historical cohorts + pre-3pm warning-indicator statistics.
+    Groups CAS-era days into 7 named cohorts (derived from Phase 7A's
+    transition_type x magnitude_tier) and, for each cohort, compares its
+    pre-3pm (14:55-14:59) state against the rest of the sample --
+    "which conditions preceded this kind of outcome", complementary to
+    (not a replacement for) /cas-intelligence's factor-correlation study.
+    Every cohort is always present in the response, even with n_days=0.
+    Does not claim predictive power from a low p-value alone: every
+    result carries N and is explicitly marked "Insufficient data" below
+    the cohort-appropriate minimum sample size.
+    """
+    return await service.get_cas_cohort_analysis(symbol)

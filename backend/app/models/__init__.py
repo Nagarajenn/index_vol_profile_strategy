@@ -2,6 +2,8 @@ from app.models.base import Base
 from app.models.levels_snapshot import LevelsSnapshot
 from app.models.market_intelligence import ClassifiedEvent, NewsItem
 from app.models.market_transition import (
+    CasCohortCategorical,
+    CasCohortFeatureStat,
     CasDailyTransition,
     CasFactorCorrelation,
     CasPostTransitionMinute,
@@ -29,4 +31,6 @@ __all__ = [
     "CasPretransitionWindow",
     "CasPostTransitionMinute",
     "CasTransitionForecast",
+    "CasCohortFeatureStat",
+    "CasCohortCategorical",
 ]

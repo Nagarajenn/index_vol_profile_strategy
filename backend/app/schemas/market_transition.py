@@ -270,3 +270,47 @@ class CasWindowedDetailResponseDTO(BaseModel):
     pre_transition_windows: list[PreTransitionWindowDTO]
     post_transition_minutes: list[PostTransitionMinuteDTO]
     forecasts: list[TransitionForecastDTO]
+
+
+# ---------------------------------------------------------------------------
+# Phase 7C: historical cohorts + pre-3pm warning-indicator statistics --
+# served by GET /api/v1/market-transition/{symbol}/cas-cohort-analysis.
+# Cohort-vs-rest comparison, complementary to (not a replacement for) the
+# correlation study above. Symbol-wide, not per-day.
+# ---------------------------------------------------------------------------
+CohortNameLiteral = Literal[
+    "FLAT_LARGE_UP", "FLAT_LARGE_DOWN", "UP_REVERSAL_DOWN", "DOWN_REVERSAL_UP",
+    "UP_CONTINUATION", "DOWN_CONTINUATION", "FLAT_NO_MATERIAL_MOVE",
+]
+
+
+class CohortFeatureStatDTO(BaseModel):
+    feature_name: str
+    n: int
+    median: float | None
+    mean: float | None
+    percentile_within_full_sample: float | None
+    effect_size: float | None
+    statistic: float | None
+    p_value: float | None
+    confidence_label: ConfidenceLabelLiteral
+    direction_note: str | None
+
+
+class CohortCategoricalDTO(BaseModel):
+    feature_name: str
+    n: int
+    category_counts: dict[str, int]
+    full_sample_category_counts: dict[str, int]
+
+
+class CohortResultDTO(BaseModel):
+    cohort: CohortNameLiteral
+    n_days: int
+    features: list[CohortFeatureStatDTO]
+    categorical: list[CohortCategoricalDTO]
+
+
+class CasCohortAnalysisResponseDTO(BaseModel):
+    symbol: str
+    cohorts: list[CohortResultDTO]

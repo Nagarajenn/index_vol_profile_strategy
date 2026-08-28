@@ -274,3 +274,59 @@ class CasTransitionForecast(Base):
     top_contributing_factors: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     historical_similarity_score: Mapped[float] = mapped_column(Double, nullable=False)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+_COHORT_CHECK = (
+    "cohort IN ('FLAT_LARGE_UP', 'FLAT_LARGE_DOWN', 'UP_REVERSAL_DOWN', 'DOWN_REVERSAL_UP', "
+    "'UP_CONTINUATION', 'DOWN_CONTINUATION', 'FLAT_NO_MATERIAL_MOVE')"
+)
+
+
+class CasCohortFeatureStat(Base):
+    """Phase 7C: cohort-vs-rest comparison of one pre-3pm feature for one
+    of the 7 named cohorts -- see market_transition/cas_cohorts.py.
+    Complementary to CasFactorCorrelation's single-model regression, not a
+    replacement."""
+
+    __tablename__ = "mti_cas_cohort_analysis"
+    __table_args__ = (
+        UniqueConstraint("symbol", "cohort", "feature_name", name="mti_cas_cohort_analysis_symbol_cohort_feature_name_key"),
+        CheckConstraint(_COHORT_CHECK, name="mti_cas_cohort_analysis_cohort_check"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    symbol: Mapped[str] = mapped_column(Text, nullable=False)
+    cohort: Mapped[str] = mapped_column(Text, nullable=False)
+    feature_name: Mapped[str] = mapped_column(Text, nullable=False)
+    n: Mapped[int] = mapped_column(Integer, nullable=False)
+    median: Mapped[float | None] = mapped_column(Double, nullable=True)
+    mean: Mapped[float | None] = mapped_column(Double, nullable=True)
+    percentile_within_full_sample: Mapped[float | None] = mapped_column(Double, nullable=True)
+    effect_size: Mapped[float | None] = mapped_column(Double, nullable=True)
+    statistic: Mapped[float | None] = mapped_column(Double, nullable=True)
+    p_value: Mapped[float | None] = mapped_column(Double, nullable=True)
+    confidence_label: Mapped[str] = mapped_column(Text, nullable=False)
+    direction_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class CasCohortCategorical(Base):
+    """Phase 7C: categorical companion to CasCohortFeatureStat -- category
+    counts within the cohort vs. the full sample, descriptive only (no
+    formal significance test for multi-category small-N comparisons in
+    this phase)."""
+
+    __tablename__ = "mti_cas_cohort_categorical"
+    __table_args__ = (
+        UniqueConstraint("symbol", "cohort", "feature_name", name="mti_cas_cohort_categorical_symbol_cohort_feature_name_key"),
+        CheckConstraint(_COHORT_CHECK, name="mti_cas_cohort_categorical_cohort_check"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    symbol: Mapped[str] = mapped_column(Text, nullable=False)
+    cohort: Mapped[str] = mapped_column(Text, nullable=False)
+    feature_name: Mapped[str] = mapped_column(Text, nullable=False)
+    n: Mapped[int] = mapped_column(Integer, nullable=False)
+    category_counts: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    full_sample_category_counts: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

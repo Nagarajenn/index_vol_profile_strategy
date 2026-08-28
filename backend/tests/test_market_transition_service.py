@@ -7,6 +7,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pytest
 
 from app.models import (
+    CasCohortCategorical,
+    CasCohortFeatureStat,
     CasDailyTransition,
     CasPostTransitionMinute,
     CasPretransitionWindow,
@@ -93,6 +95,7 @@ class _FakeRepo:
     def __init__(
         self, daily, correlations, cas_daily=None, cas_correlations=None,
         pretransition_windows=None, post_transition_minutes=None, transition_forecasts=None,
+        cohort_feature_stats=None, cohort_categorical=None,
     ) -> None:
         self._daily = daily
         self._correlations = correlations
@@ -101,6 +104,8 @@ class _FakeRepo:
         self._pretransition_windows = pretransition_windows or []
         self._post_transition_minutes = post_transition_minutes or []
         self._transition_forecasts = transition_forecasts or []
+        self._cohort_feature_stats = cohort_feature_stats or []
+        self._cohort_categorical = cohort_categorical or []
 
     async def list_daily(self, symbol: str, limit: int = 200):
         return self._daily[:limit]
@@ -122,6 +127,12 @@ class _FakeRepo:
 
     async def list_transition_forecasts(self, symbol: str, session_date: date):
         return self._transition_forecasts
+
+    async def list_cohort_feature_stats(self, symbol: str):
+        return self._cohort_feature_stats
+
+    async def list_cohort_categorical(self, symbol: str):
+        return self._cohort_categorical
 
 
 def _pretransition_window_row(window_index: int = 1, dominant_side: str = "balanced") -> CasPretransitionWindow:
@@ -155,6 +166,23 @@ def _transition_forecast_row(checkpoint_time: str = "14:59") -> CasTransitionFor
         probability_reversal=0.6, probability_continuation=0.4, n_analogs=8, confidence_label="Weak",
         top_contributing_factors=[{"factor_name": "PCR", "today_value": "0.9", "note": "n=8", "contribution": 0.2}],
         historical_similarity_score=0.7, computed_at=datetime.now(timezone.utc),
+    )
+
+
+def _cohort_feature_stat_row(cohort: str = "UP_CONTINUATION", feature_name: str = "Pre-window volume (14:55-14:59)", n: int = 4) -> CasCohortFeatureStat:
+    return CasCohortFeatureStat(
+        symbol="NIFTY", cohort=cohort, feature_name=feature_name, n=n,
+        median=1000.0, mean=1010.0, percentile_within_full_sample=75.0, effect_size=0.8,
+        statistic=2.0, p_value=0.03, confidence_label="Insufficient data",
+        direction_note="Cohort median is higher than the rest of the sample.", computed_at=datetime.now(timezone.utc),
+    )
+
+
+def _cohort_categorical_row(cohort: str = "UP_CONTINUATION", feature_name: str = "Institutional bias label (14:59)") -> CasCohortCategorical:
+    return CasCohortCategorical(
+        symbol="NIFTY", cohort=cohort, feature_name=feature_name, n=4,
+        category_counts={"Neutral": 4}, full_sample_category_counts={"Neutral": 8},
+        computed_at=datetime.now(timezone.utc),
     )
 
 
@@ -363,3 +391,54 @@ async def test_get_cas_windowed_detail_empty_when_nothing_computed_yet():
     assert result.pre_transition_windows == []
     assert result.post_transition_minutes == []
     assert result.forecasts == []
+
+
+@pytest.mark.asyncio
+async def test_get_cas_cohort_analysis_always_returns_all_seven_cohorts():
+    service = MarketTransitionService(_FakeRepo([], []))
+
+    result = await service.get_cas_cohort_analysis("NIFTY")
+
+    assert result.symbol == "NIFTY"
+    assert len(result.cohorts) == 7
+    assert {c.cohort for c in result.cohorts} == {
+        "FLAT_LARGE_UP", "FLAT_LARGE_DOWN", "UP_REVERSAL_DOWN", "DOWN_REVERSAL_UP",
+        "UP_CONTINUATION", "DOWN_CONTINUATION", "FLAT_NO_MATERIAL_MOVE",
+    }
+    # every cohort present even with zero data -- not silently dropped
+    for c in result.cohorts:
+        assert c.n_days == 0
+        assert c.features == []
+        assert c.categorical == []
+
+
+@pytest.mark.asyncio
+async def test_get_cas_cohort_analysis_groups_features_and_categorical_by_cohort():
+    repo = _FakeRepo(
+        [], [],
+        cohort_feature_stats=[
+            _cohort_feature_stat_row(cohort="UP_CONTINUATION", feature_name="Pre-window volume (14:55-14:59)", n=6),
+            _cohort_feature_stat_row(cohort="UP_CONTINUATION", feature_name="PCR (14:59)", n=5),
+            _cohort_feature_stat_row(cohort="DOWN_CONTINUATION", feature_name="Pre-window volume (14:55-14:59)", n=3),
+        ],
+        cohort_categorical=[_cohort_categorical_row(cohort="UP_CONTINUATION")],
+    )
+    service = MarketTransitionService(repo)
+
+    result = await service.get_cas_cohort_analysis("NIFTY")
+
+    up_continuation = next(c for c in result.cohorts if c.cohort == "UP_CONTINUATION")
+    down_continuation = next(c for c in result.cohorts if c.cohort == "DOWN_CONTINUATION")
+    flat_no_material = next(c for c in result.cohorts if c.cohort == "FLAT_NO_MATERIAL_MOVE")
+
+    assert len(up_continuation.features) == 2
+    assert up_continuation.n_days == 6  # max n across this cohort's features
+    assert len(up_continuation.categorical) == 1
+    assert up_continuation.categorical[0].category_counts == {"Neutral": 4}
+
+    assert len(down_continuation.features) == 1
+    assert down_continuation.n_days == 3
+
+    # cohorts with no rows at all still present, empty
+    assert flat_no_material.features == []
+    assert flat_no_material.n_days == 0

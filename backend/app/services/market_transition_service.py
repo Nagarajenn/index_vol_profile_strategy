@@ -1,6 +1,8 @@
 from datetime import date
 
 from app.models import (
+    CasCohortCategorical,
+    CasCohortFeatureStat,
     CasDailyTransition,
     CasPostTransitionMinute,
     CasPretransitionWindow,
@@ -10,9 +12,13 @@ from app.models import (
 )
 from app.repositories.protocols import MarketTransitionRepositoryProtocol
 from app.schemas.market_transition import (
+    CasCohortAnalysisResponseDTO,
     CasDailyResultDTO,
     CasIntelligenceResponseDTO,
     CasWindowedDetailResponseDTO,
+    CohortCategoricalDTO,
+    CohortFeatureStatDTO,
+    CohortResultDTO,
     ContributingFactorDTO,
     MtiDailyResultDTO,
     MtiFactorCorrelationDTO,
@@ -21,6 +27,11 @@ from app.schemas.market_transition import (
     PreTransitionWindowDTO,
     TransitionForecastDTO,
 )
+
+_COHORT_ORDER = [
+    "FLAT_LARGE_UP", "FLAT_LARGE_DOWN", "UP_REVERSAL_DOWN", "DOWN_REVERSAL_UP",
+    "UP_CONTINUATION", "DOWN_CONTINUATION", "FLAT_NO_MATERIAL_MOVE",
+]
 
 
 class MarketTransitionService:
@@ -167,6 +178,54 @@ class MarketTransitionService:
             pre_transition_windows=[self._to_pretransition_window_dto(r) for r in window_rows],
             post_transition_minutes=[self._to_post_transition_minute_dto(r) for r in minute_rows],
             forecasts=[self._to_forecast_dto(r) for r in forecast_rows],
+        )
+
+    async def get_cas_cohort_analysis(self, symbol: str) -> CasCohortAnalysisResponseDTO:
+        """Phase 7C: cohort-vs-rest pre-3pm feature comparison, grouped
+        server-side by cohort (not a flat row list the frontend has to
+        re-group). Every one of the 7 named cohorts is always present in
+        the response, even with n_days=0 and every feature "Insufficient
+        data" -- an absent cohort is a UI implementation detail this
+        service never introduces; a genuinely-empty cohort is itself
+        useful information (e.g. no LARGE/EXTREME days have occurred yet)."""
+        feature_rows = await self._repo.list_cohort_feature_stats(symbol)
+        categorical_rows = await self._repo.list_cohort_categorical(symbol)
+
+        features_by_cohort: dict[str, list[CohortFeatureStatDTO]] = {c: [] for c in _COHORT_ORDER}
+        n_days_by_cohort: dict[str, int] = {c: 0 for c in _COHORT_ORDER}
+        for row in feature_rows:
+            features_by_cohort.setdefault(row.cohort, []).append(self._to_cohort_feature_dto(row))
+            n_days_by_cohort[row.cohort] = max(n_days_by_cohort.get(row.cohort, 0), row.n)
+
+        categorical_by_cohort: dict[str, list[CohortCategoricalDTO]] = {c: [] for c in _COHORT_ORDER}
+        for row in categorical_rows:
+            categorical_by_cohort.setdefault(row.cohort, []).append(self._to_cohort_categorical_dto(row))
+
+        cohorts = [
+            CohortResultDTO(
+                cohort=cohort,
+                n_days=n_days_by_cohort.get(cohort, 0),
+                features=features_by_cohort.get(cohort, []),
+                categorical=categorical_by_cohort.get(cohort, []),
+            )
+            for cohort in _COHORT_ORDER
+        ]
+        return CasCohortAnalysisResponseDTO(symbol=symbol, cohorts=cohorts)
+
+    @staticmethod
+    def _to_cohort_feature_dto(row: CasCohortFeatureStat) -> CohortFeatureStatDTO:
+        return CohortFeatureStatDTO(
+            feature_name=row.feature_name, n=row.n, median=row.median, mean=row.mean,
+            percentile_within_full_sample=row.percentile_within_full_sample, effect_size=row.effect_size,
+            statistic=row.statistic, p_value=row.p_value, confidence_label=row.confidence_label,
+            direction_note=row.direction_note,
+        )
+
+    @staticmethod
+    def _to_cohort_categorical_dto(row: CasCohortCategorical) -> CohortCategoricalDTO:
+        return CohortCategoricalDTO(
+            feature_name=row.feature_name, n=row.n,
+            category_counts=row.category_counts or {}, full_sample_category_counts=row.full_sample_category_counts or {},
         )
 
     @staticmethod

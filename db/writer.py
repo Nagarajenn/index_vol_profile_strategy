@@ -506,3 +506,33 @@ def insert_cas_transition_forecast(symbol: str, session_date: date, forecast) ->
         """,
         tuple(values),
     )
+
+
+# --- Phase 7C: historical cohorts + pre-3pm warning-indicator stats -----
+# (market_transition/cas_cohorts.py).
+
+
+def insert_cas_cohort_feature_stat(symbol: str, stat) -> None:
+    """`stat` is a market_transition.cas_cohorts.CohortFeatureStat."""
+    _insert_from_dataclass(
+        "mti_cas_cohort_analysis", stat,
+        extra_cols={"symbol": symbol},
+        conflict_cols=("symbol", "cohort", "feature_name"),
+    )
+
+
+def insert_cas_cohort_categorical(symbol: str, breakdown) -> None:
+    """`breakdown` is a market_transition.cas_cohorts.CohortCategoricalBreakdown."""
+    execute(
+        """
+        INSERT INTO mti_cas_cohort_categorical (symbol, cohort, feature_name, n, category_counts, full_sample_category_counts)
+        VALUES (%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (symbol, cohort, feature_name) DO UPDATE SET
+            n = EXCLUDED.n, category_counts = EXCLUDED.category_counts,
+            full_sample_category_counts = EXCLUDED.full_sample_category_counts, computed_at = now()
+        """,
+        (
+            symbol, breakdown.cohort, breakdown.feature_name, breakdown.n,
+            _jsonb(breakdown.category_counts), _jsonb(breakdown.full_sample_category_counts),
+        ),
+    )

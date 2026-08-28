@@ -1,5 +1,10 @@
 import { apiClient } from "../client";
-import type { CasIntelligenceResponseDTO, CasWindowedDetailResponseDTO, MtiResearchResponseDTO } from "../../types/marketTransition";
+import type {
+  CasCohortAnalysisResponseDTO,
+  CasIntelligenceResponseDTO,
+  CasWindowedDetailResponseDTO,
+  MtiResearchResponseDTO,
+} from "../../types/marketTransition";
 
 export async function fetchMarketTransitionResearch(symbol: string): Promise<MtiResearchResponseDTO> {
   const { data } = await apiClient.get<MtiResearchResponseDTO>(`/market-transition/${symbol}/research`);
@@ -15,5 +20,10 @@ export async function fetchCasWindowedDetail(symbol: string, sessionDate: string
   const { data } = await apiClient.get<CasWindowedDetailResponseDTO>(
     `/market-transition/${symbol}/cas-intelligence/${sessionDate}/windowed-detail`
   );
+  return data;
+}
+
+export async function fetchCasCohortAnalysis(symbol: string): Promise<CasCohortAnalysisResponseDTO> {
+  const { data } = await apiClient.get<CasCohortAnalysisResponseDTO>(`/market-transition/${symbol}/cas-cohort-analysis`);
   return data;
 }

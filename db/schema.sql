@@ -392,3 +392,51 @@ CREATE TABLE IF NOT EXISTS cas_transition_forecasts (
     UNIQUE (symbol, session_date, checkpoint_time)
 );
 CREATE INDEX IF NOT EXISTS idx_cas_transition_forecasts_symbol_date ON cas_transition_forecasts (symbol, session_date DESC);
+
+-- Historical cohorts + pre-3pm warning-indicator statistics (Phase 7C, see
+-- market_transition/cas_cohorts.py). Cohort-vs-rest comparison: for each
+-- of 7 named cohorts (derived from Phase 7A's transition_type x
+-- magnitude_tier), how did that cohort's pre-3pm (14:55-14:59) state
+-- differ from the rest of the sample. Complementary to, not a
+-- replacement for, mti_cas_factor_correlations' single-model regression.
+CREATE TABLE IF NOT EXISTS mti_cas_cohort_analysis (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    cohort TEXT NOT NULL CHECK (cohort IN (
+        'FLAT_LARGE_UP', 'FLAT_LARGE_DOWN', 'UP_REVERSAL_DOWN', 'DOWN_REVERSAL_UP',
+        'UP_CONTINUATION', 'DOWN_CONTINUATION', 'FLAT_NO_MATERIAL_MOVE'
+    )),
+    feature_name TEXT NOT NULL,
+    n INTEGER NOT NULL,
+    median DOUBLE PRECISION,
+    mean DOUBLE PRECISION,
+    percentile_within_full_sample DOUBLE PRECISION,
+    effect_size DOUBLE PRECISION,
+    statistic DOUBLE PRECISION,
+    p_value DOUBLE PRECISION,
+    confidence_label TEXT NOT NULL,
+    direction_note TEXT,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, cohort, feature_name)
+);
+CREATE INDEX IF NOT EXISTS idx_mti_cas_cohort_analysis_symbol ON mti_cas_cohort_analysis (symbol);
+
+-- Categorical companion to mti_cas_cohort_analysis above -- kept as a
+-- separate table since its row shape (category-count dicts) is genuinely
+-- different from the numeric feature-stat rows, not a variant of the same
+-- grain (mirrors mti_factor_correlations vs. mti_daily_transitions).
+CREATE TABLE IF NOT EXISTS mti_cas_cohort_categorical (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    cohort TEXT NOT NULL CHECK (cohort IN (
+        'FLAT_LARGE_UP', 'FLAT_LARGE_DOWN', 'UP_REVERSAL_DOWN', 'DOWN_REVERSAL_UP',
+        'UP_CONTINUATION', 'DOWN_CONTINUATION', 'FLAT_NO_MATERIAL_MOVE'
+    )),
+    feature_name TEXT NOT NULL,
+    n INTEGER NOT NULL,
+    category_counts JSONB,
+    full_sample_category_counts JSONB,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, cohort, feature_name)
+);
+CREATE INDEX IF NOT EXISTS idx_mti_cas_cohort_categorical_symbol ON mti_cas_cohort_categorical (symbol);

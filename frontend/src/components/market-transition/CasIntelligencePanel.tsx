@@ -19,6 +19,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 
+import { CasCohortAnalysisPanel } from "./CasCohortAnalysisPanel";
 import { useCasIntelligence } from "../../hooks/useCasIntelligence";
 import { useCasWindowedDetail } from "../../hooks/useCasWindowedDetail";
 import type {
@@ -490,6 +491,7 @@ export function CasIntelligencePanel({ symbol }: { symbol: string }) {
             </Table>
           </TableContainer>
           {data.correlations.length > 0 && <CasCorrelationSection correlations={data.correlations} />}
+          <CasCohortAnalysisPanel symbol={symbol} />
         </>
       )}
     </Paper>

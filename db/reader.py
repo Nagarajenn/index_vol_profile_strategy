@@ -214,3 +214,31 @@ def load_cas_daily_transitions(symbol: str, limit: int = 60) -> list[dict]:
     )
     rows = list(reversed(rows))
     return [dict(zip(_CAS_DAILY_COLUMNS, r)) for r in rows]
+
+
+# Column order matches market_transition.cas_windows.PreTransitionWindow's
+# dataclass fields exactly (minus session_date/symbol, which key the
+# lookup) -- lets callers do PreTransitionWindow(**row) directly.
+_PRETRANSITION_WINDOW_COLUMNS = [
+    "window_index", "window_label", "open", "close", "high", "low", "net_point_change", "pct_change",
+    "volume", "rvol_pct", "volume_acceleration_ratio", "buy_volume_estimate", "sell_volume_estimate",
+    "dominance_ratio", "dominant_side", "vwap_at_window_end", "price_distance_from_vwap",
+    "price_distance_from_vwap_pct", "vwap_slope", "poc_at_window_end", "poc_change_during_window", "poc_slope",
+    "vah", "val", "pcr", "pcr_change", "call_oi_change", "put_oi_change", "iv_change", "option_pressure_score",
+    "market_regime", "institutional_bias_label", "institutional_bias_score", "news_risk_score", "data_quality_flag",
+]
+
+
+def load_final_pretransition_windows(symbol: str) -> dict[date, dict]:
+    """All window_index=6 (14:55-14:59, the final pre-3pm state) rows for
+    `symbol`, keyed by session_date -- used by market_transition/
+    cas_cohorts.py's per-cohort pre-3pm feature comparison. Empty dict for
+    a day that hasn't had scripts/run_cas_windowed_analysis.py run yet."""
+    rows = fetch_all(
+        f"""
+        SELECT session_date, {", ".join(_PRETRANSITION_WINDOW_COLUMNS)}
+        FROM cas_pretransition_windows WHERE symbol = %s AND window_index = 6
+        """,
+        (symbol,),
+    )
+    return {r[0]: dict(zip(_PRETRANSITION_WINDOW_COLUMNS, r[1:])) for r in rows}
