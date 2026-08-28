@@ -4,6 +4,7 @@ import {
   Box,
   Chip,
   CircularProgress,
+  Collapse,
   Divider,
   IconButton,
   Paper,
@@ -60,49 +61,64 @@ function confidenceColor(label: ConfidenceLabel | null): "success" | "primary" |
 }
 
 function CasCorrelationSection({ correlations }: { correlations: MtiFactorCorrelationDTO[] }) {
+  // Collapsed by default -- this table alone runs 40+ rows, which otherwise
+  // pushes the pre/post-transition detail (the thing most worth seeing on
+  // one screen for a given day) well below the fold.
+  const [open, setOpen] = useState(false);
   return (
     <Paper sx={{ p: 1.5, mt: 1.5 }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-        CAS Factor Correlation Study
-      </Typography>
-      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-        The original engine's 13 factors, recomputed over the CAS-adjusted 14:31-14:59 window, plus new factors this
-        panel introduces (points move, volume, PCR, institutional bias) -- tested against whether the CAS-adjusted
-        call reverses and how large the post-3pm move is. Same statistics as the original methodology's study (needs {"≥"}20 days
-        for any confidence label beyond "Insufficient data"), just a separate, additive result set.
-      </Typography>
-      <TableContainer sx={{ maxHeight: 360 }}>
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell>Factor</TableCell>
-              <TableCell>Target</TableCell>
-              <TableCell align="right">N</TableCell>
-              <TableCell align="right">Statistic</TableCell>
-              <TableCell align="right">p-value</TableCell>
-              <TableCell>Confidence</TableCell>
-              <TableCell>Finding</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {correlations.map((c) => (
-              <TableRow key={`${c.factor_name}-${c.target}`} hover>
-                <TableCell sx={{ whiteSpace: "nowrap" }}>{c.factor_name}</TableCell>
-                <TableCell sx={{ textTransform: "capitalize" }}>{c.target}</TableCell>
-                <TableCell align="right">{c.n_days}</TableCell>
-                <TableCell align="right">{c.statistic !== null ? c.statistic.toFixed(2) : "N/A"}</TableCell>
-                <TableCell align="right">{c.p_value !== null ? c.p_value.toFixed(3) : "N/A"}</TableCell>
-                <TableCell>
-                  <Chip size="small" label={c.confidence_label} color={confidenceColor(c.confidence_label)} variant="outlined" />
-                </TableCell>
-                <TableCell sx={{ maxWidth: 320 }}>
-                  <Typography variant="caption">{c.direction_note}</Typography>
-                </TableCell>
+      <Stack
+        direction="row"
+        spacing={1}
+        sx={{ alignItems: "center", cursor: "pointer" }}
+        onClick={() => setOpen((o) => !o)}
+      >
+        <IconButton size="small">{open ? <KeyboardArrowDown fontSize="small" /> : <KeyboardArrowRight fontSize="small" />}</IconButton>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+          CAS Factor Correlation Study
+        </Typography>
+        <Chip size="small" label={`${correlations.length} factors`} variant="outlined" />
+      </Stack>
+      <Collapse in={open}>
+        <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1, mt: 0.5 }}>
+          The original engine's 13 factors, recomputed over the CAS-adjusted 14:31-14:59 window, plus new factors this
+          panel introduces (points move, volume, PCR, institutional bias) -- tested against whether the CAS-adjusted
+          call reverses and how large the post-3pm move is. Same statistics as the original methodology's study (needs {"≥"}20 days
+          for any confidence label beyond "Insufficient data"), just a separate, additive result set.
+        </Typography>
+        <TableContainer sx={{ maxHeight: 360 }}>
+          <Table size="small" stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>Factor</TableCell>
+                <TableCell>Target</TableCell>
+                <TableCell align="right">N</TableCell>
+                <TableCell align="right">Statistic</TableCell>
+                <TableCell align="right">p-value</TableCell>
+                <TableCell>Confidence</TableCell>
+                <TableCell>Finding</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {correlations.map((c) => (
+                <TableRow key={`${c.factor_name}-${c.target}`} hover>
+                  <TableCell sx={{ whiteSpace: "nowrap" }}>{c.factor_name}</TableCell>
+                  <TableCell sx={{ textTransform: "capitalize" }}>{c.target}</TableCell>
+                  <TableCell align="right">{c.n_days}</TableCell>
+                  <TableCell align="right">{c.statistic !== null ? c.statistic.toFixed(2) : "N/A"}</TableCell>
+                  <TableCell align="right">{c.p_value !== null ? c.p_value.toFixed(3) : "N/A"}</TableCell>
+                  <TableCell>
+                    <Chip size="small" label={c.confidence_label} color={confidenceColor(c.confidence_label)} variant="outlined" />
+                  </TableCell>
+                  <TableCell sx={{ maxWidth: 320 }}>
+                    <Typography variant="caption">{c.direction_note}</Typography>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </Collapse>
     </Paper>
   );
 }
