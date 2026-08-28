@@ -25,7 +25,7 @@ function CasCorrelationSection({ correlations }: { correlations: MtiFactorCorrel
       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
         The original engine's 13 factors, recomputed over the CAS-adjusted 14:31-14:59 window, plus new factors this
         panel introduces (points move, volume, PCR, institutional bias) -- tested against whether the CAS-adjusted
-        call reverses and how large the post-3pm move is. Same statistics as the study above (needs {"≥"}20 days
+        call reverses and how large the post-3pm move is. Same statistics as the original methodology's study (needs {"≥"}20 days
         for any confidence label beyond "Insufficient data"), just a separate, additive result set.
       </Typography>
       <TableContainer sx={{ maxHeight: 360 }}>
@@ -140,7 +140,7 @@ export function CasIntelligencePanel({ symbol }: { symbol: string }) {
       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
         Re-frames the 3pm transition for NSE's post-2026-08-03 Closing Auction Session: trend from 14:31-14:59 vs.
         trend from 15:00-15:39, compared against the same day's call under the original (unchanged) methodology
-        above. Additive research view -- never feeds the trading decision engine.{" "}
+        (see the "Original engine" column below). Additive research view -- never feeds the trading decision engine.{" "}
         <strong>Post-window volume only covers 14:31-14:59 vs. 15:00-15:14</strong> ("pre-auction volume"): Dhan's
         1-minute feed does not report reliable volume once the Closing Auction Session begins at 15:15, even though
         price keeps moving genuinely through it.
