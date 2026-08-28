@@ -1,11 +1,10 @@
-import { KeyboardArrowDown, KeyboardArrowRight } from "@mui/icons-material";
+import { KeyboardArrowDown, KeyboardArrowRight, OpenInNew } from "@mui/icons-material";
 import {
   Alert,
   Box,
   Chip,
   CircularProgress,
   Collapse,
-  Divider,
   IconButton,
   Paper,
   Stack,
@@ -19,46 +18,12 @@ import {
   Typography,
 } from "@mui/material";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 import { CasCohortAnalysisPanel } from "./CasCohortAnalysisPanel";
-import { PostTransitionMinutesTable, PreTransitionWindowsTable } from "./CasWindowedDetailTables";
+import { confidenceColor, magnitudeTierColor, transitionTypeColor, TRANSITION_TYPE_LABELS } from "./CasWindowedDetailTables";
 import { useCasIntelligence } from "../../hooks/useCasIntelligence";
-import { useCasWindowedDetail } from "../../hooks/useCasWindowedDetail";
-import type { CasDailyResultDTO, ConfidenceLabel, MtiFactorCorrelationDTO, TransitionForecastDTO } from "../../types/marketTransition";
-
-const TRANSITION_TYPE_LABELS: Record<CasDailyResultDTO["transition_type"], string> = {
-  CONTINUATION_UP: "Continuation (Up)",
-  CONTINUATION_DOWN: "Continuation (Down)",
-  REVERSAL_UP: "Reversal (Up)",
-  REVERSAL_DOWN: "Reversal (Down)",
-  POST_WINDOW_INITIATION_UP: "Post-Window Move (Up)",
-  POST_WINDOW_INITIATION_DOWN: "Post-Window Move (Down)",
-  NO_MATERIAL_TRANSITION: "No Material Transition",
-};
-
-function transitionTypeColor(t: CasDailyResultDTO["transition_type"]): "success" | "error" | "info" | "default" {
-  if (t === "CONTINUATION_UP" || t === "CONTINUATION_DOWN") return "success";
-  if (t === "REVERSAL_UP" || t === "REVERSAL_DOWN") return "error";
-  // A genuinely distinct 3rd category -- no pre-window trend to reverse or
-  // continue, but a real post-window move -- exactly what used to be
-  // indistinguishable from a quiet day under the old "Neutral" label.
-  if (t === "POST_WINDOW_INITIATION_UP" || t === "POST_WINDOW_INITIATION_DOWN") return "info";
-  return "default"; // NO_MATERIAL_TRANSITION
-}
-
-function magnitudeTierColor(tier: CasDailyResultDTO["magnitude_tier"]): "default" | "info" | "warning" | "error" {
-  if (tier === "EXTREME") return "error";
-  if (tier === "LARGE") return "warning";
-  if (tier === "MODERATE") return "info";
-  return "default"; // NORMAL or null
-}
-
-function confidenceColor(label: ConfidenceLabel | null): "success" | "primary" | "warning" | "default" {
-  if (label === "Strong") return "success";
-  if (label === "Moderate") return "primary";
-  if (label === "Weak") return "warning";
-  return "default";
-}
+import type { CasDailyResultDTO, MtiFactorCorrelationDTO } from "../../types/marketTransition";
 
 function CasCorrelationSection({ correlations }: { correlations: MtiFactorCorrelationDTO[] }) {
   // Collapsed by default -- this table alone runs 40+ rows, which otherwise
@@ -139,91 +104,17 @@ function fmtPoints(v: number | null): string {
   return v > 0 ? `+${v.toFixed(0)}` : v.toFixed(0); // negative values already carry their own "-"
 }
 
-function ForecastVsActualStrip({ forecast, day }: { forecast: TransitionForecastDTO | undefined; day: CasDailyResultDTO }) {
-  if (!forecast) return null;
-  return (
-    <Paper variant="outlined" sx={{ p: 1, mt: 1 }}>
-      <Typography variant="caption" sx={{ fontWeight: 700, display: "block", mb: 0.5 }}>
-        14:59 Forecast vs. What Actually Happened
-      </Typography>
-      <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", rowGap: 0.5, alignItems: "center" }}>
-        <Typography variant="caption">No material: {(forecast.probability_no_material_transition * 100).toFixed(0)}%</Typography>
-        <Typography variant="caption">Large up: {(forecast.probability_large_up * 100).toFixed(0)}%</Typography>
-        <Typography variant="caption">Large down: {(forecast.probability_large_down * 100).toFixed(0)}%</Typography>
-        <Typography variant="caption">Reversal: {(forecast.probability_reversal * 100).toFixed(0)}%</Typography>
-        <Typography variant="caption">Continuation: {(forecast.probability_continuation * 100).toFixed(0)}%</Typography>
-        <Chip size="small" label={forecast.confidence_label} color={confidenceColor(forecast.confidence_label)} variant="outlined" />
-        <Typography variant="caption" color="text.secondary">
-          (n={forecast.n_analogs})
-        </Typography>
-        <Divider orientation="vertical" flexItem />
-        <Typography variant="caption" sx={{ fontWeight: 700 }}>
-          Actual: {TRANSITION_TYPE_LABELS[day.transition_type]}
-          {day.magnitude_tier && ` (${day.magnitude_tier})`}
-        </Typography>
-      </Stack>
-    </Paper>
-  );
-}
-
-function CasWindowedDetailSection({ symbol, day }: { symbol: string; day: CasDailyResultDTO }) {
-  const { data, isLoading, isError } = useCasWindowedDetail(symbol, day.session_date, true);
-
-  if (isLoading) {
-    return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
-        <CircularProgress size={20} />
-      </Box>
-    );
-  }
-  if (isError || !data) {
-    return <Alert severity="error">Failed to load windowed detail for {day.session_date}.</Alert>;
-  }
-  if (data.pre_transition_windows.length === 0 && data.post_transition_minutes.length === 0) {
-    return (
-      <Alert severity="info">
-        No windowed detail yet for {day.session_date} -- run scripts/run_cas_windowed_analysis.py.
-      </Alert>
-    );
-  }
-
-  const forecast1459 = data.forecasts.find((f) => f.checkpoint_time === "14:59");
-
-  return (
-    <Stack spacing={1}>
-      <Chip
-        size="small"
-        label="2:30-2:59 PRE-TRANSITION — FORECAST INFORMATION"
-        sx={{ alignSelf: "flex-start", bgcolor: "info.dark", color: "info.contrastText", fontWeight: 700 }}
-      />
-      <PreTransitionWindowsTable windows={data.pre_transition_windows} />
-
-      <Divider sx={{ "&::before, &::after": { borderColor: "warning.main" } }}>
-        <Chip size="small" label="⬇ 3 PM TRANSITION ⬇" color="warning" sx={{ fontWeight: 700 }} />
-      </Divider>
-
-      <Chip
-        size="small"
-        label="3:00-3:15 — ACTUAL OUTCOME"
-        sx={{ alignSelf: "flex-start", bgcolor: "success.dark", color: "success.contrastText", fontWeight: 700 }}
-      />
-      <PostTransitionMinutesTable minutes={data.post_transition_minutes} />
-
-      <ForecastVsActualStrip forecast={forecast1459} day={day} />
-    </Stack>
-  );
-}
-
 function CasDailyRow({ symbol, day }: { symbol: string; day: CasDailyResultDTO }) {
-  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const agrees = day.old_methodology_outcome !== null && day.old_methodology_outcome === day.conclusion;
   return (
-    <>
     <TableRow hover sx={day.data_quality_flag ? { opacity: 0.6 } : undefined}>
       <TableCell sx={{ width: 32 }}>
-        <IconButton size="small" onClick={() => setOpen((o) => !o)}>
-          {open ? <KeyboardArrowDown fontSize="small" /> : <KeyboardArrowRight fontSize="small" />}
-        </IconButton>
+        <Tooltip title="View full pre/post-3pm detail on its own page">
+          <IconButton size="small" onClick={() => navigate(`/market-transition-intelligence/cas-day/${symbol}/${day.session_date}`)}>
+            <OpenInNew fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>
         {day.session_date}
@@ -282,14 +173,6 @@ function CasDailyRow({ symbol, day }: { symbol: string; day: CasDailyResultDTO }
       </TableCell>
       <TableCell>{day.expiry_type ?? "-"}</TableCell>
     </TableRow>
-    {open && (
-      <TableRow>
-        <TableCell colSpan={15} sx={{ bgcolor: "background.default", py: 1.5 }}>
-          <CasWindowedDetailSection symbol={symbol} day={day} />
-        </TableCell>
-      </TableRow>
-    )}
-    </>
   );
 }
 

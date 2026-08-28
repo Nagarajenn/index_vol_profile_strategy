@@ -1,10 +1,78 @@
-import { Chip, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from "@mui/material";
+import { Chip, Divider, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from "@mui/material";
 
-import type { PostTransitionMinuteDTO, PreTransitionWindowDTO } from "../../types/marketTransition";
+import type {
+  CasDailyResultDTO,
+  ConfidenceLabel,
+  PostTransitionMinuteDTO,
+  PreTransitionWindowDTO,
+  TransitionForecastDTO,
+} from "../../types/marketTransition";
 
-// Shared between CasIntelligencePanel's expand-a-past-day interaction and
-// LiveCasTrackerPanel's today-in-progress view -- same two tables, same
-// FORECAST INFORMATION / ACTUAL OUTCOME distinction either way.
+// Shared between CasIntelligencePanel's daily table, CasDayDetailPage's
+// dedicated full-page view, and LiveCasTrackerPanel's today-in-progress
+// view -- same two tables, same FORECAST INFORMATION / ACTUAL OUTCOME
+// distinction, same transition-type/magnitude labeling everywhere.
+
+export const TRANSITION_TYPE_LABELS: Record<CasDailyResultDTO["transition_type"], string> = {
+  CONTINUATION_UP: "Continuation (Up)",
+  CONTINUATION_DOWN: "Continuation (Down)",
+  REVERSAL_UP: "Reversal (Up)",
+  REVERSAL_DOWN: "Reversal (Down)",
+  POST_WINDOW_INITIATION_UP: "Post-Window Move (Up)",
+  POST_WINDOW_INITIATION_DOWN: "Post-Window Move (Down)",
+  NO_MATERIAL_TRANSITION: "No Material Transition",
+};
+
+export function transitionTypeColor(t: CasDailyResultDTO["transition_type"]): "success" | "error" | "info" | "default" {
+  if (t === "CONTINUATION_UP" || t === "CONTINUATION_DOWN") return "success";
+  if (t === "REVERSAL_UP" || t === "REVERSAL_DOWN") return "error";
+  // A genuinely distinct 3rd category -- no pre-window trend to reverse or
+  // continue, but a real post-window move -- exactly what used to be
+  // indistinguishable from a quiet day under the old "Neutral" label.
+  if (t === "POST_WINDOW_INITIATION_UP" || t === "POST_WINDOW_INITIATION_DOWN") return "info";
+  return "default"; // NO_MATERIAL_TRANSITION
+}
+
+export function magnitudeTierColor(tier: CasDailyResultDTO["magnitude_tier"]): "default" | "info" | "warning" | "error" {
+  if (tier === "EXTREME") return "error";
+  if (tier === "LARGE") return "warning";
+  if (tier === "MODERATE") return "info";
+  return "default"; // NORMAL or null
+}
+
+export function confidenceColor(label: ConfidenceLabel | null): "success" | "primary" | "warning" | "default" {
+  if (label === "Strong") return "success";
+  if (label === "Moderate") return "primary";
+  if (label === "Weak") return "warning";
+  return "default";
+}
+
+export function ForecastVsActualStrip({ forecast, day }: { forecast: TransitionForecastDTO | undefined; day: CasDailyResultDTO }) {
+  if (!forecast) return null;
+  return (
+    <Paper variant="outlined" sx={{ p: 1, mt: 1 }}>
+      <Typography variant="caption" sx={{ fontWeight: 700, display: "block", mb: 0.5 }}>
+        14:59 Forecast vs. What Actually Happened
+      </Typography>
+      <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", rowGap: 0.5, alignItems: "center" }}>
+        <Typography variant="caption">No material: {(forecast.probability_no_material_transition * 100).toFixed(0)}%</Typography>
+        <Typography variant="caption">Large up: {(forecast.probability_large_up * 100).toFixed(0)}%</Typography>
+        <Typography variant="caption">Large down: {(forecast.probability_large_down * 100).toFixed(0)}%</Typography>
+        <Typography variant="caption">Reversal: {(forecast.probability_reversal * 100).toFixed(0)}%</Typography>
+        <Typography variant="caption">Continuation: {(forecast.probability_continuation * 100).toFixed(0)}%</Typography>
+        <Chip size="small" label={forecast.confidence_label} color={confidenceColor(forecast.confidence_label)} variant="outlined" />
+        <Typography variant="caption" color="text.secondary">
+          (n={forecast.n_analogs})
+        </Typography>
+        <Divider orientation="vertical" flexItem />
+        <Typography variant="caption" sx={{ fontWeight: 700 }}>
+          Actual: {TRANSITION_TYPE_LABELS[day.transition_type]}
+          {day.magnitude_tier && ` (${day.magnitude_tier})`}
+        </Typography>
+      </Stack>
+    </Paper>
+  );
+}
 
 export function fmtSigned(v: number | null, digits = 2): string {
   if (v === null) return "N/A";
@@ -34,9 +102,17 @@ export function shockScoreColor(score: number): "default" | "info" | "warning" |
 // onward appears in this table. `nowTime` (optional, "HH:MM") marks the
 // window still in progress as "developing" -- only meaningful for today's
 // live view, unused (undefined) for a past, fully-closed day.
-export function PreTransitionWindowsTable({ windows, nowTime }: { windows: PreTransitionWindowDTO[]; nowTime?: string }) {
+export function PreTransitionWindowsTable({
+  windows,
+  nowTime,
+  maxTableHeight = 280,
+}: {
+  windows: PreTransitionWindowDTO[];
+  nowTime?: string;
+  maxTableHeight?: number;
+}) {
   return (
-    <TableContainer sx={{ maxHeight: 280 }}>
+    <TableContainer sx={{ maxHeight: maxTableHeight }}>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
@@ -95,9 +171,15 @@ export function PreTransitionWindowsTable({ windows, nowTime }: { windows: PreTr
 // ACTUAL OUTCOME -- 15:00-15:15, sixteen native 1-minute rows. This is
 // what actually happened; a forecast-vs-actual strip elsewhere reads it,
 // never the other way around.
-export function PostTransitionMinutesTable({ minutes }: { minutes: PostTransitionMinuteDTO[] }) {
+export function PostTransitionMinutesTable({
+  minutes,
+  maxTableHeight = 280,
+}: {
+  minutes: PostTransitionMinuteDTO[];
+  maxTableHeight?: number;
+}) {
   return (
-    <TableContainer sx={{ maxHeight: 280 }}>
+    <TableContainer sx={{ maxHeight: maxTableHeight }}>
       <Table size="small" stickyHeader>
         <TableHead>
           <TableRow>
