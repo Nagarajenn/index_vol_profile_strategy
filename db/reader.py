@@ -58,6 +58,27 @@ def has_classified_event(news_item_id: int) -> bool:
     return row is not None
 
 
+def list_classified_events_between(start: datetime, end: datetime, relevant_only: bool = True) -> list[dict]:
+    """Classified events with classified_at in [start, end] -- gated on
+    classified_at, never published_at (a news item can publish well before
+    it's actually classified; joining on classified_at is what keeps a
+    point-in-time read honest about what was actually known by that time).
+    Used by market_transition/cas_windows.py to build a per-checkpoint
+    trailing news-risk reading without re-querying per checkpoint -- callers
+    fetch once for the whole day and filter in memory."""
+    condition = "WHERE ce.is_relevant = true AND " if relevant_only else "WHERE "
+    rows = fetch_all(
+        f"""
+        SELECT ce.severity, ce.risk_level, ce.sentiment, ce.classified_at
+        FROM classified_events ce
+        {condition} ce.classified_at BETWEEN %s AND %s
+        ORDER BY ce.classified_at
+        """,
+        (start, end),
+    )
+    return [{"severity": r[0], "risk_level": r[1], "sentiment": r[2], "classified_at": r[3]} for r in rows]
+
+
 def list_recent_classified_events(limit: int = 20, relevant_only: bool = True) -> list[dict]:
     condition = "WHERE ce.is_relevant = true" if relevant_only else ""
     rows = fetch_all(
@@ -172,7 +193,12 @@ _CAS_DAILY_COLUMNS = [
     "pre_window_points_move", "post_window_points_move",
     "pcr_1459", "institutional_bias_label_1459", "institutional_bias_score_1459",
     "expiry_type", "day_of_week", "old_methodology_outcome", "old_methodology_outcome_magnitude",
-    "data_quality_flag", "computed_at",
+    "data_quality_flag",
+    # Phase 7A additions -- transition_type/magnitude_* (see
+    # market_transition/cas_transition.py::classify_transition_type/
+    # classify_transition_magnitude). `conclusion` above is untouched.
+    "transition_type", "magnitude_pct_return", "magnitude_atr_normalized", "magnitude_tier",
+    "computed_at",
 ]
 
 

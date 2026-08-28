@@ -182,3 +182,91 @@ class CasIntelligenceResponseDTO(BaseModel):
     # market_transition/cas_statistics.py. Same MtiFactorCorrelationDTO
     # shape as the original engine's study, just a separate result set.
     correlations: list[MtiFactorCorrelationDTO]
+
+
+# ---------------------------------------------------------------------------
+# Phase 7B: dual-resolution pre/post-3pm transition detail -- served by
+# GET /api/v1/market-transition/{symbol}/cas-intelligence/{session_date}/
+# windowed-detail. Lazy-loaded per day, never eagerly joined into the DTOs
+# above. Pre-transition windows are FORECAST INFORMATION; post-transition
+# minutes are ACTUAL OUTCOME; forecasts are graded against the latter only
+# by the caller comparing timestamps, never merged server-side.
+# ---------------------------------------------------------------------------
+class PreTransitionWindowDTO(BaseModel):
+    window_index: int
+    window_label: str
+    open: float | None
+    close: float | None
+    high: float | None
+    low: float | None
+    net_point_change: float | None
+    pct_change: float | None
+    volume: float
+    rvol_pct: float | None
+    volume_acceleration_ratio: float | None
+    buy_volume_estimate: float | None
+    sell_volume_estimate: float | None
+    dominance_ratio: float
+    dominant_side: Literal["buy", "sell", "balanced"]
+    vwap_at_window_end: float | None
+    price_distance_from_vwap: float | None
+    price_distance_from_vwap_pct: float | None
+    vwap_slope: float | None
+    poc_at_window_end: float | None
+    poc_change_during_window: float | None
+    poc_slope: float | None
+    vah: float | None
+    val: float | None
+    pcr: float | None
+    pcr_change: float | None
+    call_oi_change: float | None
+    put_oi_change: float | None
+    iv_change: float | None
+    option_pressure_score: float | None
+    market_regime: str | None
+    institutional_bias_label: str | None
+    institutional_bias_score: int | None
+    news_risk_score: int | None
+    data_quality_flag: str | None
+
+
+class PostTransitionMinuteDTO(BaseModel):
+    minute_offset: int
+    minute_time: str
+    close: float
+    price_change: float
+    volume: float
+    rvol_pct: float | None
+    dominance_ratio: float
+    dominant_side: Literal["buy", "sell", "balanced"]
+    poc_change: float | None
+    vwap_change: float | None
+    pcr_change: float | None
+    call_oi_change: float | None
+    put_oi_change: float | None
+    iv_change: float | None
+    option_pressure_score: float | None
+    range_expansion: float
+    transition_shock_score: float
+    data_quality_flag: str | None
+
+
+class TransitionForecastDTO(BaseModel):
+    checkpoint_time: str
+    probability_no_material_transition: float
+    probability_large_up: float
+    probability_large_down: float
+    probability_reversal: float
+    probability_continuation: float
+    n_analogs: int
+    confidence_label: ConfidenceLabelLiteral
+    top_contributing_factors: list[ContributingFactorDTO]
+    historical_similarity_score: float
+
+
+class CasWindowedDetailResponseDTO(BaseModel):
+    symbol: str
+    session_date: date
+    pre_transition_windows: list[PreTransitionWindowDTO]
+    post_transition_minutes: list[PostTransitionMinuteDTO]
+    forecasts: list[TransitionForecastDTO]

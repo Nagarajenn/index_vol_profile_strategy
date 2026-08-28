@@ -1,12 +1,25 @@
-from app.models import CasDailyTransition, MtiDailyTransition, MtiFactorCorrelation
+from datetime import date
+
+from app.models import (
+    CasDailyTransition,
+    CasPostTransitionMinute,
+    CasPretransitionWindow,
+    CasTransitionForecast,
+    MtiDailyTransition,
+    MtiFactorCorrelation,
+)
 from app.repositories.protocols import MarketTransitionRepositoryProtocol
 from app.schemas.market_transition import (
     CasDailyResultDTO,
     CasIntelligenceResponseDTO,
+    CasWindowedDetailResponseDTO,
     ContributingFactorDTO,
     MtiDailyResultDTO,
     MtiFactorCorrelationDTO,
     MtiResearchResponseDTO,
+    PostTransitionMinuteDTO,
+    PreTransitionWindowDTO,
+    TransitionForecastDTO,
 )
 
 
@@ -136,6 +149,69 @@ class MarketTransitionService:
             magnitude_atr_normalized=row.magnitude_atr_normalized,
             magnitude_tier=row.magnitude_tier,
             computed_at=row.computed_at,
+        )
+
+    async def get_cas_windowed_detail(self, symbol: str, session_date: date) -> CasWindowedDetailResponseDTO:
+        """Phase 7B: lazy-loaded per-day detail -- pre_transition_windows is
+        FORECAST INFORMATION (14:30-14:59), post_transition_minutes is
+        ACTUAL OUTCOME (15:00-15:15). Never merged/compared server-side --
+        the caller (UI) is responsible for keeping the two visually
+        separate, per the explicit design requirement."""
+        window_rows = await self._repo.list_pretransition_windows(symbol, session_date)
+        minute_rows = await self._repo.list_post_transition_minutes(symbol, session_date)
+        forecast_rows = await self._repo.list_transition_forecasts(symbol, session_date)
+
+        return CasWindowedDetailResponseDTO(
+            symbol=symbol,
+            session_date=session_date,
+            pre_transition_windows=[self._to_pretransition_window_dto(r) for r in window_rows],
+            post_transition_minutes=[self._to_post_transition_minute_dto(r) for r in minute_rows],
+            forecasts=[self._to_forecast_dto(r) for r in forecast_rows],
+        )
+
+    @staticmethod
+    def _to_pretransition_window_dto(row: CasPretransitionWindow) -> PreTransitionWindowDTO:
+        return PreTransitionWindowDTO(
+            window_index=row.window_index, window_label=row.window_label,
+            open=row.open, close=row.close, high=row.high, low=row.low,
+            net_point_change=row.net_point_change, pct_change=row.pct_change,
+            volume=row.volume, rvol_pct=row.rvol_pct, volume_acceleration_ratio=row.volume_acceleration_ratio,
+            buy_volume_estimate=row.buy_volume_estimate, sell_volume_estimate=row.sell_volume_estimate,
+            dominance_ratio=row.dominance_ratio, dominant_side=row.dominant_side,
+            vwap_at_window_end=row.vwap_at_window_end, price_distance_from_vwap=row.price_distance_from_vwap,
+            price_distance_from_vwap_pct=row.price_distance_from_vwap_pct, vwap_slope=row.vwap_slope,
+            poc_at_window_end=row.poc_at_window_end, poc_change_during_window=row.poc_change_during_window,
+            poc_slope=row.poc_slope, vah=row.vah, val=row.val,
+            pcr=row.pcr, pcr_change=row.pcr_change, call_oi_change=row.call_oi_change, put_oi_change=row.put_oi_change,
+            iv_change=row.iv_change, option_pressure_score=row.option_pressure_score,
+            market_regime=row.market_regime, institutional_bias_label=row.institutional_bias_label,
+            institutional_bias_score=row.institutional_bias_score, news_risk_score=row.news_risk_score,
+            data_quality_flag=row.data_quality_flag,
+        )
+
+    @staticmethod
+    def _to_post_transition_minute_dto(row: CasPostTransitionMinute) -> PostTransitionMinuteDTO:
+        return PostTransitionMinuteDTO(
+            minute_offset=row.minute_offset, minute_time=row.minute_time,
+            close=row.close, price_change=row.price_change, volume=row.volume, rvol_pct=row.rvol_pct,
+            dominance_ratio=row.dominance_ratio, dominant_side=row.dominant_side,
+            poc_change=row.poc_change, vwap_change=row.vwap_change,
+            pcr_change=row.pcr_change, call_oi_change=row.call_oi_change, put_oi_change=row.put_oi_change,
+            iv_change=row.iv_change, option_pressure_score=row.option_pressure_score,
+            range_expansion=row.range_expansion, transition_shock_score=row.transition_shock_score,
+            data_quality_flag=row.data_quality_flag,
+        )
+
+    @staticmethod
+    def _to_forecast_dto(row: CasTransitionForecast) -> TransitionForecastDTO:
+        factors = [ContributingFactorDTO(**f) for f in (row.top_contributing_factors or [])]
+        return TransitionForecastDTO(
+            checkpoint_time=row.checkpoint_time,
+            probability_no_material_transition=row.probability_no_material_transition,
+            probability_large_up=row.probability_large_up, probability_large_down=row.probability_large_down,
+            probability_reversal=row.probability_reversal, probability_continuation=row.probability_continuation,
+            n_analogs=row.n_analogs, confidence_label=row.confidence_label,
+            top_contributing_factors=factors, historical_similarity_score=row.historical_similarity_score,
         )
 
     @staticmethod

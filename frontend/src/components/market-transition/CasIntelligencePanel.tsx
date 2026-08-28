@@ -1,7 +1,34 @@
-import { Alert, Box, Chip, CircularProgress, Paper, Stack, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Tooltip, Typography } from "@mui/material";
+import { KeyboardArrowDown, KeyboardArrowRight } from "@mui/icons-material";
+import {
+  Alert,
+  Box,
+  Chip,
+  CircularProgress,
+  Divider,
+  IconButton,
+  Paper,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import { useState } from "react";
 
 import { useCasIntelligence } from "../../hooks/useCasIntelligence";
-import type { CasDailyResultDTO, ConfidenceLabel, MtiFactorCorrelationDTO } from "../../types/marketTransition";
+import { useCasWindowedDetail } from "../../hooks/useCasWindowedDetail";
+import type {
+  CasDailyResultDTO,
+  ConfidenceLabel,
+  MtiFactorCorrelationDTO,
+  PostTransitionMinuteDTO,
+  PreTransitionWindowDTO,
+  TransitionForecastDTO,
+} from "../../types/marketTransition";
 
 const TRANSITION_TYPE_LABELS: Record<CasDailyResultDTO["transition_type"], string> = {
   CONTINUATION_UP: "Continuation (Up)",
@@ -101,10 +128,221 @@ function fmtPoints(v: number | null): string {
   return v > 0 ? `+${v.toFixed(0)}` : v.toFixed(0); // negative values already carry their own "-"
 }
 
-function CasDailyRow({ day }: { day: CasDailyResultDTO }) {
+function fmtSigned(v: number | null, digits = 2): string {
+  if (v === null) return "N/A";
+  const s = v.toFixed(digits);
+  return v > 0 ? `+${s}` : s;
+}
+
+function fmt(v: number | null, digits = 2): string {
+  return v === null ? "N/A" : v.toFixed(digits);
+}
+
+function dominantSideColor(side: PreTransitionWindowDTO["dominant_side"]): "success" | "error" | "default" {
+  if (side === "buy") return "success";
+  if (side === "sell") return "error";
+  return "default";
+}
+
+function shockScoreColor(score: number): "default" | "info" | "warning" | "error" {
+  if (score >= 70) return "error";
+  if (score >= 40) return "warning";
+  if (score >= 15) return "info";
+  return "default";
+}
+
+// FORECAST INFORMATION -- 14:30-14:59, six 5-minute windows. Every field
+// here is knowable by the window's own end time; nothing from 15:00
+// onward appears in this table.
+function PreTransitionWindowsTable({ windows }: { windows: PreTransitionWindowDTO[] }) {
+  return (
+    <TableContainer sx={{ maxHeight: 280 }}>
+      <Table size="small" stickyHeader>
+        <TableHead>
+          <TableRow>
+            <TableCell>Window</TableCell>
+            <TableCell align="right">Close</TableCell>
+            <TableCell align="right">Net pts</TableCell>
+            <TableCell align="right">Volume</TableCell>
+            <TableCell align="right">RVOL%</TableCell>
+            <TableCell align="right">Vol accel</TableCell>
+            <TableCell>Dominance</TableCell>
+            <TableCell align="right">VWAP dist</TableCell>
+            <TableCell align="right">POC</TableCell>
+            <TableCell align="right">PCR chg</TableCell>
+            <TableCell align="right">Opt. pressure</TableCell>
+            <TableCell>Regime</TableCell>
+            <TableCell>Inst. bias</TableCell>
+            <TableCell align="right">News risk</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {windows.map((w) => (
+            <TableRow key={w.window_index} hover sx={w.data_quality_flag ? { opacity: 0.6 } : undefined}>
+              <TableCell sx={{ whiteSpace: "nowrap" }}>{w.window_label}</TableCell>
+              <TableCell align="right">{fmt(w.close, 2)}</TableCell>
+              <TableCell align="right">{fmtSigned(w.net_point_change, 2)}</TableCell>
+              <TableCell align="right">{w.volume.toLocaleString()}</TableCell>
+              <TableCell align="right">{fmt(w.rvol_pct, 0)}</TableCell>
+              <TableCell align="right">{w.volume_acceleration_ratio !== null ? `${w.volume_acceleration_ratio.toFixed(2)}x` : "N/A"}</TableCell>
+              <TableCell>
+                <Chip size="small" label={w.dominant_side} color={dominantSideColor(w.dominant_side)} variant="outlined" sx={{ height: 18 }} />
+              </TableCell>
+              <TableCell align="right">{fmtSigned(w.price_distance_from_vwap, 1)}</TableCell>
+              <TableCell align="right">{fmt(w.poc_at_window_end, 1)}</TableCell>
+              <TableCell align="right">{fmtSigned(w.pcr_change, 3)}</TableCell>
+              <TableCell align="right">{fmtSigned(w.option_pressure_score, 2)}</TableCell>
+              <TableCell>{w.market_regime ?? "N/A"}</TableCell>
+              <TableCell>
+                <Typography variant="caption">{w.institutional_bias_label ?? "N/A"}</Typography>
+              </TableCell>
+              <TableCell align="right">{w.news_risk_score ?? "-"}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
+
+// ACTUAL OUTCOME -- 15:00-15:15, sixteen native 1-minute rows. This is
+// what actually happened; the forecast strip below reads it, never the
+// other way around.
+function PostTransitionMinutesTable({ minutes }: { minutes: PostTransitionMinuteDTO[] }) {
+  return (
+    <TableContainer sx={{ maxHeight: 280 }}>
+      <Table size="small" stickyHeader>
+        <TableHead>
+          <TableRow>
+            <TableCell>Minute</TableCell>
+            <TableCell align="right">Close</TableCell>
+            <TableCell align="right">Price chg</TableCell>
+            <TableCell align="right">Volume</TableCell>
+            <TableCell align="right">RVOL%</TableCell>
+            <TableCell>Dominance</TableCell>
+            <TableCell align="right">POC chg</TableCell>
+            <TableCell align="right">VWAP chg</TableCell>
+            <TableCell align="right">PCR chg</TableCell>
+            <TableCell align="right">Opt. pressure</TableCell>
+            <TableCell align="right">Range exp.</TableCell>
+            <TableCell>Shock</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {minutes.map((m) => (
+            <TableRow key={m.minute_offset} hover sx={m.data_quality_flag ? { opacity: 0.6 } : undefined}>
+              <TableCell sx={{ whiteSpace: "nowrap" }}>{m.minute_time}</TableCell>
+              <TableCell align="right">{fmt(m.close, 2)}</TableCell>
+              <TableCell align="right">{fmtSigned(m.price_change, 2)}</TableCell>
+              <TableCell align="right">{m.volume.toLocaleString()}</TableCell>
+              <TableCell align="right">{fmt(m.rvol_pct, 0)}</TableCell>
+              <TableCell>
+                <Chip size="small" label={m.dominant_side} color={dominantSideColor(m.dominant_side)} variant="outlined" sx={{ height: 18 }} />
+              </TableCell>
+              <TableCell align="right">{fmtSigned(m.poc_change, 1)}</TableCell>
+              <TableCell align="right">{fmtSigned(m.vwap_change, 2)}</TableCell>
+              <TableCell align="right">{fmtSigned(m.pcr_change, 3)}</TableCell>
+              <TableCell align="right">{fmtSigned(m.option_pressure_score, 2)}</TableCell>
+              <TableCell align="right">{m.range_expansion.toFixed(1)}x</TableCell>
+              <TableCell>
+                <Tooltip title="Deterministic 0-100 composite: ATR-normalized move, RVOL, range expansion, buy/sell dominance, option pressure.">
+                  <Chip size="small" label={m.transition_shock_score.toFixed(0)} color={shockScoreColor(m.transition_shock_score)} />
+                </Tooltip>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+}
+
+function ForecastVsActualStrip({ forecast, day }: { forecast: TransitionForecastDTO | undefined; day: CasDailyResultDTO }) {
+  if (!forecast) return null;
+  return (
+    <Paper variant="outlined" sx={{ p: 1, mt: 1 }}>
+      <Typography variant="caption" sx={{ fontWeight: 700, display: "block", mb: 0.5 }}>
+        14:59 Forecast vs. What Actually Happened
+      </Typography>
+      <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", rowGap: 0.5, alignItems: "center" }}>
+        <Typography variant="caption">No material: {(forecast.probability_no_material_transition * 100).toFixed(0)}%</Typography>
+        <Typography variant="caption">Large up: {(forecast.probability_large_up * 100).toFixed(0)}%</Typography>
+        <Typography variant="caption">Large down: {(forecast.probability_large_down * 100).toFixed(0)}%</Typography>
+        <Typography variant="caption">Reversal: {(forecast.probability_reversal * 100).toFixed(0)}%</Typography>
+        <Typography variant="caption">Continuation: {(forecast.probability_continuation * 100).toFixed(0)}%</Typography>
+        <Chip size="small" label={forecast.confidence_label} color={confidenceColor(forecast.confidence_label)} variant="outlined" />
+        <Typography variant="caption" color="text.secondary">
+          (n={forecast.n_analogs})
+        </Typography>
+        <Divider orientation="vertical" flexItem />
+        <Typography variant="caption" sx={{ fontWeight: 700 }}>
+          Actual: {TRANSITION_TYPE_LABELS[day.transition_type]}
+          {day.magnitude_tier && ` (${day.magnitude_tier})`}
+        </Typography>
+      </Stack>
+    </Paper>
+  );
+}
+
+function CasWindowedDetailSection({ symbol, day }: { symbol: string; day: CasDailyResultDTO }) {
+  const { data, isLoading, isError } = useCasWindowedDetail(symbol, day.session_date, true);
+
+  if (isLoading) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", py: 2 }}>
+        <CircularProgress size={20} />
+      </Box>
+    );
+  }
+  if (isError || !data) {
+    return <Alert severity="error">Failed to load windowed detail for {day.session_date}.</Alert>;
+  }
+  if (data.pre_transition_windows.length === 0 && data.post_transition_minutes.length === 0) {
+    return (
+      <Alert severity="info">
+        No windowed detail yet for {day.session_date} -- run scripts/run_cas_windowed_analysis.py.
+      </Alert>
+    );
+  }
+
+  const forecast1459 = data.forecasts.find((f) => f.checkpoint_time === "14:59");
+
+  return (
+    <Stack spacing={1}>
+      <Chip
+        size="small"
+        label="2:30-2:59 PRE-TRANSITION — FORECAST INFORMATION"
+        sx={{ alignSelf: "flex-start", bgcolor: "info.dark", color: "info.contrastText", fontWeight: 700 }}
+      />
+      <PreTransitionWindowsTable windows={data.pre_transition_windows} />
+
+      <Divider sx={{ "&::before, &::after": { borderColor: "warning.main" } }}>
+        <Chip size="small" label="⬇ 3 PM TRANSITION ⬇" color="warning" sx={{ fontWeight: 700 }} />
+      </Divider>
+
+      <Chip
+        size="small"
+        label="3:00-3:15 — ACTUAL OUTCOME"
+        sx={{ alignSelf: "flex-start", bgcolor: "success.dark", color: "success.contrastText", fontWeight: 700 }}
+      />
+      <PostTransitionMinutesTable minutes={data.post_transition_minutes} />
+
+      <ForecastVsActualStrip forecast={forecast1459} day={day} />
+    </Stack>
+  );
+}
+
+function CasDailyRow({ symbol, day }: { symbol: string; day: CasDailyResultDTO }) {
+  const [open, setOpen] = useState(false);
   const agrees = day.old_methodology_outcome !== null && day.old_methodology_outcome === day.conclusion;
   return (
+    <>
     <TableRow hover sx={day.data_quality_flag ? { opacity: 0.6 } : undefined}>
+      <TableCell sx={{ width: 32 }}>
+        <IconButton size="small" onClick={() => setOpen((o) => !o)}>
+          {open ? <KeyboardArrowDown fontSize="small" /> : <KeyboardArrowRight fontSize="small" />}
+        </IconButton>
+      </TableCell>
       <TableCell sx={{ whiteSpace: "nowrap" }}>
         {day.session_date}
         {day.data_quality_flag && (
@@ -162,6 +400,14 @@ function CasDailyRow({ day }: { day: CasDailyResultDTO }) {
       </TableCell>
       <TableCell>{day.expiry_type ?? "-"}</TableCell>
     </TableRow>
+    {open && (
+      <TableRow>
+        <TableCell colSpan={15} sx={{ bgcolor: "background.default", py: 1.5 }}>
+          <CasWindowedDetailSection symbol={symbol} day={day} />
+        </TableCell>
+      </TableRow>
+    )}
+    </>
   );
 }
 
@@ -219,6 +465,7 @@ export function CasIntelligencePanel({ symbol }: { symbol: string }) {
             <Table size="small" stickyHeader>
               <TableHead>
                 <TableRow>
+                  <TableCell sx={{ width: 32 }} />
                   <TableCell>Date</TableCell>
                   <TableCell>Pre (14:31-14:59)</TableCell>
                   <TableCell>Post (15:00-15:39)</TableCell>
@@ -237,7 +484,7 @@ export function CasIntelligencePanel({ symbol }: { symbol: string }) {
               </TableHead>
               <TableBody>
                 {data.daily_results.map((d) => (
-                  <CasDailyRow key={d.session_date} day={d} />
+                  <CasDailyRow key={d.session_date} symbol={symbol} day={d} />
                 ))}
               </TableBody>
             </Table>

@@ -153,3 +153,124 @@ class CasDailyTransition(Base):
     magnitude_tier: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class CasPretransitionWindow(Base):
+    """Phase 7B: one of 6 five-minute pre-3pm decision windows -- see
+    market_transition/cas_windows.py. FORECAST information -- never
+    contains anything from 15:00 onward."""
+
+    __tablename__ = "cas_pretransition_windows"
+    __table_args__ = (
+        UniqueConstraint("symbol", "session_date", "window_index", name="cas_pretransition_windows_symbol_session_date_window_index_key"),
+        CheckConstraint("window_index BETWEEN 1 AND 6", name="cas_pretransition_windows_window_index_check"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    symbol: Mapped[str] = mapped_column(Text, nullable=False)
+    session_date: Mapped[date] = mapped_column(Date, nullable=False)
+    window_index: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    window_label: Mapped[str] = mapped_column(Text, nullable=False)
+
+    open: Mapped[float | None] = mapped_column(Double, nullable=True)
+    close: Mapped[float | None] = mapped_column(Double, nullable=True)
+    high: Mapped[float | None] = mapped_column(Double, nullable=True)
+    low: Mapped[float | None] = mapped_column(Double, nullable=True)
+    net_point_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pct_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+
+    volume: Mapped[float] = mapped_column(Double, nullable=False)
+    rvol_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    volume_acceleration_ratio: Mapped[float | None] = mapped_column(Double, nullable=True)
+    buy_volume_estimate: Mapped[float | None] = mapped_column(Double, nullable=True)
+    sell_volume_estimate: Mapped[float | None] = mapped_column(Double, nullable=True)
+    dominance_ratio: Mapped[float] = mapped_column(Double, nullable=False)
+    dominant_side: Mapped[str] = mapped_column(Text, nullable=False)
+
+    vwap_at_window_end: Mapped[float | None] = mapped_column(Double, nullable=True)
+    price_distance_from_vwap: Mapped[float | None] = mapped_column(Double, nullable=True)
+    price_distance_from_vwap_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    vwap_slope: Mapped[float | None] = mapped_column(Double, nullable=True)
+    poc_at_window_end: Mapped[float | None] = mapped_column(Double, nullable=True)
+    poc_change_during_window: Mapped[float | None] = mapped_column(Double, nullable=True)
+    poc_slope: Mapped[float | None] = mapped_column(Double, nullable=True)
+    vah: Mapped[float | None] = mapped_column(Double, nullable=True)
+    val: Mapped[float | None] = mapped_column(Double, nullable=True)
+
+    pcr: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pcr_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    call_oi_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    put_oi_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    iv_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    option_pressure_score: Mapped[float | None] = mapped_column(Double, nullable=True)
+
+    market_regime: Mapped[str | None] = mapped_column(Text, nullable=True)
+    institutional_bias_label: Mapped[str | None] = mapped_column(Text, nullable=True)
+    institutional_bias_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    news_risk_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    data_quality_flag: Mapped[str | None] = mapped_column(Text, nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class CasPostTransitionMinute(Base):
+    """Phase 7B: one of 16 native 1-minute post-3pm rows (15:00-15:15
+    inclusive) -- see market_transition/cas_windows.py. ACTUAL OUTCOME --
+    never joined against the forecast tables at this layer."""
+
+    __tablename__ = "cas_post_transition_minutes"
+    __table_args__ = (
+        UniqueConstraint("symbol", "session_date", "minute_offset", name="cas_post_transition_minutes_symbol_session_date_minute_offset_key"),
+        CheckConstraint("minute_offset BETWEEN 0 AND 15", name="cas_post_transition_minutes_minute_offset_check"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    symbol: Mapped[str] = mapped_column(Text, nullable=False)
+    session_date: Mapped[date] = mapped_column(Date, nullable=False)
+    minute_offset: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    minute_time: Mapped[str] = mapped_column(Text, nullable=False)
+
+    close: Mapped[float] = mapped_column(Double, nullable=False)
+    price_change: Mapped[float] = mapped_column(Double, nullable=False)
+    volume: Mapped[float] = mapped_column(Double, nullable=False)
+    rvol_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    dominance_ratio: Mapped[float] = mapped_column(Double, nullable=False)
+    dominant_side: Mapped[str] = mapped_column(Text, nullable=False)
+    poc_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    vwap_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    pcr_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    call_oi_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    put_oi_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    iv_change: Mapped[float | None] = mapped_column(Double, nullable=True)
+    option_pressure_score: Mapped[float | None] = mapped_column(Double, nullable=True)
+    range_expansion: Mapped[float] = mapped_column(Double, nullable=False)
+    transition_shock_score: Mapped[float] = mapped_column(Double, nullable=False)
+    data_quality_flag: Mapped[str | None] = mapped_column(Text, nullable=True)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class CasTransitionForecast(Base):
+    """Phase 7B: one of 7 leakage-safe forecast checkpoints
+    (14:30/35/40/45/50/55/59) -- see market_transition/cas_forecast.py.
+    FORECAST information only -- built strictly from data available at
+    checkpoint_time, never the actual outcome."""
+
+    __tablename__ = "cas_transition_forecasts"
+    __table_args__ = (
+        UniqueConstraint("symbol", "session_date", "checkpoint_time", name="cas_transition_forecasts_symbol_session_date_checkpoint_time_key"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    symbol: Mapped[str] = mapped_column(Text, nullable=False)
+    session_date: Mapped[date] = mapped_column(Date, nullable=False)
+    checkpoint_time: Mapped[str] = mapped_column(Text, nullable=False)
+
+    probability_no_material_transition: Mapped[float] = mapped_column(Double, nullable=False)
+    probability_large_up: Mapped[float] = mapped_column(Double, nullable=False)
+    probability_large_down: Mapped[float] = mapped_column(Double, nullable=False)
+    probability_reversal: Mapped[float] = mapped_column(Double, nullable=False)
+    probability_continuation: Mapped[float] = mapped_column(Double, nullable=False)
+    n_analogs: Mapped[int] = mapped_column(Integer, nullable=False)
+    confidence_label: Mapped[str] = mapped_column(Text, nullable=False)
+    top_contributing_factors: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    historical_similarity_score: Mapped[float] = mapped_column(Double, nullable=False)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

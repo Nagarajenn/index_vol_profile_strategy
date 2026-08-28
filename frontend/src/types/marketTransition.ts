@@ -104,3 +104,89 @@ export interface CasIntelligenceResponseDTO {
   daily_results: CasDailyResultDTO[];
   correlations: MtiFactorCorrelationDTO[];
 }
+
+// Phase 7B: dual-resolution pre/post-3pm transition detail, lazy-loaded
+// per day. pre_transition_windows = FORECAST INFORMATION (14:30-14:59);
+// post_transition_minutes = ACTUAL OUTCOME (15:00-15:15). Never merged --
+// keep these visually distinct wherever rendered.
+type DominantSide = "buy" | "sell" | "balanced";
+
+export interface PreTransitionWindowDTO {
+  window_index: number;
+  window_label: string;
+  open: number | null;
+  close: number | null;
+  high: number | null;
+  low: number | null;
+  net_point_change: number | null;
+  pct_change: number | null;
+  volume: number;
+  rvol_pct: number | null;
+  volume_acceleration_ratio: number | null;
+  buy_volume_estimate: number | null;
+  sell_volume_estimate: number | null;
+  dominance_ratio: number;
+  dominant_side: DominantSide;
+  vwap_at_window_end: number | null;
+  price_distance_from_vwap: number | null;
+  price_distance_from_vwap_pct: number | null;
+  vwap_slope: number | null;
+  poc_at_window_end: number | null;
+  poc_change_during_window: number | null;
+  poc_slope: number | null;
+  vah: number | null;
+  val: number | null;
+  pcr: number | null;
+  pcr_change: number | null;
+  call_oi_change: number | null;
+  put_oi_change: number | null;
+  iv_change: number | null;
+  option_pressure_score: number | null;
+  market_regime: string | null;
+  institutional_bias_label: string | null;
+  institutional_bias_score: number | null;
+  news_risk_score: number | null;
+  data_quality_flag: string | null;
+}
+
+export interface PostTransitionMinuteDTO {
+  minute_offset: number;
+  minute_time: string;
+  close: number;
+  price_change: number;
+  volume: number;
+  rvol_pct: number | null;
+  dominance_ratio: number;
+  dominant_side: DominantSide;
+  poc_change: number | null;
+  vwap_change: number | null;
+  pcr_change: number | null;
+  call_oi_change: number | null;
+  put_oi_change: number | null;
+  iv_change: number | null;
+  option_pressure_score: number | null;
+  range_expansion: number;
+  transition_shock_score: number;
+  data_quality_flag: string | null;
+}
+
+export interface TransitionForecastDTO {
+  checkpoint_time: string;
+  probability_no_material_transition: number;
+  probability_large_up: number;
+  probability_large_down: number;
+  probability_reversal: number;
+  probability_continuation: number;
+  n_analogs: number;
+  confidence_label: ConfidenceLabel;
+  top_contributing_factors: ContributingFactorDTO[];
+  historical_similarity_score: number;
+}
+
+export interface CasWindowedDetailResponseDTO {
+  symbol: string;
+  session_date: string;
+  pre_transition_windows: PreTransitionWindowDTO[];
+  post_transition_minutes: PostTransitionMinuteDTO[];
+  forecasts: TransitionForecastDTO[];
+}

@@ -1,7 +1,14 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends
 
 from app.api.v1.dependencies import get_live_transition_advisor_service, get_market_transition_service
-from app.schemas.market_transition import CasIntelligenceResponseDTO, LiveAdvisoryDTO, MtiResearchResponseDTO
+from app.schemas.market_transition import (
+    CasIntelligenceResponseDTO,
+    CasWindowedDetailResponseDTO,
+    LiveAdvisoryDTO,
+    MtiResearchResponseDTO,
+)
 from app.services.live_transition_advisor_service import LiveTransitionAdvisorService
 from app.services.market_transition_service import MarketTransitionService
 
@@ -50,3 +57,23 @@ async def get_cas_intelligence(
     begins at 15:15.
     """
     return await service.get_cas_intelligence(symbol)
+
+
+@router.get(
+    "/market-transition/{symbol}/cas-intelligence/{session_date}/windowed-detail",
+    response_model=CasWindowedDetailResponseDTO,
+)
+async def get_cas_windowed_detail(
+    symbol: str, session_date: date, service: MarketTransitionService = Depends(get_market_transition_service)
+) -> CasWindowedDetailResponseDTO:
+    """Phase 7B: dual-resolution pre/post-3pm transition detail for one
+    day -- six 5-minute pre-transition windows (14:30-14:59, FORECAST
+    INFORMATION) at native detail, sixteen native 1-minute post-transition
+    rows (15:00-15:15, ACTUAL OUTCOME), and 7 leakage-safe forecast
+    checkpoints. Lazy-loaded on demand (not eagerly joined into
+    /cas-intelligence above) -- fetch only when a UI expands a specific
+    day. Pre-transition and post-transition data are never merged
+    server-side; the two must stay visually distinct in any UI that
+    renders this response.
+    """
+    return await service.get_cas_windowed_detail(symbol, session_date)

@@ -6,7 +6,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from app.models import CasDailyTransition, MtiDailyTransition, MtiFactorCorrelation
+from app.models import (
+    CasDailyTransition,
+    CasPostTransitionMinute,
+    CasPretransitionWindow,
+    CasTransitionForecast,
+    MtiDailyTransition,
+    MtiFactorCorrelation,
+)
 from app.services.market_transition_service import MarketTransitionService
 
 
@@ -83,11 +90,17 @@ def _cas_daily_row(
 
 
 class _FakeRepo:
-    def __init__(self, daily, correlations, cas_daily=None, cas_correlations=None) -> None:
+    def __init__(
+        self, daily, correlations, cas_daily=None, cas_correlations=None,
+        pretransition_windows=None, post_transition_minutes=None, transition_forecasts=None,
+    ) -> None:
         self._daily = daily
         self._correlations = correlations
         self._cas_daily = cas_daily or []
         self._cas_correlations = cas_correlations or []
+        self._pretransition_windows = pretransition_windows or []
+        self._post_transition_minutes = post_transition_minutes or []
+        self._transition_forecasts = transition_forecasts or []
 
     async def list_daily(self, symbol: str, limit: int = 200):
         return self._daily[:limit]
@@ -100,6 +113,49 @@ class _FakeRepo:
 
     async def list_cas_correlations(self, symbol: str):
         return self._cas_correlations
+
+    async def list_pretransition_windows(self, symbol: str, session_date: date):
+        return self._pretransition_windows
+
+    async def list_post_transition_minutes(self, symbol: str, session_date: date):
+        return self._post_transition_minutes
+
+    async def list_transition_forecasts(self, symbol: str, session_date: date):
+        return self._transition_forecasts
+
+
+def _pretransition_window_row(window_index: int = 1, dominant_side: str = "balanced") -> CasPretransitionWindow:
+    return CasPretransitionWindow(
+        symbol="NIFTY", session_date=date(2026, 8, 27), window_index=window_index, window_label="14:30-14:34",
+        open=100, close=101, high=102, low=99, net_point_change=1, pct_change=1.0,
+        volume=1000, rvol_pct=110.0, volume_acceleration_ratio=1.1,
+        buy_volume_estimate=550, sell_volume_estimate=450, dominance_ratio=0.55, dominant_side=dominant_side,
+        vwap_at_window_end=100.5, price_distance_from_vwap=0.5, price_distance_from_vwap_pct=0.5, vwap_slope=0.1,
+        poc_at_window_end=100.0, poc_change_during_window=0.5, poc_slope=0.5, vah=101.0, val=99.0,
+        pcr=0.9, pcr_change=0.01, call_oi_change=100.0, put_oi_change=-50.0, iv_change=-0.5, option_pressure_score=0.2,
+        market_regime="Trending", institutional_bias_label="Neutral", institutional_bias_score=0, news_risk_score=None,
+        data_quality_flag=None, computed_at=datetime.now(timezone.utc),
+    )
+
+
+def _post_transition_minute_row(minute_offset: int = 0) -> CasPostTransitionMinute:
+    return CasPostTransitionMinute(
+        symbol="NIFTY", session_date=date(2026, 8, 27), minute_offset=minute_offset, minute_time="15:00",
+        close=101, price_change=1.0, volume=500, rvol_pct=90.0,
+        dominance_ratio=0.6, dominant_side="buy", poc_change=0.5, vwap_change=0.2,
+        pcr_change=0.0, call_oi_change=0.0, put_oi_change=0.0, iv_change=0.0, option_pressure_score=0.1,
+        range_expansion=1.2, transition_shock_score=35.0, data_quality_flag=None, computed_at=datetime.now(timezone.utc),
+    )
+
+
+def _transition_forecast_row(checkpoint_time: str = "14:59") -> CasTransitionForecast:
+    return CasTransitionForecast(
+        symbol="NIFTY", session_date=date(2026, 8, 27), checkpoint_time=checkpoint_time,
+        probability_no_material_transition=0.5, probability_large_up=0.25, probability_large_down=0.25,
+        probability_reversal=0.6, probability_continuation=0.4, n_analogs=8, confidence_label="Weak",
+        top_contributing_factors=[{"factor_name": "PCR", "today_value": "0.9", "note": "n=8", "contribution": 0.2}],
+        historical_similarity_score=0.7, computed_at=datetime.now(timezone.utc),
+    )
 
 
 @pytest.mark.asyncio
@@ -273,3 +329,37 @@ async def test_get_cas_intelligence_magnitude_tier_none_when_atr_unavailable():
     result = await service.get_cas_intelligence("NIFTY")
 
     assert result.daily_results[0].magnitude_tier is None
+
+
+@pytest.mark.asyncio
+async def test_get_cas_windowed_detail_maps_all_three_row_types():
+    repo = _FakeRepo(
+        [], [],
+        pretransition_windows=[_pretransition_window_row(1), _pretransition_window_row(2)],
+        post_transition_minutes=[_post_transition_minute_row(0), _post_transition_minute_row(1)],
+        transition_forecasts=[_transition_forecast_row("14:30"), _transition_forecast_row("14:59")],
+    )
+    service = MarketTransitionService(repo)
+
+    result = await service.get_cas_windowed_detail("NIFTY", date(2026, 8, 27))
+
+    assert result.symbol == "NIFTY"
+    assert result.session_date == date(2026, 8, 27)
+    assert len(result.pre_transition_windows) == 2
+    assert len(result.post_transition_minutes) == 2
+    assert len(result.forecasts) == 2
+    assert result.pre_transition_windows[0].dominant_side == "balanced"
+    assert result.post_transition_minutes[0].transition_shock_score == pytest.approx(35.0)
+    assert result.forecasts[1].checkpoint_time == "14:59"
+    assert result.forecasts[1].top_contributing_factors[0].factor_name == "PCR"
+
+
+@pytest.mark.asyncio
+async def test_get_cas_windowed_detail_empty_when_nothing_computed_yet():
+    service = MarketTransitionService(_FakeRepo([], []))
+
+    result = await service.get_cas_windowed_detail("NIFTY", date(2026, 8, 27))
+
+    assert result.pre_transition_windows == []
+    assert result.post_transition_minutes == []
+    assert result.forecasts == []

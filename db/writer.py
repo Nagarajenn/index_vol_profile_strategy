@@ -443,3 +443,66 @@ def insert_cas_factor_correlation(symbol: str, result) -> None:
             _jsonb(result.category_breakdown) if result.category_breakdown else None,
         ),
     )
+
+
+# --- Phase 7B: dual-resolution pre/post-3pm transition detail -----------
+# (market_transition/cas_windows.py + cas_forecast.py). All three inserts
+# build their column/value lists from the dataclass's own field names --
+# with this many columns, one source of truth for the field list avoids a
+# manual tuple silently drifting out of order from the dataclass.
+
+
+def _insert_from_dataclass(table: str, record, extra_cols: dict, conflict_cols: tuple[str, ...]) -> None:
+    """extra_cols are columns not on the dataclass itself (symbol,
+    session_date, and whichever index/label column keys the row)."""
+    field_names = list(record.__dataclass_fields__.keys())
+    columns = list(extra_cols.keys()) + field_names
+    values = list(extra_cols.values()) + [getattr(record, f) for f in field_names]
+    placeholders = ",".join(["%s"] * len(columns))
+    update_cols = [c for c in columns if c not in conflict_cols]
+    update_clause = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols) + ", computed_at = now()"
+    execute(
+        f"""
+        INSERT INTO {table} ({",".join(columns)}) VALUES ({placeholders})
+        ON CONFLICT ({",".join(conflict_cols)}) DO UPDATE SET {update_clause}
+        """,
+        tuple(values),
+    )
+
+
+def insert_cas_pretransition_window(symbol: str, session_date: date, window) -> None:
+    """`window` is a market_transition.cas_windows.PreTransitionWindow."""
+    _insert_from_dataclass(
+        "cas_pretransition_windows", window,
+        extra_cols={"symbol": symbol, "session_date": session_date},
+        conflict_cols=("symbol", "session_date", "window_index"),
+    )
+
+
+def insert_cas_post_transition_minute(symbol: str, session_date: date, minute) -> None:
+    """`minute` is a market_transition.cas_windows.PostTransitionMinute."""
+    _insert_from_dataclass(
+        "cas_post_transition_minutes", minute,
+        extra_cols={"symbol": symbol, "session_date": session_date},
+        conflict_cols=("symbol", "session_date", "minute_offset"),
+    )
+
+
+def insert_cas_transition_forecast(symbol: str, session_date: date, forecast) -> None:
+    """`forecast` is a market_transition.cas_forecast.TransitionForecast."""
+    field_names = [f for f in forecast.__dataclass_fields__.keys() if f != "top_contributing_factors"]
+    columns = ["symbol", "session_date"] + field_names + ["top_contributing_factors"]
+    values = [symbol, session_date] + [getattr(forecast, f) for f in field_names] + [
+        _jsonb([asdict(c) for c in forecast.top_contributing_factors]) if forecast.top_contributing_factors else None
+    ]
+    placeholders = ",".join(["%s"] * len(columns))
+    conflict_cols = ("symbol", "session_date", "checkpoint_time")
+    update_cols = [c for c in columns if c not in conflict_cols]
+    update_clause = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols) + ", computed_at = now()"
+    execute(
+        f"""
+        INSERT INTO cas_transition_forecasts ({",".join(columns)}) VALUES ({placeholders})
+        ON CONFLICT ({",".join(conflict_cols)}) DO UPDATE SET {update_clause}
+        """,
+        tuple(values),
+    )

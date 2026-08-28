@@ -314,3 +314,81 @@ CREATE TABLE IF NOT EXISTS mti_cas_factor_correlations (
     UNIQUE (symbol, factor_name, target)
 );
 CREATE INDEX IF NOT EXISTS idx_mti_cas_correlations_symbol ON mti_cas_factor_correlations (symbol);
+
+-- Dual-resolution pre/post-3pm transition detail (Phase 7B, see
+-- market_transition/cas_windows.py + cas_forecast.py). Purely additive
+-- presentation/analysis tables over the same raw_candles/option_chain_*
+-- history everything else reads -- never a replacement for the 1-minute
+-- Feature Store grain. Lazy-loaded per day (not eagerly joined into the
+-- hot mti_cas_daily_transitions poll) -- see backend windowed-detail
+-- endpoint.
+
+CREATE TABLE IF NOT EXISTS cas_pretransition_windows (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    window_index SMALLINT NOT NULL CHECK (window_index BETWEEN 1 AND 6),
+    window_label TEXT NOT NULL,
+    open DOUBLE PRECISION, close DOUBLE PRECISION, high DOUBLE PRECISION, low DOUBLE PRECISION,
+    net_point_change DOUBLE PRECISION, pct_change DOUBLE PRECISION,
+    volume DOUBLE PRECISION NOT NULL,
+    rvol_pct DOUBLE PRECISION, volume_acceleration_ratio DOUBLE PRECISION,
+    buy_volume_estimate DOUBLE PRECISION, sell_volume_estimate DOUBLE PRECISION,
+    dominance_ratio DOUBLE PRECISION NOT NULL, dominant_side TEXT NOT NULL,
+    vwap_at_window_end DOUBLE PRECISION, price_distance_from_vwap DOUBLE PRECISION,
+    price_distance_from_vwap_pct DOUBLE PRECISION, vwap_slope DOUBLE PRECISION,
+    poc_at_window_end DOUBLE PRECISION, poc_change_during_window DOUBLE PRECISION, poc_slope DOUBLE PRECISION,
+    vah DOUBLE PRECISION, val DOUBLE PRECISION,
+    pcr DOUBLE PRECISION, pcr_change DOUBLE PRECISION,
+    call_oi_change DOUBLE PRECISION, put_oi_change DOUBLE PRECISION,
+    iv_change DOUBLE PRECISION, option_pressure_score DOUBLE PRECISION,
+    market_regime TEXT, institutional_bias_label TEXT, institutional_bias_score SMALLINT,
+    news_risk_score SMALLINT,
+    data_quality_flag TEXT,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date, window_index)
+);
+CREATE INDEX IF NOT EXISTS idx_cas_pretransition_windows_symbol_date ON cas_pretransition_windows (symbol, session_date DESC);
+
+CREATE TABLE IF NOT EXISTS cas_post_transition_minutes (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    minute_offset SMALLINT NOT NULL CHECK (minute_offset BETWEEN 0 AND 15),
+    minute_time TEXT NOT NULL,
+    close DOUBLE PRECISION NOT NULL, price_change DOUBLE PRECISION NOT NULL,
+    volume DOUBLE PRECISION NOT NULL, rvol_pct DOUBLE PRECISION,
+    dominance_ratio DOUBLE PRECISION NOT NULL, dominant_side TEXT NOT NULL,
+    poc_change DOUBLE PRECISION, vwap_change DOUBLE PRECISION,
+    pcr_change DOUBLE PRECISION, call_oi_change DOUBLE PRECISION, put_oi_change DOUBLE PRECISION, iv_change DOUBLE PRECISION,
+    option_pressure_score DOUBLE PRECISION,
+    range_expansion DOUBLE PRECISION NOT NULL,
+    transition_shock_score DOUBLE PRECISION NOT NULL,
+    data_quality_flag TEXT,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date, minute_offset)
+);
+CREATE INDEX IF NOT EXISTS idx_cas_post_transition_minutes_symbol_date ON cas_post_transition_minutes (symbol, session_date DESC);
+
+-- One row per (symbol, session_date, checkpoint) -- 7 rows/day, see
+-- market_transition/cas_forecast.py. FORECAST information only; never
+-- joined against the actual outcome in this table -- the UI/service layer
+-- fetches mti_cas_daily_transitions separately to compare.
+CREATE TABLE IF NOT EXISTS cas_transition_forecasts (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    checkpoint_time TEXT NOT NULL,
+    probability_no_material_transition DOUBLE PRECISION NOT NULL,
+    probability_large_up DOUBLE PRECISION NOT NULL,
+    probability_large_down DOUBLE PRECISION NOT NULL,
+    probability_reversal DOUBLE PRECISION NOT NULL,
+    probability_continuation DOUBLE PRECISION NOT NULL,
+    n_analogs INTEGER NOT NULL,
+    confidence_label TEXT NOT NULL,
+    top_contributing_factors JSONB,
+    historical_similarity_score DOUBLE PRECISION NOT NULL,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date, checkpoint_time)
+);
+CREATE INDEX IF NOT EXISTS idx_cas_transition_forecasts_symbol_date ON cas_transition_forecasts (symbol, session_date DESC);

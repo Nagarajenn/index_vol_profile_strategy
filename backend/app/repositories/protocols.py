@@ -6,12 +6,15 @@ without a real Postgres connection. Concrete implementations below just need
 to satisfy the shape (structural typing), no explicit inheritance required.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Protocol
 
 from app.models import (
     CasDailyTransition,
     CasFactorCorrelation,
+    CasPostTransitionMinute,
+    CasPretransitionWindow,
+    CasTransitionForecast,
     ClassifiedEvent,
     LevelsSnapshot,
     MtiDailyTransition,
@@ -45,3 +48,6 @@ class MarketTransitionRepositoryProtocol(Protocol):
     async def list_correlations(self, symbol: str) -> list[MtiFactorCorrelation]: ...
     async def list_cas_daily(self, symbol: str, limit: int = 60) -> list[CasDailyTransition]: ...
     async def list_cas_correlations(self, symbol: str) -> list[CasFactorCorrelation]: ...
+    async def list_pretransition_windows(self, symbol: str, session_date: date) -> list[CasPretransitionWindow]: ...
+    async def list_post_transition_minutes(self, symbol: str, session_date: date) -> list[CasPostTransitionMinute]: ...
+    async def list_transition_forecasts(self, symbol: str, session_date: date) -> list[CasTransitionForecast]: ...
