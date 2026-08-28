@@ -118,15 +118,23 @@ export function PreTransitionWindowsTable({
           <TableRow>
             <TableCell>Window</TableCell>
             <TableCell align="right">Close</TableCell>
-            <TableCell align="right">Net pts</TableCell>
+            <TableCell align="right">Price chg</TableCell>
             <TableCell align="right">Volume</TableCell>
             <TableCell align="right">RVOL%</TableCell>
-            <TableCell align="right">Vol accel</TableCell>
             <TableCell>Dominance</TableCell>
-            <TableCell align="right">VWAP dist</TableCell>
-            <TableCell align="right">POC</TableCell>
+            <TableCell align="right">
+              <Tooltip title="Distance from VWAP at this window's close (absolute level, points) -- not a change.">
+                <span>VWAP dist</span>
+              </Tooltip>
+            </TableCell>
+            <TableCell align="right">
+              <Tooltip title="Session POC at this window's close (absolute price level) -- not a change.">
+                <span>POC</span>
+              </Tooltip>
+            </TableCell>
             <TableCell align="right">PCR chg</TableCell>
             <TableCell align="right">Opt. pressure</TableCell>
+            <TableCell align="right">Vol accel</TableCell>
             <TableCell>Regime</TableCell>
             <TableCell>Inst. bias</TableCell>
             <TableCell align="right">News risk</TableCell>
@@ -146,7 +154,6 @@ export function PreTransitionWindowsTable({
                 <TableCell align="right">{fmtSigned(w.net_point_change, 2)}</TableCell>
                 <TableCell align="right">{w.volume.toLocaleString()}</TableCell>
                 <TableCell align="right">{fmt(w.rvol_pct, 0)}</TableCell>
-                <TableCell align="right">{w.volume_acceleration_ratio !== null ? `${w.volume_acceleration_ratio.toFixed(2)}x` : "N/A"}</TableCell>
                 <TableCell>
                   <Chip size="small" label={w.dominant_side} color={dominantSideColor(w.dominant_side)} variant="outlined" sx={{ height: 18 }} />
                 </TableCell>
@@ -154,6 +161,7 @@ export function PreTransitionWindowsTable({
                 <TableCell align="right">{fmt(w.poc_at_window_end, 1)}</TableCell>
                 <TableCell align="right">{fmtSigned(w.pcr_change, 3)}</TableCell>
                 <TableCell align="right">{fmtSigned(w.option_pressure_score, 2)}</TableCell>
+                <TableCell align="right">{w.volume_acceleration_ratio !== null ? `${w.volume_acceleration_ratio.toFixed(2)}x` : "N/A"}</TableCell>
                 <TableCell>{w.market_regime ?? "N/A"}</TableCell>
                 <TableCell>
                   <Typography variant="caption">{w.institutional_bias_label ?? "N/A"}</Typography>
@@ -189,8 +197,16 @@ export function PostTransitionMinutesTable({
             <TableCell align="right">Volume</TableCell>
             <TableCell align="right">RVOL%</TableCell>
             <TableCell>Dominance</TableCell>
-            <TableCell align="right">POC chg</TableCell>
-            <TableCell align="right">VWAP chg</TableCell>
+            <TableCell align="right">
+              <Tooltip title="Change in distance from VWAP during this minute (delta, points) -- the pre-transition table shows the absolute distance instead, since it's a single snapshot at each window's close rather than a minute-over-minute delta.">
+                <span>VWAP chg</span>
+              </Tooltip>
+            </TableCell>
+            <TableCell align="right">
+              <Tooltip title="Change in session POC during this minute (delta, points) -- the pre-transition table shows the absolute POC level instead, for the same reason.">
+                <span>POC chg</span>
+              </Tooltip>
+            </TableCell>
             <TableCell align="right">PCR chg</TableCell>
             <TableCell align="right">Opt. pressure</TableCell>
             <TableCell align="right">Range exp.</TableCell>
@@ -208,8 +224,8 @@ export function PostTransitionMinutesTable({
               <TableCell>
                 <Chip size="small" label={m.dominant_side} color={dominantSideColor(m.dominant_side)} variant="outlined" sx={{ height: 18 }} />
               </TableCell>
-              <TableCell align="right">{fmtSigned(m.poc_change, 1)}</TableCell>
               <TableCell align="right">{fmtSigned(m.vwap_change, 2)}</TableCell>
+              <TableCell align="right">{fmtSigned(m.poc_change, 1)}</TableCell>
               <TableCell align="right">{fmtSigned(m.pcr_change, 3)}</TableCell>
               <TableCell align="right">{fmtSigned(m.option_pressure_score, 2)}</TableCell>
               <TableCell align="right">{m.range_expansion.toFixed(1)}x</TableCell>
