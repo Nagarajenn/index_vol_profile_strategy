@@ -100,8 +100,8 @@ export function shockScoreColor(score: number): "default" | "info" | "warning" |
 // Fixed pixel widths for the columns both tables share. Same column ORDER
 // alone isn't enough to keep them visually lined up -- these are two
 // separate <Table>s with different trailing columns (Vol accel/Regime/
-// Inst. bias/News risk here vs. Range exp./Shock there), so each table's
-// own auto-layout sizes its shared columns independently and they drift
+// Inst. bias here vs. Range exp./Shock there), so each table's own
+// auto-layout sizes its shared columns independently and they drift
 // apart. table-layout: fixed + identical explicit widths on every shared
 // column removes that drift, so "VWAP dist" sits directly above "VWAP
 // chg", "POC" above "POC chg", etc.
@@ -118,7 +118,13 @@ const SHARED_COL_WIDTHS = {
   optPressure: 100,
 };
 
-const PRE_ONLY_COL_WIDTHS = { volAccel: 84, regime: 90, instBias: 110, newsRisk: 80 };
+// News risk (max classified-event severity in the trailing window before
+// each window's close) is a real, occasionally-populated signal, but is
+// "-" on the vast majority of windows (most 5-min stretches simply have
+// no news event in them) -- dropped from the table per user feedback, not
+// shown at all rather than shown mostly-empty. Still computed/returned by
+// cas_windows.py and present on the DTO; just not rendered here.
+const PRE_ONLY_COL_WIDTHS = { volAccel: 84, regime: 90, instBias: 110 };
 const POST_ONLY_COL_WIDTHS = { rangeExp: 80, shock: 70 };
 
 const SHARED_TOTAL_WIDTH = Object.values(SHARED_COL_WIDTHS).reduce((a, b) => a + b, 0);
@@ -178,7 +184,6 @@ export function PreTransitionWindowsTable({
           <col style={{ width: PRE_ONLY_COL_WIDTHS.volAccel }} />
           <col style={{ width: PRE_ONLY_COL_WIDTHS.regime }} />
           <col style={{ width: PRE_ONLY_COL_WIDTHS.instBias }} />
-          <col style={{ width: PRE_ONLY_COL_WIDTHS.newsRisk }} />
         </colgroup>
         <TableHead>
           <TableRow>
@@ -203,7 +208,6 @@ export function PreTransitionWindowsTable({
             <TableCell align="right">Vol accel</TableCell>
             <TableCell>Regime</TableCell>
             <TableCell>Inst. bias</TableCell>
-            <TableCell align="right">News risk</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -232,7 +236,6 @@ export function PreTransitionWindowsTable({
                 <TableCell>
                   <Typography variant="caption">{w.institutional_bias_label ?? "N/A"}</Typography>
                 </TableCell>
-                <TableCell align="right">{w.news_risk_score ?? "-"}</TableCell>
               </TableRow>
             );
           })}
