@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from config.instruments import INSTRUMENTS
 from config.settings import IST, LIVE_LOOP_INTERVAL_MIN, SESSION_CLOSE, SESSION_OPEN
 from dhan_client.client import reset_client
+from pipeline import cas_live
 from pipeline.run_snapshot import run_snapshot
 from pipeline.trading_calendar import is_trading_day
 
@@ -98,6 +99,15 @@ def run_live_loop(
                 # so the next tick rebuilds a fresh one instead of retrying
                 # the same dead connection until market close.
                 reset_client()
+
+            try:
+                # Phase 7D: live 14:30-15:15 CAS windowed detail -- reads
+                # candles/option data run_snapshot just persisted, no new
+                # Dhan calls. A true no-op outside that window. Must never
+                # break the core snapshot tick above.
+                cas_live.maybe_update(symbol, datetime.now(IST))
+            except Exception:
+                logger.exception("CAS live update failed for %s", symbol)
 
         iterations += 1
         if max_iterations is not None and iterations >= max_iterations:

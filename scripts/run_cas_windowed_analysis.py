@@ -25,12 +25,10 @@ import config  # noqa: F401 -- truststore bootstrap, must import before any DB/H
 from config.instruments import INSTRUMENTS
 from config.settings import IST
 from db import reader as db_reader
-from db import writer as db_writer
-from market_transition.cas_forecast import FORECAST_CHECKPOINTS, build_transition_forecast
 from market_transition.cas_transition import CAS_EFFECTIVE_DATE, extract_cas_transition_record
-from market_transition.cas_windows import build_post_transition_minutes, build_pre_transition_windows
 from market_transition.research import extract_all_records
 from market_transition.statistics import run_correlation_study
+from pipeline.cas_live import compute_and_persist_windowed_day
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -89,26 +87,13 @@ def run_symbol(symbol: str) -> tuple[int, int, int]:
         def option_lookup(at_time, _symbol=symbol, _session_date=session_date):
             return db_reader.get_option_summary_near(_symbol, _session_date, at_or_before=at_time.strftime("%H:%M:%S"))
 
-        pre_windows = build_pre_transition_windows(day_candles, historical_by_date, option_lookup, events, bin_size, session_date)
-        for w in pre_windows:
-            db_writer.insert_cas_pretransition_window(symbol, session_date, w)
-            n_windows += 1
-
-        post_minutes = build_post_transition_minutes(
-            day_candles, historical_by_date, option_lookup, pre_windows[-1] if pre_windows else None, bin_size, session_date
+        w, m, f = compute_and_persist_windowed_day(
+            symbol, session_date, day_candles, historical_by_date, option_lookup, events, bin_size, expiry_type,
+            prior_day_candles, old_records, cas_history, correlations,
         )
-        for m in post_minutes:
-            db_writer.insert_cas_post_transition_minute(symbol, session_date, m)
-            n_minutes += 1
-
-        for checkpoint in FORECAST_CHECKPOINTS:
-            forecast = build_transition_forecast(
-                checkpoint, symbol, session_date, day_candles, prior_day_candles, historical_by_date,
-                old_records, cas_history, correlations, bin_size, expiry_type,
-            )
-            if forecast:
-                db_writer.insert_cas_transition_forecast(symbol, session_date, forecast)
-                n_forecasts += 1
+        n_windows += w
+        n_minutes += m
+        n_forecasts += f
 
     return n_windows, n_minutes, n_forecasts
 

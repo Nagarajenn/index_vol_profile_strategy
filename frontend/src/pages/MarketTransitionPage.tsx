@@ -2,6 +2,7 @@ import { Stack } from "@mui/material";
 
 import { CasIntelligencePanel } from "../components/market-transition/CasIntelligencePanel";
 import { LiveAdvisorPanel } from "../components/market-transition/LiveAdvisorPanel";
+import { LiveCasTrackerPanel } from "../components/market-transition/LiveCasTrackerPanel";
 import { useSymbolStore } from "../store/useSymbolStore";
 
 // The original 2:00-3:01pm Market Transition Intelligence research view
@@ -19,6 +20,7 @@ export function MarketTransitionPage() {
   return (
     <Stack spacing={2} sx={{ width: "100%" }}>
       <LiveAdvisorPanel />
+      <LiveCasTrackerPanel symbol={selectedSymbol} />
       <CasIntelligencePanel symbol={selectedSymbol} />
     </Stack>
   );
