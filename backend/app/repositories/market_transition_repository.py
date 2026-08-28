@@ -31,7 +31,7 @@ class MarketTransitionRepository:
             .limit(limit)
         )
         result = await self._session.execute(stmt)
-        return list(reversed(result.scalars().all()))
+        return list(result.scalars().all())  # most recent first, matching list_daily's convention
 
     async def list_cas_correlations(self, symbol: str) -> list[CasFactorCorrelation]:
         stmt = select(CasFactorCorrelation).where(CasFactorCorrelation.symbol == symbol)
