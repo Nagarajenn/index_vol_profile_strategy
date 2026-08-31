@@ -5,7 +5,7 @@ import { PostTransitionMinutesTable, PreTransitionWindowsTable } from "./CasWind
 import { useCasWindowedDetail } from "../../hooks/useCasWindowedDetail";
 
 const TRACKER_START_MIN = 14 * 60 + 15; // 14:15, a little buffer before the first 14:30 window
-const TRACKER_END_MIN = 15 * 60 + 20; // 15:20, a little buffer after the last 15:15 minute
+const TRACKER_END_MIN = 15 * 60 + 35; // 15:35, a little buffer after the 15:30 closing-print checkpoint
 const POLL_INTERVAL_MS = 20_000;
 
 function nowInIst(): Date {
@@ -57,10 +57,10 @@ export function LiveCasTrackerPanel({ symbol }: { symbol: string }) {
         <Chip size="small" label="LIVE" color="error" sx={{ fontWeight: 700 }} />
       </Stack>
       <Typography variant="caption" color="text.secondary" sx={{ display: "block", mb: 1 }}>
-        Today's 14:30-14:59 pre-transition windows and 15:00-15:15 post-transition minutes, updating as the session
-        happens -- the same dual-resolution view as CAS Intelligence's per-day detail below, just live for today
-        instead of a closed historical day. Today won't appear in the CAS Intelligence table itself until after
-        tonight's post-market batch run.
+        Today's 14:30-14:59 pre-transition windows, 15:00-15:15 post-transition minutes, and the 15:30 closing-print
+        checkpoint, updating as the session happens -- the same dual-resolution view as CAS Intelligence's per-day
+        detail below, just live for today instead of a closed historical day. Today won't appear in the CAS
+        Intelligence table itself until after tonight's post-market batch run.
       </Typography>
 
       {isLoading && (
@@ -94,7 +94,7 @@ export function LiveCasTrackerPanel({ symbol }: { symbol: string }) {
               </Divider>
               <Chip
                 size="small"
-                label="3:00-3:15 — ACTUAL OUTCOME (so far)"
+                label="3:00-3:15 + 3:30 CLOSE — ACTUAL OUTCOME (so far)"
                 sx={{ alignSelf: "flex-start", bgcolor: "success.dark", color: "success.contrastText", fontWeight: 700 }}
               />
               <PostTransitionMinutesTable minutes={data.post_transition_minutes} />

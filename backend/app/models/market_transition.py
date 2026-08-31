@@ -213,14 +213,17 @@ class CasPretransitionWindow(Base):
 
 
 class CasPostTransitionMinute(Base):
-    """Phase 7B: one of 16 native 1-minute post-3pm rows (15:00-15:15
-    inclusive) -- see market_transition/cas_windows.py. ACTUAL OUTCOME --
-    never joined against the forecast tables at this layer."""
+    """Phase 7B: 16 native 1-minute post-3pm rows (15:00-15:15 inclusive)
+    plus a single 17th row at 15:30 (minute_offset 16, is_closing_snapshot
+    true) -- the NSE Closing Auction Session's actual settlement print,
+    added because 15:16-15:35 was otherwise untracked. See
+    market_transition/cas_windows.py::CLOSING_SNAPSHOT_TIME. ACTUAL
+    OUTCOME -- never joined against the forecast tables at this layer."""
 
     __tablename__ = "cas_post_transition_minutes"
     __table_args__ = (
         UniqueConstraint("symbol", "session_date", "minute_offset", name="cas_post_transition_minutes_symbol_session_date_minute_offset_key"),
-        CheckConstraint("minute_offset BETWEEN 0 AND 15", name="cas_post_transition_minutes_minute_offset_check"),
+        CheckConstraint("minute_offset BETWEEN 0 AND 16", name="cas_post_transition_minutes_minute_offset_check"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
@@ -244,6 +247,7 @@ class CasPostTransitionMinute(Base):
     option_pressure_score: Mapped[float | None] = mapped_column(Double, nullable=True)
     range_expansion: Mapped[float] = mapped_column(Double, nullable=False)
     transition_shock_score: Mapped[float] = mapped_column(Double, nullable=False)
+    is_closing_snapshot: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     data_quality_flag: Mapped[str | None] = mapped_column(Text, nullable=True)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 

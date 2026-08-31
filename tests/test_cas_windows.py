@@ -102,14 +102,48 @@ def test_no_option_data_leaves_option_fields_none_not_fabricated():
 # --- build_post_transition_minutes ---
 
 
-def test_returns_sixteen_minutes_1500_through_1515_inclusive():
+def test_returns_sixteen_native_minutes_plus_the_1530_closing_snapshot():
+    # _full_day_candles() extends through 15:39, so the 15:30 closing
+    # candle exists -- the native run is still exactly 16 minutes
+    # (15:00-15:15), with the closing snapshot appended as a 17th row.
     candles = _full_day_candles()
     pre_windows = build_pre_transition_windows(candles, {}, _flat_option_lookup(), [], BIN_SIZE, date(2026, 8, 27))
     minutes = build_post_transition_minutes(candles, {}, _flat_option_lookup(), pre_windows[-1], BIN_SIZE, date(2026, 8, 27))
+    assert len(minutes) == 17
+    native = minutes[:16]
+    assert native[0].minute_time == "15:00"
+    assert native[-1].minute_time == "15:15"
+    assert [m.minute_offset for m in native] == list(range(16))
+    assert all(not m.is_closing_snapshot for m in native)
+
+    closing = minutes[16]
+    assert closing.minute_time == "15:30"
+    assert closing.minute_offset == 16
+    assert closing.is_closing_snapshot is True
+
+
+def test_closing_snapshot_omitted_when_1530_candle_not_yet_available():
+    # A live in-progress session that has only reached 15:15 -- honestly
+    # omits the closing checkpoint rather than fabricating one.
+    rows = []
+    price = 100.0
+    for hh, mm_range in [(9, range(15, 60)), (10, range(60)), (11, range(60)), (12, range(60)), (13, range(60)), (14, range(60)), (15, range(16))]:
+        for mm in mm_range:
+            price += 0.05
+            rows.append({"time": f"{hh:02d}:{mm:02d}", "o": price, "h": price + 0.5, "l": price - 0.5, "c": price, "v": 100})
+    candles = make_candles(rows, tz_date="2026-08-27")
+    pre_windows = build_pre_transition_windows(candles, {}, _flat_option_lookup(), [], BIN_SIZE, date(2026, 8, 27))
+    minutes = build_post_transition_minutes(candles, {}, _flat_option_lookup(), pre_windows[-1], BIN_SIZE, date(2026, 8, 27))
     assert len(minutes) == 16
-    assert minutes[0].minute_time == "15:00"
-    assert minutes[-1].minute_time == "15:15"
-    assert [m.minute_offset for m in minutes] == list(range(16))
+    assert all(not m.is_closing_snapshot for m in minutes)
+
+
+def test_closing_snapshot_price_change_measured_from_1515_close():
+    candles = _full_day_candles()
+    pre_windows = build_pre_transition_windows(candles, {}, _flat_option_lookup(), [], BIN_SIZE, date(2026, 8, 27))
+    minutes = build_post_transition_minutes(candles, {}, _flat_option_lookup(), pre_windows[-1], BIN_SIZE, date(2026, 8, 27))
+    closing = minutes[-1]
+    assert closing.price_change == pytest.approx(closing.close - minutes[-2].close)
 
 
 def test_first_minute_price_change_measured_from_last_pre_window_close():

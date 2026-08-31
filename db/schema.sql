@@ -350,11 +350,14 @@ CREATE TABLE IF NOT EXISTS cas_pretransition_windows (
 );
 CREATE INDEX IF NOT EXISTS idx_cas_pretransition_windows_symbol_date ON cas_pretransition_windows (symbol, session_date DESC);
 
+-- minute_offset 0-15 are the native 1-min rows (15:00-15:15 inclusive);
+-- 16 is the single 15:30 closing-print checkpoint (is_closing_snapshot
+-- true) -- see market_transition/cas_windows.py::CLOSING_SNAPSHOT_TIME.
 CREATE TABLE IF NOT EXISTS cas_post_transition_minutes (
     id BIGSERIAL PRIMARY KEY,
     symbol TEXT NOT NULL,
     session_date DATE NOT NULL,
-    minute_offset SMALLINT NOT NULL CHECK (minute_offset BETWEEN 0 AND 15),
+    minute_offset SMALLINT NOT NULL CHECK (minute_offset BETWEEN 0 AND 16),
     minute_time TEXT NOT NULL,
     close DOUBLE PRECISION NOT NULL, price_change DOUBLE PRECISION NOT NULL,
     volume DOUBLE PRECISION NOT NULL, rvol_pct DOUBLE PRECISION,
@@ -364,6 +367,7 @@ CREATE TABLE IF NOT EXISTS cas_post_transition_minutes (
     option_pressure_score DOUBLE PRECISION,
     range_expansion DOUBLE PRECISION NOT NULL,
     transition_shock_score DOUBLE PRECISION NOT NULL,
+    is_closing_snapshot BOOLEAN NOT NULL DEFAULT false,
     data_quality_flag TEXT,
     computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (symbol, session_date, minute_offset)

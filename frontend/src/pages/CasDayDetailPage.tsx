@@ -103,7 +103,7 @@ export function CasDayDetailPage() {
             </Divider>
 
             <Chip
-              label="3:00-3:15 — ACTUAL OUTCOME"
+              label="3:00-3:15 + 3:30 CLOSE — ACTUAL OUTCOME"
               sx={{ alignSelf: "flex-start", bgcolor: "success.dark", color: "success.contrastText", fontWeight: 700 }}
             />
             <PostTransitionMinutesTable minutes={data.post_transition_minutes} maxTableHeight={520} />

@@ -62,10 +62,21 @@ def test_no_op_before_1430(monkeypatch):
     assert calls["insert_window"] == 0
 
 
-def test_no_op_after_1515(monkeypatch):
+def test_no_op_after_1531(monkeypatch):
     calls = _patch_db(monkeypatch)
-    cas_live.maybe_update("NIFTY", datetime(2026, 8, 28, 15, 16, tzinfo=IST))
+    cas_live.maybe_update("NIFTY", datetime(2026, 8, 28, 15, 32, tzinfo=IST))
     assert calls["load_raw_candles"] == 0
+
+
+def test_still_active_at_1516_through_1530_for_the_closing_snapshot(monkeypatch):
+    # The window was extended past the old 15:15 cutoff specifically to
+    # catch the 15:30 closing-print checkpoint -- a tick at 15:20 (before
+    # that candle exists in this fixture) is expected to still run and
+    # just redundantly rewrite the same native minutes.
+    calls = _patch_db(monkeypatch)
+    cas_live.maybe_update("NIFTY", datetime(2026, 8, 28, 15, 20, tzinfo=IST))
+    assert calls["load_raw_candles"] > 0
+    assert calls["insert_minute"] > 0
 
 
 def test_no_op_when_no_candles_yet(monkeypatch):

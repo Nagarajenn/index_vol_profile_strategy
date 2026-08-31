@@ -167,6 +167,7 @@ export interface PostTransitionMinuteDTO {
   option_pressure_score: number | null;
   range_expansion: number;
   transition_shock_score: number;
+  is_closing_snapshot: boolean;
   data_quality_flag: string | null;
 }
 

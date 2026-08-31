@@ -248,6 +248,7 @@ class PostTransitionMinuteDTO(BaseModel):
     option_pressure_score: float | None
     range_expansion: float
     transition_shock_score: float
+    is_closing_snapshot: bool
     data_quality_flag: str | None
 
 

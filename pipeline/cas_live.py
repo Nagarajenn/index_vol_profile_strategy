@@ -20,8 +20,13 @@ construction. This mirrors this package's established stateless,
 recompute-per-call philosophy (live_advisor.py, generate_checkpoint_times-
 based backfill) rather than inventing incremental/delta logic.
 
-Gated to only the ~45 minutes/day (14:30-15:15) where there's anything to
-compute -- a true no-op the other ~340 minutes of the session.
+Gated to only the ~61 minutes/day (14:30-15:31) where there's anything to
+compute -- a true no-op the rest of the session. The window extends 16
+minutes past the old 15:15 cutoff purely to catch the single 15:30
+closing-print checkpoint (market_transition.cas_windows.
+CLOSING_SNAPSHOT_TIME) once that candle lands -- ticks in between just
+redundantly (but harmlessly) re-write the same 16 native minutes, same
+idempotent-recompute-per-call philosophy as the rest of this window.
 """
 
 import logging
@@ -42,7 +47,7 @@ from market_transition.statistics import run_correlation_study
 logger = logging.getLogger(__name__)
 
 CAS_LIVE_START = time(14, 30)
-CAS_LIVE_END = time(15, 15)
+CAS_LIVE_END = time(15, 31)  # a minute past CLOSING_SNAPSHOT_TIME (15:30), so a tick exactly at 15:30 still runs
 CAS_HISTORY_LIMIT = 10_000
 HISTORICAL_LOOKBACK_DAYS = 20
 
@@ -165,7 +170,7 @@ def _get_context(symbol: str, session_date: date) -> _LiveCasContext:
 
 def maybe_update(symbol: str, now: datetime) -> None:
     """Called once per live tick from pipeline/live_loop.py, right after
-    run_snapshot -- a true no-op outside [14:30, 15:15]."""
+    run_snapshot -- a true no-op outside [14:30, 15:31]."""
     now_time = now.time()
     if not (CAS_LIVE_START <= now_time <= CAS_LIVE_END):
         return

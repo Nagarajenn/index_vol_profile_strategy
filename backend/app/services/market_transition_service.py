@@ -258,7 +258,7 @@ class MarketTransitionService:
             pcr_change=row.pcr_change, call_oi_change=row.call_oi_change, put_oi_change=row.put_oi_change,
             iv_change=row.iv_change, option_pressure_score=row.option_pressure_score,
             range_expansion=row.range_expansion, transition_shock_score=row.transition_shock_score,
-            data_quality_flag=row.data_quality_flag,
+            is_closing_snapshot=row.is_closing_snapshot, data_quality_flag=row.data_quality_flag,
         )
 
     @staticmethod

@@ -155,7 +155,8 @@ def _post_transition_minute_row(minute_offset: int = 0) -> CasPostTransitionMinu
         close=101, price_change=1.0, volume=500, rvol_pct=90.0,
         dominance_ratio=0.6, dominant_side="buy", poc_change=0.5, vwap_change=0.2,
         pcr_change=0.0, call_oi_change=0.0, put_oi_change=0.0, iv_change=0.0, option_pressure_score=0.1,
-        range_expansion=1.2, transition_shock_score=35.0, data_quality_flag=None, computed_at=datetime.now(timezone.utc),
+        range_expansion=1.2, transition_shock_score=35.0, is_closing_snapshot=False,
+        data_quality_flag=None, computed_at=datetime.now(timezone.utc),
     )
 
 

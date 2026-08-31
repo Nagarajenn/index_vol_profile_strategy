@@ -245,9 +245,10 @@ export function PreTransitionWindowsTable({
   );
 }
 
-// ACTUAL OUTCOME -- 15:00-15:15, sixteen native 1-minute rows. This is
-// what actually happened; a forecast-vs-actual strip elsewhere reads it,
-// never the other way around.
+// ACTUAL OUTCOME -- 15:00-15:15, sixteen native 1-minute rows, plus a
+// single 15:30 closing-print checkpoint (is_closing_snapshot) when that
+// candle exists. This is what actually happened; a forecast-vs-actual
+// strip elsewhere reads it, never the other way around.
 export function PostTransitionMinutesTable({
   minutes,
   maxTableHeight = 280,
@@ -301,28 +302,63 @@ export function PostTransitionMinutesTable({
           </TableRow>
         </TableHead>
         <TableBody>
-          {minutes.map((m) => (
-            <TableRow key={m.minute_offset} hover sx={m.data_quality_flag ? { opacity: 0.6 } : undefined}>
-              <TableCell sx={{ whiteSpace: "nowrap" }}>{m.minute_time}</TableCell>
-              <TableCell align="right">{fmt(m.close, 2)}</TableCell>
-              <TableCell align="right">{fmtSigned(m.price_change, 2)}</TableCell>
-              <TableCell align="right">{m.volume.toLocaleString()}</TableCell>
-              <TableCell align="right">{fmt(m.rvol_pct, 0)}</TableCell>
-              <TableCell>
-                <Chip size="small" label={m.dominant_side} color={dominantSideColor(m.dominant_side)} variant="outlined" sx={{ height: 18 }} />
-              </TableCell>
-              <TableCell align="right">{fmtSigned(m.vwap_change, 2)}</TableCell>
-              <TableCell align="right">{fmtSigned(m.poc_change, 1)}</TableCell>
-              <TableCell align="right">{fmtSigned(m.pcr_change, 3)}</TableCell>
-              <TableCell align="right">{fmtSigned(m.option_pressure_score, 2)}</TableCell>
-              <TableCell align="right">{m.range_expansion.toFixed(1)}x</TableCell>
-              <TableCell>
-                <Tooltip title="Deterministic 0-100 composite: ATR-normalized move, RVOL, range expansion, buy/sell dominance, option pressure.">
-                  <Chip size="small" label={m.transition_shock_score.toFixed(0)} color={shockScoreColor(m.transition_shock_score)} />
-                </Tooltip>
-              </TableCell>
-            </TableRow>
-          ))}
+          {minutes.flatMap((m) => {
+            const rows = [];
+            if (m.is_closing_snapshot) {
+              // 15:16-15:29 isn't tracked at all -- a plain divider row
+              // (not styled as prominently as the PRE/POST 3pm divider,
+              // since this is a smaller, single-checkpoint gap within the
+              // already-"actual outcome" section) makes that gap explicit
+              // instead of the 15:30 row silently looking like the next
+              // sequential minute.
+              rows.push(
+                <TableRow key={`${m.minute_offset}-gap`}>
+                  <TableCell colSpan={12} sx={{ py: 0.5, textAlign: "center", borderBottom: "none" }}>
+                    <Tooltip title="NSE's Closing Auction Session (cash CAS runs 15:15-15:35) settles the actual closing print here -- often the most consequential move of the day for options. Volume/OI-based columns on this row may be less reliable than the native minutes above, same reason this table's data stops being dense once the auction begins.">
+                      <Typography variant="caption" color="text.secondary" sx={{ fontStyle: "italic" }}>
+                        ⋯ 15:16-15:29 not tracked (CAS auction) ⋯
+                      </Typography>
+                    </Tooltip>
+                  </TableCell>
+                </TableRow>
+              );
+            }
+            rows.push(
+              <TableRow
+                key={m.minute_offset}
+                hover
+                sx={{
+                  ...(m.data_quality_flag ? { opacity: 0.6 } : undefined),
+                  ...(m.is_closing_snapshot ? { borderTop: "2px solid", borderTopColor: "warning.main" } : undefined),
+                }}
+              >
+                <TableCell sx={{ whiteSpace: "nowrap" }}>
+                  {m.minute_time}
+                  {m.is_closing_snapshot && (
+                    <Chip size="small" label="closing print" color="warning" variant="outlined" sx={{ ml: 0.5, height: 16 }} />
+                  )}
+                </TableCell>
+                <TableCell align="right">{fmt(m.close, 2)}</TableCell>
+                <TableCell align="right">{fmtSigned(m.price_change, 2)}</TableCell>
+                <TableCell align="right">{m.volume.toLocaleString()}</TableCell>
+                <TableCell align="right">{fmt(m.rvol_pct, 0)}</TableCell>
+                <TableCell>
+                  <Chip size="small" label={m.dominant_side} color={dominantSideColor(m.dominant_side)} variant="outlined" sx={{ height: 18 }} />
+                </TableCell>
+                <TableCell align="right">{fmtSigned(m.vwap_change, 2)}</TableCell>
+                <TableCell align="right">{fmtSigned(m.poc_change, 1)}</TableCell>
+                <TableCell align="right">{fmtSigned(m.pcr_change, 3)}</TableCell>
+                <TableCell align="right">{fmtSigned(m.option_pressure_score, 2)}</TableCell>
+                <TableCell align="right">{m.range_expansion.toFixed(1)}x</TableCell>
+                <TableCell>
+                  <Tooltip title="Deterministic 0-100 composite: ATR-normalized move, RVOL, range expansion, buy/sell dominance, option pressure.">
+                    <Chip size="small" label={m.transition_shock_score.toFixed(0)} color={shockScoreColor(m.transition_shock_score)} />
+                  </Tooltip>
+                </TableCell>
+              </TableRow>
+            );
+            return rows;
+          })}
         </TableBody>
       </Table>
     </TableContainer>

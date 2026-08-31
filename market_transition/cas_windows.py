@@ -7,8 +7,11 @@ Per an explicit user correction: DO NOT use a uniform resolution across
     state EVOLVES as 3pm approaches. This is "forecast information": every
     field here answers "what did we know by the end of this window".
   - POST-3PM (15:00-15:15): sixteen native 1-minute rows -- how the
-    transition actually MANIFESTS, minute by minute. This is "actual
-    outcome" -- never mixed with the pre-3pm section.
+    transition actually MANIFESTS, minute by minute -- plus a single
+    17th checkpoint at 15:30 (the NSE Closing Auction Session's actual
+    settlement print, often the most consequential move of the day for
+    options; 15:16-15:29 itself isn't tracked). This is "actual outcome"
+    -- never mixed with the pre-3pm section.
 
 Entirely a presentation/analysis layer over the same 1-min raw_candles /
 option_chain_* history everything else in this package reads. Never a
@@ -47,6 +50,19 @@ PRE_WINDOW_BOUNDARIES: list[tuple[time, time]] = [
 ]
 POST_MINUTE_START = time(15, 0)
 POST_MINUTE_END = time(15, 15)  # inclusive -- 16 native 1-min rows
+
+# NSE's Closing Auction Session (cash CAS runs 15:15-15:35; F&O close
+# extended to 15:40) settles the day's actual closing print here -- the
+# native 1-min post-transition table above stops at 15:15, silently
+# missing this move even though it's often the single most consequential
+# price action of the day for options (settlement-relevant). Tracked as
+# ONE additional checkpoint row, not densified minute-by-minute like
+# 15:00-15:15 -- volume/OI signals are already known to be less reliable
+# once the closing auction begins (see the panel's own disclaimer), so a
+# single anchor point at the actual close is the honest resolution for
+# now; a proper multi-minute or leakage-safe-forecast treatment of
+# 15:16-15:35 is future work, not this checkpoint.
+CLOSING_SNAPSHOT_TIME = time(15, 30)
 
 NEWS_RISK_WINDOW_MINUTES = 30
 SEVERITY_MAX = 5  # classified_events.severity is 1-5 -- scaled to 0-100
@@ -93,8 +109,8 @@ class PreTransitionWindow:
 
 @dataclass
 class PostTransitionMinute:
-    minute_offset: int  # 0-15 (0 = 15:00, 15 = 15:15)
-    minute_time: str  # "15:00"
+    minute_offset: int  # 0-15 (0 = 15:00, 15 = 15:15); 16 = the single 15:30 closing-print checkpoint (see CLOSING_SNAPSHOT_TIME)
+    minute_time: str  # "15:00".."15:15", or "15:30" for the closing checkpoint
     close: float
     price_change: float
     volume: float
@@ -110,6 +126,7 @@ class PostTransitionMinute:
     option_pressure_score: float | None
     range_expansion: float
     transition_shock_score: float
+    is_closing_snapshot: bool = False  # True only for the 15:30 row -- 15:16-15:29 isn't tracked at all
     data_quality_flag: str | None = None
 
 
@@ -340,6 +357,96 @@ def build_pre_transition_windows(
     return windows
 
 
+def _build_one_minute(
+    row: pd.Series,
+    offset: int,
+    today_candles: pd.DataFrame,
+    vwap_series: pd.Series,
+    historical_by_date: dict[date, pd.DataFrame],
+    option_lookup_fn: Callable[[time], dict | None],
+    bin_size: float,
+    session_date: date,
+    session_start,
+    typical_range: float,
+    ranges: list[float],
+    state: dict,
+    is_closing_snapshot: bool = False,
+) -> PostTransitionMinute:
+    """One row's worth of computation, factored out so the native
+    15:00-15:15 loop and the single 15:30 closing-snapshot checkpoint
+    share identical logic. `state` carries prev_close/prev_vwap/prev_poc/
+    prev_option and is mutated in place so the caller's next call (whether
+    the next native minute or the closing snapshot) diffs against this
+    row correctly."""
+    minute_time = row["timestamp"].time()
+    close = float(row["close"])
+    prev_close = state["prev_close"]
+    price_change = close - prev_close if prev_close is not None else 0.0
+    rng = float(row["high"]) - float(row["low"])
+    ranges.append(rng)
+    # For the closing snapshot, this compares against the last 10 TRACKED
+    # minutes (ending 15:15), not the last 10 minutes of clock time --
+    # 15:16-15:29 isn't sampled, so there's no other baseline available.
+    range_expansion = (rng / (sum(ranges[-11:-1]) / len(ranges[-11:-1]))) if len(ranges) > 1 and sum(ranges[-11:-1]) > 0 else 1.0
+
+    enriched = attach_buy_sell_columns(today_candles[today_candles["timestamp"] <= row["timestamp"]].tail(1))
+    buy_vol, sell_vol = float(enriched["buy_volume"].sum()), float(enriched["sell_volume"].sum())
+    dom_ratio = buy_vol / (buy_vol + sell_vol) if (buy_vol + sell_vol) > 0 else 0.5
+
+    volume = float(row["volume"])
+    start_elapsed = (datetime.combine(session_date, minute_time) - session_start.replace(tzinfo=None)).total_seconds() / 60
+    rvol_pct = _rvol_pct(volume, historical_by_date, start_elapsed, start_elapsed + 1)
+
+    cumulative = today_candles[today_candles["timestamp"] <= row["timestamp"]]
+    vwap_now = float(vwap_series.loc[cumulative.index[-1]]) if len(cumulative) else None
+    prev_vwap = state["prev_vwap"]
+    vwap_change = (vwap_now - prev_vwap) if (vwap_now is not None and prev_vwap is not None) else None
+
+    vp = compute_volume_profile(cumulative, bin_size)
+    poc = vp.poc if vp else None
+    prev_poc = state["prev_poc"]
+    poc_change = (poc - prev_poc) if (poc is not None and prev_poc is not None) else None
+
+    option_reading = _option_reading(option_lookup_fn, minute_time)
+    prev_option = state["prev_option"]
+    pcr_change = _diff(option_reading, prev_option, "pcr")
+    call_oi_change = _diff(option_reading, prev_option, "call_oi_change_near_atm")
+    put_oi_change = _diff(option_reading, prev_option, "put_oi_change_near_atm")
+    iv_change = _diff(option_reading, prev_option, "atm_iv")
+    pressure = _option_pressure_score(pcr_change, call_oi_change, put_oi_change, iv_change)
+
+    atr_component = min(abs(price_change) / typical_range, 1.0) if typical_range else 0.0
+    rvol_component = min(rvol_pct / 300, 1.0) if rvol_pct is not None else 0.0
+    range_component = min(range_expansion / 3.0, 1.0)
+    dominance_component = abs(dom_ratio - 0.5) * 2
+    pressure_component = abs(pressure) if pressure is not None else 0.0
+    shock_score = round(
+        100
+        * max(
+            0.0,
+            min(
+                1.0,
+                0.25 * atr_component + 0.25 * rvol_component + 0.20 * range_component
+                + 0.15 * dominance_component + 0.15 * pressure_component,
+            ),
+        ),
+        1,
+    )
+
+    minute = PostTransitionMinute(
+        minute_offset=offset, minute_time=f"{minute_time:%H:%M}",
+        close=close, price_change=price_change, volume=volume, rvol_pct=rvol_pct,
+        dominance_ratio=dom_ratio, dominant_side=_dominant_side(dom_ratio),
+        poc_change=poc_change, vwap_change=vwap_change,
+        pcr_change=pcr_change, call_oi_change=call_oi_change, put_oi_change=put_oi_change, iv_change=iv_change,
+        option_pressure_score=pressure, range_expansion=round(range_expansion, 2),
+        transition_shock_score=shock_score, is_closing_snapshot=is_closing_snapshot,
+    )
+
+    state["prev_close"], state["prev_vwap"], state["prev_poc"], state["prev_option"] = close, vwap_now, poc, option_reading
+    return minute
+
+
 def build_post_transition_minutes(
     today_candles: pd.DataFrame,
     historical_by_date: dict[date, pd.DataFrame],
@@ -348,13 +455,15 @@ def build_post_transition_minutes(
     bin_size: float,
     session_date: date,
 ) -> list[PostTransitionMinute]:
-    """Native 1-minute resolution, 15:00 through 15:15 inclusive (16 rows).
-    `prior_window` is the last pre-transition window (14:55-14:59) so the
-    very first post-3pm minute has something to diff against. The shock
-    score's magnitude component is scaled by this session's own typical
-    1-min range (_typical_1min_range), not a separately-supplied ATR --
-    self-contained, no dependency on Phase 7A's ATR value (which isn't
-    persisted anywhere retrievable at this granularity)."""
+    """Native 1-minute resolution, 15:00 through 15:15 inclusive (16 rows),
+    plus a single 17th row at 15:30 (CLOSING_SNAPSHOT_TIME) when that
+    candle exists -- see its own comment for why. `prior_window` is the
+    last pre-transition window (14:55-14:59) so the very first post-3pm
+    minute has something to diff against. The shock score's magnitude
+    component is scaled by this session's own typical 1-min range
+    (_typical_1min_range), not a separately-supplied ATR -- self-contained,
+    no dependency on Phase 7A's ATR value (which isn't persisted anywhere
+    retrievable at this granularity)."""
     post_window = _time_between(today_candles, POST_MINUTE_START, POST_MINUTE_END)
     if post_window.empty:
         return []
@@ -363,74 +472,31 @@ def build_post_transition_minutes(
     vwap_series = compute_vwap(today_candles)
     typical_range = _typical_1min_range(today_candles)
 
-    prev_close = prior_window.close if prior_window else None
-    prev_vwap = prior_window.vwap_at_window_end if prior_window else None
-    prev_poc = prior_window.poc_at_window_end if prior_window else None
-    prev_option = _option_reading(option_lookup_fn, POST_MINUTE_START) if prior_window else None
+    state = {
+        "prev_close": prior_window.close if prior_window else None,
+        "prev_vwap": prior_window.vwap_at_window_end if prior_window else None,
+        "prev_poc": prior_window.poc_at_window_end if prior_window else None,
+        "prev_option": _option_reading(option_lookup_fn, POST_MINUTE_START) if prior_window else None,
+    }
     ranges: list[float] = []
 
     minutes: list[PostTransitionMinute] = []
     for offset, (_, row) in enumerate(post_window.iterrows()):
-        minute_time = row["timestamp"].time()
-        close = float(row["close"])
-        price_change = close - prev_close if prev_close is not None else 0.0
-        rng = float(row["high"]) - float(row["low"])
-        ranges.append(rng)
-        range_expansion = (rng / (sum(ranges[-11:-1]) / len(ranges[-11:-1]))) if len(ranges) > 1 and sum(ranges[-11:-1]) > 0 else 1.0
+        minutes.append(_build_one_minute(
+            row, offset, today_candles, vwap_series, historical_by_date, option_lookup_fn,
+            bin_size, session_date, session_start, typical_range, ranges, state,
+        ))
 
-        enriched = attach_buy_sell_columns(today_candles[today_candles["timestamp"] <= row["timestamp"]].tail(1))
-        buy_vol, sell_vol = float(enriched["buy_volume"].sum()), float(enriched["sell_volume"].sum())
-        dom_ratio = buy_vol / (buy_vol + sell_vol) if (buy_vol + sell_vol) > 0 else 0.5
-
-        volume = float(row["volume"])
-        start_elapsed = (datetime.combine(session_date, minute_time) - session_start.replace(tzinfo=None)).total_seconds() / 60
-        rvol_pct = _rvol_pct(volume, historical_by_date, start_elapsed, start_elapsed + 1)
-
-        cumulative = today_candles[today_candles["timestamp"] <= row["timestamp"]]
-        vwap_now = float(vwap_series.loc[cumulative.index[-1]]) if len(cumulative) else None
-        vwap_change = (vwap_now - prev_vwap) if (vwap_now is not None and prev_vwap is not None) else None
-
-        vp = compute_volume_profile(cumulative, bin_size)
-        poc = vp.poc if vp else None
-        poc_change = (poc - prev_poc) if (poc is not None and prev_poc is not None) else None
-
-        option_reading = _option_reading(option_lookup_fn, minute_time)
-        pcr_change = _diff(option_reading, prev_option, "pcr")
-        call_oi_change = _diff(option_reading, prev_option, "call_oi_change_near_atm")
-        put_oi_change = _diff(option_reading, prev_option, "put_oi_change_near_atm")
-        iv_change = _diff(option_reading, prev_option, "atm_iv")
-        pressure = _option_pressure_score(pcr_change, call_oi_change, put_oi_change, iv_change)
-
-        atr_component = min(abs(price_change) / typical_range, 1.0) if typical_range else 0.0
-        rvol_component = min(rvol_pct / 300, 1.0) if rvol_pct is not None else 0.0
-        range_component = min(range_expansion / 3.0, 1.0)
-        dominance_component = abs(dom_ratio - 0.5) * 2
-        pressure_component = abs(pressure) if pressure is not None else 0.0
-        shock_score = round(
-            100
-            * max(
-                0.0,
-                min(
-                    1.0,
-                    0.25 * atr_component + 0.25 * rvol_component + 0.20 * range_component
-                    + 0.15 * dominance_component + 0.15 * pressure_component,
-                ),
-            ),
-            1,
-        )
-
-        minutes.append(
-            PostTransitionMinute(
-                minute_offset=offset, minute_time=f"{minute_time:%H:%M}",
-                close=close, price_change=price_change, volume=volume, rvol_pct=rvol_pct,
-                dominance_ratio=dom_ratio, dominant_side=_dominant_side(dom_ratio),
-                poc_change=poc_change, vwap_change=vwap_change,
-                pcr_change=pcr_change, call_oi_change=call_oi_change, put_oi_change=put_oi_change, iv_change=iv_change,
-                option_pressure_score=pressure, range_expansion=round(range_expansion, 2),
-                transition_shock_score=shock_score,
-            )
-        )
-
-        prev_close, prev_vwap, prev_poc, prev_option = close, vwap_now, poc, option_reading
+    # Closing-print checkpoint: a SINGLE extra row at 15:30, not a
+    # densified 15:16-15:29 -- see CLOSING_SNAPSHOT_TIME's comment.
+    # Skipped (not fabricated) when that candle doesn't exist yet -- a
+    # live in-progress session that hasn't reached 15:30, or a historical
+    # day with a genuine data gap.
+    closing_candle = today_candles[today_candles["timestamp"].dt.time == CLOSING_SNAPSHOT_TIME]
+    if not closing_candle.empty:
+        minutes.append(_build_one_minute(
+            closing_candle.iloc[0], len(minutes), today_candles, vwap_series, historical_by_date, option_lookup_fn,
+            bin_size, session_date, session_start, typical_range, ranges, state, is_closing_snapshot=True,
+        ))
 
     return minutes
