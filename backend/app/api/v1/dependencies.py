@@ -11,6 +11,7 @@ from app.services.dashboard_service import DashboardService
 from app.services.live_transition_advisor_service import LiveTransitionAdvisorService
 from app.services.market_intelligence_service import MarketIntelligenceService
 from app.services.market_transition_service import MarketTransitionService
+from app.services.session_amd_service import SessionAmdService
 from app.services.volume_intelligence_service import VolumeIntelligenceService
 from app.services.volume_profile_intelligence_service import VolumeProfileIntelligenceService
 
@@ -45,6 +46,12 @@ def get_volume_intelligence_service(
     candle_repo: CandleRepository = Depends(get_candle_repository),
 ) -> VolumeIntelligenceService:
     return VolumeIntelligenceService(candle_repo)
+
+
+def get_session_amd_service(
+    candle_repo: CandleRepository = Depends(get_candle_repository),
+) -> SessionAmdService:
+    return SessionAmdService(candle_repo)
 
 
 def get_market_intelligence_repository(

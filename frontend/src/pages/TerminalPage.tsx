@@ -4,6 +4,7 @@ import { CandlestickChart } from "../components/chart/CandlestickChart";
 import { DecisionCardPanel } from "../components/decision-card/DecisionCardPanel";
 import { MarketIntelligenceSummaryBar } from "../components/market-intelligence/MarketIntelligenceSummaryBar";
 import { OptionChainPanel } from "../components/option-chain/OptionChainPanel";
+import { SessionAmdPanel } from "../components/session-amd/SessionAmdPanel";
 import { VolumeIntelligencePanel } from "../components/volume-intelligence/VolumeIntelligencePanel";
 import { VolumeProfileIntelligencePanel } from "../components/volume-profile/VolumeProfileIntelligencePanel";
 import { useDashboardData } from "../hooks/useDashboardData";
@@ -49,6 +50,7 @@ export function TerminalPage() {
         </Box>
       </Box>
       <VolumeIntelligencePanel symbol={selectedSymbol} />
+      <SessionAmdPanel symbol={selectedSymbol} />
       <OptionChainPanel data={data.option_chain} />
     </Stack>
   );
