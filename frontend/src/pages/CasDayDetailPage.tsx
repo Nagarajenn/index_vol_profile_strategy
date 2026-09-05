@@ -10,6 +10,7 @@ import {
   magnitudeTierColor,
   transitionTypeColor,
 } from "../components/market-transition/CasWindowedDetailTables";
+import { TransitionForecastHeadline } from "../components/market-transition/TransitionForecastHeadline";
 import { useCasIntelligence } from "../hooks/useCasIntelligence";
 import { useCasWindowedDetail } from "../hooks/useCasWindowedDetail";
 
@@ -92,6 +93,8 @@ export function CasDayDetailPage() {
 
         {data && (data.pre_transition_windows.length > 0 || data.post_transition_minutes.length > 0) && (
           <Stack spacing={1}>
+            <TransitionForecastHeadline forecast={data.forecasts.find((f) => f.checkpoint_time === "14:59")} />
+
             <Chip
               label="2:30-2:59 PRE-TRANSITION — FORECAST INFORMATION"
               sx={{ alignSelf: "flex-start", bgcolor: "info.dark", color: "info.contrastText", fontWeight: 700 }}

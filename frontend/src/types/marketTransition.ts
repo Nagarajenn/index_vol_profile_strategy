@@ -171,6 +171,8 @@ export interface PostTransitionMinuteDTO {
   data_quality_flag: string | null;
 }
 
+export type TransitionVerdict = "UP" | "DOWN" | "NO_MATERIAL_MOVE" | "NO_CLEAR_EDGE" | "CONFLICTED" | "INSUFFICIENT_EVIDENCE";
+
 export interface TransitionForecastDTO {
   checkpoint_time: string;
   probability_no_material_transition: number;
@@ -182,6 +184,20 @@ export interface TransitionForecastDTO {
   confidence_label: ConfidenceLabel;
   top_contributing_factors: ContributingFactorDTO[];
   historical_similarity_score: number;
+  // Phase 9C: the unified UP/DOWN/NO-MATERIAL-MOVE forecast.
+  probability_up: number | null;
+  probability_down: number | null;
+  expected_move_low: number | null;
+  expected_move_high: number | null;
+  expected_move_pct: number | null;
+  expected_move_percentile: number | null;
+  transition_risk_tier: string | null;
+  verdict: TransitionVerdict | null;
+  primary_driver: string | null;
+  secondary_driver: string | null;
+  tertiary_driver: string | null;
+  contradictory_factors: string[];
+  option_bias: string | null;
 }
 
 export interface CasWindowedDetailResponseDTO {

@@ -277,6 +277,21 @@ class CasTransitionForecast(Base):
     confidence_label: Mapped[str] = mapped_column(Text, nullable=False)
     top_contributing_factors: Mapped[list | None] = mapped_column(JSONB, nullable=True)
     historical_similarity_score: Mapped[float] = mapped_column(Double, nullable=False)
+    # Phase 9C: the unified UP/DOWN/NO-MATERIAL-MOVE forecast -- all
+    # nullable since only rows written after this phase shipped have them.
+    probability_up: Mapped[float | None] = mapped_column(Double, nullable=True)
+    probability_down: Mapped[float | None] = mapped_column(Double, nullable=True)
+    expected_move_low: Mapped[float | None] = mapped_column(Double, nullable=True)
+    expected_move_high: Mapped[float | None] = mapped_column(Double, nullable=True)
+    expected_move_pct: Mapped[float | None] = mapped_column(Double, nullable=True)
+    expected_move_percentile: Mapped[float | None] = mapped_column(Double, nullable=True)
+    transition_risk_tier: Mapped[str | None] = mapped_column(Text, nullable=True)
+    verdict: Mapped[str | None] = mapped_column(Text, nullable=True)
+    primary_driver: Mapped[str | None] = mapped_column(Text, nullable=True)
+    secondary_driver: Mapped[str | None] = mapped_column(Text, nullable=True)
+    tertiary_driver: Mapped[str | None] = mapped_column(Text, nullable=True)
+    contradictory_factors: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    option_bias: Mapped[str | None] = mapped_column(Text, nullable=True)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 

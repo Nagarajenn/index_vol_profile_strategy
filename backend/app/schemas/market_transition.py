@@ -263,6 +263,19 @@ class TransitionForecastDTO(BaseModel):
     confidence_label: ConfidenceLabelLiteral
     top_contributing_factors: list[ContributingFactorDTO]
     historical_similarity_score: float
+    probability_up: float | None = None
+    probability_down: float | None = None
+    expected_move_low: float | None = None
+    expected_move_high: float | None = None
+    expected_move_pct: float | None = None
+    expected_move_percentile: float | None = None
+    transition_risk_tier: str | None = None
+    verdict: str | None = None
+    primary_driver: str | None = None
+    secondary_driver: str | None = None
+    tertiary_driver: str | None = None
+    contradictory_factors: list[str] = []
+    option_bias: str | None = None
 
 
 class CasWindowedDetailResponseDTO(BaseModel):

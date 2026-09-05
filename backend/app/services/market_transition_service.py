@@ -271,6 +271,12 @@ class MarketTransitionService:
             probability_reversal=row.probability_reversal, probability_continuation=row.probability_continuation,
             n_analogs=row.n_analogs, confidence_label=row.confidence_label,
             top_contributing_factors=factors, historical_similarity_score=row.historical_similarity_score,
+            probability_up=row.probability_up, probability_down=row.probability_down,
+            expected_move_low=row.expected_move_low, expected_move_high=row.expected_move_high,
+            expected_move_pct=row.expected_move_pct, expected_move_percentile=row.expected_move_percentile,
+            transition_risk_tier=row.transition_risk_tier, verdict=row.verdict,
+            primary_driver=row.primary_driver, secondary_driver=row.secondary_driver, tertiary_driver=row.tertiary_driver,
+            contradictory_factors=row.contradictory_factors or [], option_bias=row.option_bias,
         )
 
     @staticmethod
