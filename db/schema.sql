@@ -444,3 +444,74 @@ CREATE TABLE IF NOT EXISTS mti_cas_cohort_categorical (
     UNIQUE (symbol, cohort, feature_name)
 );
 CREATE INDEX IF NOT EXISTS idx_mti_cas_cohort_categorical_symbol ON mti_cas_cohort_categorical (symbol);
+
+-- Phase 9A: Option Chain Snapshot (derived features) + Detail (per-strike
+-- raw fields), see option_chain/snapshot_features.py. Derived at the 8
+-- fixed daily checkpoint times entirely from option_chain_raw (already
+-- captured every live tick) -- no new Dhan API calls, just a query-time
+-- derivation. Keyed by checkpoint_label (not raw timestamp) so the fixed
+-- 8-checkpoint grain stays stable regardless of exactly which minute's
+-- option_chain_raw row backed it; source_raw_fetched_at preserves exact
+-- reproducibility back to that row.
+CREATE TABLE IF NOT EXISTS option_chain_snapshot (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    checkpoint_label TEXT NOT NULL,  -- "09:20","11:00","13:00","14:00","14:30","15:00","15:15","15:30"
+    snapshot_timestamp TIMESTAMPTZ NOT NULL,
+    expiry DATE NOT NULL,
+    expiry_type TEXT,
+    spot DOUBLE PRECISION NOT NULL,
+    atm_strike DOUBLE PRECISION NOT NULL,
+    pcr_oi DOUBLE PRECISION,
+    pcr_volume DOUBLE PRECISION,
+    pcr_change DOUBLE PRECISION,
+    call_oi_concentration DOUBLE PRECISION,
+    put_oi_concentration DOUBLE PRECISION,
+    call_oi_buildup DOUBLE PRECISION,
+    put_oi_buildup DOUBLE PRECISION,
+    call_unwinding DOUBLE PRECISION,
+    put_unwinding DOUBLE PRECISION,
+    call_put_volume_imbalance DOUBLE PRECISION,
+    atm_iv_call DOUBLE PRECISION,
+    atm_iv_put DOUBLE PRECISION,
+    iv_skew DOUBLE PRECISION,
+    atm_iv_change DOUBLE PRECISION,
+    atm_straddle_value DOUBLE PRECISION,
+    atm_straddle_change DOUBLE PRECISION,
+    max_call_oi_strike DOUBLE PRECISION,
+    max_put_oi_strike DOUBLE PRECISION,
+    spot_distance_from_max_call_oi DOUBLE PRECISION,
+    spot_distance_from_max_put_oi DOUBLE PRECISION,
+    oi_migration_note TEXT,
+    position_classification TEXT NOT NULL,
+    data_quality TEXT NOT NULL CHECK (data_quality IN ('GOOD', 'DEGRADED', 'INSUFFICIENT')),
+    source_raw_fetched_at TIMESTAMPTZ,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date, checkpoint_label)
+);
+CREATE INDEX IF NOT EXISTS idx_option_chain_snapshot_symbol_date ON option_chain_snapshot (symbol, session_date DESC);
+
+CREATE TABLE IF NOT EXISTS option_chain_snapshot_detail (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    checkpoint_label TEXT NOT NULL,
+    strike DOUBLE PRECISION NOT NULL,
+    leg TEXT NOT NULL CHECK (leg IN ('CE', 'PE')),
+    ltp DOUBLE PRECISION,
+    volume DOUBLE PRECISION,
+    oi DOUBLE PRECISION,
+    oi_change DOUBLE PRECISION,
+    iv DOUBLE PRECISION,
+    bid DOUBLE PRECISION,
+    ask DOUBLE PRECISION,
+    bid_qty DOUBLE PRECISION,
+    ask_qty DOUBLE PRECISION,
+    delta DOUBLE PRECISION,
+    gamma DOUBLE PRECISION,
+    theta DOUBLE PRECISION,
+    vega DOUBLE PRECISION,
+    UNIQUE (symbol, session_date, checkpoint_label, strike, leg)
+);
+CREATE INDEX IF NOT EXISTS idx_option_chain_snapshot_detail_lookup ON option_chain_snapshot_detail (symbol, session_date, checkpoint_label);

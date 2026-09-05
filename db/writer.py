@@ -536,3 +536,63 @@ def insert_cas_cohort_categorical(symbol: str, breakdown) -> None:
             _jsonb(breakdown.category_counts), _jsonb(breakdown.full_sample_category_counts),
         ),
     )
+
+
+# --- Phase 9A: option chain snapshot derivation ---------------------------
+# (option_chain/snapshot_features.py, scripts/run_option_snapshot_features.py)
+
+
+def insert_option_chain_snapshot(
+    symbol: str, session_date: date, checkpoint_label: str, snapshot_timestamp: datetime,
+    expiry: date, expiry_type: str | None, features, position_classification: str,
+    data_quality: str, source_raw_fetched_at: datetime | None,
+) -> None:
+    """`features` is an option_chain.snapshot_features.OptionSnapshotFeatures."""
+    field_names = list(features.__dataclass_fields__.keys())
+    extra_cols = {
+        "symbol": symbol, "session_date": session_date, "checkpoint_label": checkpoint_label,
+        "snapshot_timestamp": snapshot_timestamp, "expiry": expiry, "expiry_type": expiry_type,
+        "position_classification": position_classification, "data_quality": data_quality,
+        "source_raw_fetched_at": source_raw_fetched_at,
+    }
+    columns = list(extra_cols.keys()) + field_names
+    values = list(extra_cols.values()) + [getattr(features, f) for f in field_names]
+    placeholders = ",".join(["%s"] * len(columns))
+    conflict_cols = ("symbol", "session_date", "checkpoint_label")
+    update_cols = [c for c in columns if c not in conflict_cols]
+    update_clause = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols) + ", computed_at = now()"
+    execute(
+        f"""
+        INSERT INTO option_chain_snapshot ({",".join(columns)}) VALUES ({placeholders})
+        ON CONFLICT ({",".join(conflict_cols)}) DO UPDATE SET {update_clause}
+        """,
+        tuple(values),
+    )
+
+
+def insert_option_chain_snapshot_detail(symbol: str, session_date: date, checkpoint_label: str, details: list) -> None:
+    """`details` is a list of option_chain.snapshot_features.StrikeDetail --
+    batched via executemany since a single checkpoint can carry 20+ rows
+    (ATM+/-5 x 2 legs)."""
+    if not details:
+        return
+    rows = [
+        (
+            symbol, session_date, checkpoint_label, d.strike, d.leg, d.ltp, d.volume, d.oi, d.oi_change,
+            d.iv, d.bid, d.ask, d.bid_qty, d.ask_qty, d.delta, d.gamma, d.theta, d.vega,
+        )
+        for d in details
+    ]
+    executemany(
+        """
+        INSERT INTO option_chain_snapshot_detail
+            (symbol, session_date, checkpoint_label, strike, leg, ltp, volume, oi, oi_change,
+             iv, bid, ask, bid_qty, ask_qty, delta, gamma, theta, vega)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (symbol, session_date, checkpoint_label, strike, leg) DO UPDATE SET
+            ltp = EXCLUDED.ltp, volume = EXCLUDED.volume, oi = EXCLUDED.oi, oi_change = EXCLUDED.oi_change,
+            iv = EXCLUDED.iv, bid = EXCLUDED.bid, ask = EXCLUDED.ask, bid_qty = EXCLUDED.bid_qty, ask_qty = EXCLUDED.ask_qty,
+            delta = EXCLUDED.delta, gamma = EXCLUDED.gamma, theta = EXCLUDED.theta, vega = EXCLUDED.vega
+        """,
+        rows,
+    )

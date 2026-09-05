@@ -186,6 +186,41 @@ def get_option_summary_near(symbol: str, session_date: date, at_or_before: str =
     return dict(zip(columns, row))
 
 
+def get_option_chain_raw_near(symbol: str, session_date: date, at_or_before: str = "15:30:00") -> dict | None:
+    """Latest option_chain_raw row (the FULL per-strike payload -- LTP,
+    volume, OI, IV, bid/ask, greeks -- not just the narrower
+    option_chain_summary fields) for `symbol` on `session_date` at/before
+    `at_or_before`. Used by scripts/run_option_snapshot_features.py to
+    derive the 8 fixed daily option-chain checkpoints (Phase 9A) from data
+    already captured by the live loop -- no new Dhan API calls."""
+    row = fetch_one(
+        """
+        SELECT fetched_at, expiry, spot, raw_payload
+        FROM option_chain_raw
+        WHERE symbol = %s AND fetched_at::date = %s AND fetched_at::time <= %s
+        ORDER BY fetched_at DESC LIMIT 1
+        """,
+        (symbol, session_date, at_or_before),
+    )
+    if row is None:
+        return None
+    columns = ["fetched_at", "expiry", "spot", "raw_payload"]
+    return dict(zip(columns, row))
+
+
+def list_option_chain_raw_dates(symbol: str) -> list[date]:
+    """Every distinct session_date `symbol` has at least one option_chain_raw
+    row for, ascending. Drives scripts/run_option_snapshot_features.py's
+    day loop directly off what was actually captured, rather than a static
+    trading-calendar guess -- a day with a genuine capture gap is simply
+    absent here, not silently backfilled from a holiday-calendar rule."""
+    rows = fetch_all(
+        "SELECT DISTINCT fetched_at::date FROM option_chain_raw WHERE symbol = %s ORDER BY 1",
+        (symbol,),
+    )
+    return [r[0] for r in rows]
+
+
 _CAS_DAILY_COLUMNS = [
     "symbol", "session_date", "close_1431", "close_1459", "close_1539",
     "pre_direction", "post_direction", "conclusion", "outcome_magnitude",
