@@ -531,3 +531,48 @@ CREATE TABLE IF NOT EXISTS option_chain_snapshot_detail (
     UNIQUE (symbol, session_date, checkpoint_label, strike, leg)
 );
 CREATE INDEX IF NOT EXISTS idx_option_chain_snapshot_detail_lookup ON option_chain_snapshot_detail (symbol, session_date, checkpoint_label);
+
+-- Phase 9D (spec Parts 13-14, 16D/16E): actual outcome + forecast
+-- evaluation, kept as separate, immutable tables -- never mixed with the
+-- (mutable-until-frozen) forecast row in cas_transition_forecasts, per
+-- the spec's explicit "do not mix forecast and actual data in the same
+-- mutable record". See market_transition/cas_windows.py::
+-- compute_actual_outcome_checkpoints.
+CREATE TABLE IF NOT EXISTS transition_actual_outcome (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    horizon_minutes SMALLINT NOT NULL CHECK (horizon_minutes IN (1, 5, 10, 15)),
+    direction TEXT NOT NULL,
+    point_move DOUBLE PRECISION NOT NULL,
+    pct_move DOUBLE PRECISION,
+    vol_normalized_move DOUBLE PRECISION,
+    mfe DOUBLE PRECISION NOT NULL,
+    mae DOUBLE PRECISION NOT NULL,
+    volume_expansion DOUBLE PRECISION,
+    shock_score DOUBLE PRECISION NOT NULL,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date, horizon_minutes)
+);
+CREATE INDEX IF NOT EXISTS idx_transition_actual_outcome_symbol_date ON transition_actual_outcome (symbol, session_date DESC);
+
+-- Computed only once both the frozen 14:59 forecast AND the 15-min actual
+-- outcome exist for a day -- references, never edits, either. Aggregate
+-- accuracy/calibration/FP-FN rates across many days are a query-time
+-- computation over this table (e.g. AVG(brier_score)), not a stored
+-- mutable running aggregate.
+CREATE TABLE IF NOT EXISTS forecast_evaluation (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    forecast_verdict TEXT NOT NULL,
+    actual_direction_15min TEXT NOT NULL,
+    directionally_correct BOOLEAN,
+    brier_score DOUBLE PRECISION,
+    predicted_probability_of_actual DOUBLE PRECISION,
+    is_false_positive BOOLEAN,
+    is_false_negative BOOLEAN,
+    computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date)
+);
+CREATE INDEX IF NOT EXISTS idx_forecast_evaluation_symbol_date ON forecast_evaluation (symbol, session_date DESC);

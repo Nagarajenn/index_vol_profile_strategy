@@ -10,6 +10,7 @@ from market_transition.cas_windows import (
     _rvol_pct,
     build_post_transition_minutes,
     build_pre_transition_windows,
+    compute_actual_outcome_checkpoints,
 )
 from tests.fixtures.synthetic_candles import make_candles
 
@@ -136,6 +137,77 @@ def test_closing_snapshot_omitted_when_1530_candle_not_yet_available():
     minutes = build_post_transition_minutes(candles, {}, _flat_option_lookup(), pre_windows[-1], BIN_SIZE, date(2026, 8, 27))
     assert len(minutes) == 16
     assert all(not m.is_closing_snapshot for m in minutes)
+
+
+# --- compute_actual_outcome_checkpoints ---
+
+
+def _post_minutes_for_full_day():
+    candles = _full_day_candles()
+    pre_windows = build_pre_transition_windows(candles, {}, _flat_option_lookup(), [], BIN_SIZE, date(2026, 8, 27))
+    return build_post_transition_minutes(candles, {}, _flat_option_lookup(), pre_windows[-1], BIN_SIZE, date(2026, 8, 27))
+
+
+def test_returns_all_four_horizons_when_the_full_session_is_available():
+    checkpoints = compute_actual_outcome_checkpoints(_post_minutes_for_full_day())
+    assert [c.horizon_minutes for c in checkpoints] == [1, 5, 10, 15]
+
+
+def test_direction_and_point_move_reflect_a_clean_up_move():
+    # _full_day_candles() steps price up every minute -- a clean, real up move.
+    checkpoints = compute_actual_outcome_checkpoints(_post_minutes_for_full_day())
+    for c in checkpoints:
+        assert c.direction == "up"
+        assert c.point_move > 0
+    # Longer horizons must have covered at least as much net move.
+    assert checkpoints[-1].point_move >= checkpoints[0].point_move
+
+
+def test_mfe_is_never_worse_than_mae_for_an_up_move():
+    # For a 1-minute horizon there's only a single close, so mfe==mae==the
+    # net move itself (no separate adverse point exists yet within the
+    # window) -- mfe >= mae is the universally-true invariant, not mae<=0.
+    checkpoints = compute_actual_outcome_checkpoints(_post_minutes_for_full_day())
+    for c in checkpoints:
+        assert c.mfe >= 0
+        assert c.mfe >= c.mae
+
+
+def test_vol_normalized_move_none_without_atr():
+    checkpoints = compute_actual_outcome_checkpoints(_post_minutes_for_full_day(), atr_14=None)
+    assert all(c.vol_normalized_move is None for c in checkpoints)
+
+
+def test_vol_normalized_move_populated_with_atr():
+    checkpoints = compute_actual_outcome_checkpoints(_post_minutes_for_full_day(), atr_14=50.0)
+    assert all(c.vol_normalized_move is not None for c in checkpoints)
+
+
+def test_only_offers_horizons_the_data_actually_reaches():
+    # A session that only reaches 15:04 (5 native minutes: offsets 0-4)
+    # should offer the 1 and 5 minute horizons, not 10 or 15.
+    rows = []
+    price = 100.0
+    for hh, mm_range in [(9, range(15, 60)), (10, range(60)), (11, range(60)), (12, range(60)), (13, range(60)), (14, range(60)), (15, range(5))]:
+        for mm in mm_range:
+            price += 0.05
+            rows.append({"time": f"{hh:02d}:{mm:02d}", "o": price, "h": price + 0.5, "l": price - 0.5, "c": price, "v": 100})
+    candles = make_candles(rows, tz_date="2026-08-27")
+    pre_windows = build_pre_transition_windows(candles, {}, _flat_option_lookup(), [], BIN_SIZE, date(2026, 8, 27))
+    minutes = build_post_transition_minutes(candles, {}, _flat_option_lookup(), pre_windows[-1], BIN_SIZE, date(2026, 8, 27))
+    checkpoints = compute_actual_outcome_checkpoints(minutes)
+    assert [c.horizon_minutes for c in checkpoints] == [1, 5]
+
+
+def test_empty_post_minutes_returns_no_checkpoints():
+    assert compute_actual_outcome_checkpoints([]) == []
+
+
+def test_shock_score_is_the_mean_over_the_horizon_window():
+    minutes = _post_minutes_for_full_day()
+    checkpoints = compute_actual_outcome_checkpoints(minutes)
+    one_min = checkpoints[0]
+    assert one_min.shock_score == pytest.approx(minutes[0].transition_shock_score, abs=0.1)
 
 
 def test_closing_snapshot_price_change_measured_from_1515_close():

@@ -6,6 +6,7 @@ from market_transition.verdict import (
     classify_transition_risk_tier,
     compute_expected_move_range,
     compute_verdict,
+    evaluate_forecast_vs_actual,
     percentile_rank,
     reshape_drivers,
 )
@@ -96,3 +97,52 @@ def test_reshape_drivers_takes_top_three_by_existing_rank():
 def test_reshape_drivers_handles_fewer_than_three_factors():
     primary, secondary, tertiary, _ = reshape_drivers([], [])
     assert primary is None and secondary is None and tertiary is None
+
+
+def test_evaluate_directional_correct_call():
+    result = evaluate_forecast_vs_actual("DOWN", probability_up=0.17, probability_down=0.68, probability_flat=0.15, actual_direction="down")
+    assert result["directionally_correct"] is True
+    assert result["is_false_positive"] is False
+    assert result["is_false_negative"] is False
+    assert result["predicted_probability_of_actual"] == pytest.approx(0.68)
+
+
+def test_evaluate_directional_wrong_call():
+    result = evaluate_forecast_vs_actual("DOWN", probability_up=0.17, probability_down=0.68, probability_flat=0.15, actual_direction="up")
+    assert result["directionally_correct"] is False
+
+
+def test_evaluate_directional_call_but_flat_actual_is_a_false_positive():
+    result = evaluate_forecast_vs_actual("UP", probability_up=0.68, probability_down=0.17, probability_flat=0.15, actual_direction="flat")
+    assert result["directionally_correct"] is False
+    assert result["is_false_positive"] is True
+    assert result["is_false_negative"] is False
+
+
+def test_evaluate_no_material_move_call_but_real_move_is_a_false_negative():
+    result = evaluate_forecast_vs_actual("NO_MATERIAL_MOVE", probability_up=0.15, probability_down=0.15, probability_flat=0.70, actual_direction="down")
+    assert result["directionally_correct"] is False
+    assert result["is_false_positive"] is False
+    assert result["is_false_negative"] is True
+
+
+def test_evaluate_no_call_verdicts_grade_as_none_not_wrong():
+    for verdict in ("NO_CLEAR_EDGE", "CONFLICTED", "INSUFFICIENT_EVIDENCE"):
+        result = evaluate_forecast_vs_actual(verdict, probability_up=0.33, probability_down=0.33, probability_flat=0.34, actual_direction="down")
+        assert result["directionally_correct"] is None
+        assert result["is_false_positive"] is None
+        assert result["is_false_negative"] is None
+        # Brier score is still computable -- it's a pure probability-vs-outcome
+        # comparison, independent of whether the platform was willing to
+        # commit to a directional call.
+        assert result["brier_score"] is not None
+
+
+def test_evaluate_brier_score_is_zero_for_a_perfect_call():
+    result = evaluate_forecast_vs_actual("DOWN", probability_up=0.0, probability_down=1.0, probability_flat=0.0, actual_direction="down")
+    assert result["brier_score"] == pytest.approx(0.0)
+
+
+def test_evaluate_brier_score_is_maximal_for_a_confident_wrong_call():
+    result = evaluate_forecast_vs_actual("UP", probability_up=1.0, probability_down=0.0, probability_flat=0.0, actual_direction="down")
+    assert result["brier_score"] == pytest.approx(2.0)

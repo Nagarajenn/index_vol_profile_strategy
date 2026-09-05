@@ -89,6 +89,47 @@ def classify_transition_risk_tier(expected_move_magnitude: float | None, atr_14:
     return "NORMAL"
 
 
+DIRECTIONAL_VERDICTS = ("UP", "DOWN")
+NO_MOVE_VERDICTS = ("NO_MATERIAL_MOVE",)
+# Verdicts that made no directional call at all -- graded as "no call
+# made" (every result field stays None), not as wrong, since a candid
+# NO_CLEAR_EDGE/CONFLICTED/INSUFFICIENT_EVIDENCE is not a prediction to
+# begin with (spec Part 10's whole point).
+NO_CALL_VERDICTS = ("NO_CLEAR_EDGE", "CONFLICTED", "INSUFFICIENT_EVIDENCE")
+
+
+def evaluate_forecast_vs_actual(
+    verdict: str, probability_up: float, probability_down: float, probability_flat: float, actual_direction: str,
+) -> dict:
+    """Spec Part 14: directional accuracy, a multi-class Brier score, and
+    false-positive/false-negative flags for one day's frozen forecast vs.
+    its actual 15-min outcome. Never reads or writes the forecast row
+    itself -- structurally enforces "do not optimize the model after
+    seeing the outcome" by only ever comparing already-frozen numbers."""
+    outcomes = {"up": probability_up, "down": probability_down, "flat": probability_flat}
+    brier_score = round(sum((p - (1.0 if key == actual_direction else 0.0)) ** 2 for key, p in outcomes.items()), 4)
+    predicted_probability_of_actual = outcomes.get(actual_direction)
+
+    directionally_correct = is_false_positive = is_false_negative = None
+    if verdict in DIRECTIONAL_VERDICTS:
+        directionally_correct = (verdict == "UP" and actual_direction == "up") or (verdict == "DOWN" and actual_direction == "down")
+        is_false_positive = actual_direction == "flat"  # called a direction, nothing material happened
+        is_false_negative = False
+    elif verdict in NO_MOVE_VERDICTS:
+        directionally_correct = actual_direction == "flat"
+        is_false_positive = False
+        is_false_negative = actual_direction != "flat"  # called no-move, but a real move happened
+    # NO_CALL_VERDICTS: everything stays None -- honestly "no call was made to grade"
+
+    return {
+        "brier_score": brier_score,
+        "predicted_probability_of_actual": predicted_probability_of_actual,
+        "directionally_correct": directionally_correct,
+        "is_false_positive": is_false_positive,
+        "is_false_negative": is_false_negative,
+    }
+
+
 def reshape_drivers(
     top_factors: list[ContributingFactor], contradictions: list[str],
 ) -> tuple[str | None, str | None, str | None, list[str]]:

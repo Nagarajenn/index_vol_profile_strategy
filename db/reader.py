@@ -264,6 +264,40 @@ _PRETRANSITION_WINDOW_COLUMNS = [
 ]
 
 
+_POST_TRANSITION_MINUTE_COLUMNS = [
+    "minute_offset", "minute_time", "close", "price_change", "volume", "rvol_pct",
+    "dominance_ratio", "dominant_side", "poc_change", "vwap_change", "pcr_change",
+    "call_oi_change", "put_oi_change", "iv_change", "option_pressure_score",
+    "range_expansion", "transition_shock_score", "is_closing_snapshot", "data_quality_flag",
+]
+
+
+def load_post_transition_minutes(symbol: str, session_date: date) -> list[dict]:
+    """All cas_post_transition_minutes rows for one day, ascending by
+    minute_offset -- lets a caller do PostTransitionMinute(**row) directly
+    (matches load_final_pretransition_windows' own row-shape convention).
+    Used by scripts/run_actual_outcome.py."""
+    rows = fetch_all(
+        f"""
+        SELECT {", ".join(_POST_TRANSITION_MINUTE_COLUMNS)}
+        FROM cas_post_transition_minutes WHERE symbol = %s AND session_date = %s
+        ORDER BY minute_offset
+        """,
+        (symbol, session_date),
+    )
+    return [dict(zip(_POST_TRANSITION_MINUTE_COLUMNS, r)) for r in rows]
+
+
+def list_cas_post_transition_dates(symbol: str) -> list[date]:
+    """Every distinct session_date `symbol` has cas_post_transition_minutes
+    rows for -- drives scripts/run_actual_outcome.py's day loop."""
+    rows = fetch_all(
+        "SELECT DISTINCT session_date FROM cas_post_transition_minutes WHERE symbol = %s ORDER BY 1",
+        (symbol,),
+    )
+    return [r[0] for r in rows]
+
+
 def load_final_pretransition_windows(symbol: str) -> dict[date, dict]:
     """All window_index=6 (14:55-14:59, the final pre-3pm state) rows for
     `symbol`, keyed by session_date -- used by market_transition/
@@ -277,3 +311,42 @@ def load_final_pretransition_windows(symbol: str) -> dict[date, dict]:
         (symbol,),
     )
     return {r[0]: dict(zip(_PRETRANSITION_WINDOW_COLUMNS, r[1:])) for r in rows}
+
+
+def load_frozen_forecast(symbol: str, session_date: date, checkpoint_time: str = "14:59") -> dict | None:
+    """The persisted checkpoint_time forecast row for scripts/
+    run_forecast_evaluation.py -- reads the frozen 2:59pm forecast (Phase
+    9C's verdict/probability_up/probability_down fields), never writes."""
+    row = fetch_one(
+        """
+        SELECT verdict, probability_up, probability_down, probability_no_material_transition, n_analogs
+        FROM cas_transition_forecasts
+        WHERE symbol = %s AND session_date = %s AND checkpoint_time = %s
+        """,
+        (symbol, session_date, checkpoint_time),
+    )
+    if row is None:
+        return None
+    return dict(zip(("verdict", "probability_up", "probability_down", "probability_no_material_transition", "n_analogs"), row))
+
+
+def load_actual_outcome(symbol: str, session_date: date, horizon_minutes: int = 15) -> dict | None:
+    """The persisted `horizon_minutes` actual-outcome row for scripts/
+    run_forecast_evaluation.py."""
+    row = fetch_one(
+        "SELECT direction, point_move FROM transition_actual_outcome WHERE symbol = %s AND session_date = %s AND horizon_minutes = %s",
+        (symbol, session_date, horizon_minutes),
+    )
+    if row is None:
+        return None
+    return dict(zip(("direction", "point_move"), row))
+
+
+def list_cas_forecast_dates(symbol: str) -> list[date]:
+    """Every distinct session_date `symbol` has a persisted 14:59 forecast
+    for -- drives scripts/run_forecast_evaluation.py's day loop."""
+    rows = fetch_all(
+        "SELECT DISTINCT session_date FROM cas_transition_forecasts WHERE symbol = %s AND checkpoint_time = '14:59' ORDER BY 1",
+        (symbol,),
+    )
+    return [r[0] for r in rows]

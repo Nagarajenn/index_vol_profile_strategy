@@ -95,7 +95,7 @@ def compute_and_persist_windowed_day(
         db_writer.insert_cas_post_transition_minute(symbol, session_date, m)
         n_minutes += 1
 
-    atr_14 = _compute_prior_day_atr_14(historical_by_date)
+    atr_14 = compute_prior_day_atr_14(historical_by_date)
 
     for checkpoint in FORECAST_CHECKPOINTS:
         # Leakage-safe pairing: only the pre-window whose own end time is
@@ -142,7 +142,7 @@ def _option_bias_at(symbol: str, session_date: date, checkpoint: time) -> str | 
     return classify_option_positioning(features) if features else None
 
 
-def _compute_prior_day_atr_14(historical_by_date: dict) -> float | None:
+def compute_prior_day_atr_14(historical_by_date: dict) -> float | None:
     """Daily-bar ATR(14) as of the most recent day in `historical_by_date`
     (all strictly-past days) -- the same "prior day's own ATR, never
     today's" discipline Phase 7A's magnitude-tier classification already
@@ -274,7 +274,7 @@ def maybe_update(symbol: str, now: datetime) -> None:
             db_writer.insert_cas_post_transition_minute(symbol, session_date, m)
             n_minutes += 1
 
-    atr_14 = _compute_prior_day_atr_14(ctx.historical_by_date)
+    atr_14 = compute_prior_day_atr_14(ctx.historical_by_date)
 
     n_forecasts = 0
     for checkpoint in FORECAST_CHECKPOINTS:

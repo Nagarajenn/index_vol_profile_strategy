@@ -24,9 +24,10 @@ package) -- `option_lookup_fn` and `classified_events` are supplied by the
 caller (scripts/run_cas_windowed_analysis.py).
 """
 
+import statistics as pystats
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta
-from typing import Callable
+from typing import Callable, Literal
 
 import pandas as pd
 
@@ -500,3 +501,68 @@ def build_post_transition_minutes(
         ))
 
     return minutes
+
+
+ACTUAL_OUTCOME_HORIZONS = (1, 5, 10, 15)  # minutes from 15:00 -- spec Part 13
+
+
+@dataclass
+class ActualOutcomeCheckpoint:
+    horizon_minutes: int
+    direction: Literal["up", "down", "flat"]
+    point_move: float
+    pct_move: float | None
+    vol_normalized_move: float | None  # point_move / atr_14
+    mfe: float  # best price reached in the direction of the eventual net move, relative to 15:00's own baseline
+    mae: float  # worst adverse excursion against that eventual direction
+    volume_expansion: float | None  # this horizon's total volume vs. a typical-minute baseline, scaled by horizon length
+    shock_score: float  # mean of the per-minute transition_shock_score across the horizon
+
+
+def compute_actual_outcome_checkpoints(post_minutes: list[PostTransitionMinute], atr_14: float | None = None) -> list[ActualOutcomeCheckpoint]:
+    """Rolls the already-computed native 1-minute post_minutes up into the
+    4 horizons the spec asks for (Part 13) -- 15:00-15:01/-05/-10/-15.
+    Baseline ("T0", the 14:59 close) is derived from minute_offset=0's own
+    price_change field (close - prev_close), not a separately-threaded
+    parameter, since that field already carries exactly this delta.
+    Returns fewer than 4 checkpoints on a thin/in-progress day rather than
+    fabricating one past the data actually available."""
+    native = [m for m in post_minutes if not m.is_closing_snapshot]
+    if not native:
+        return []
+
+    baseline_close = native[0].close - native[0].price_change
+    typical_minute_volume = pystats.mean(m.volume for m in native) if native else 0.0
+
+    checkpoints: list[ActualOutcomeCheckpoint] = []
+    for horizon in ACTUAL_OUTCOME_HORIZONS:
+        window = native[:horizon]
+        if len(window) < horizon:
+            continue  # honestly stop offering horizons the day hasn't reached yet
+
+        closes = [m.close for m in window]
+        net_move = closes[-1] - baseline_close
+        direction: Literal["up", "down", "flat"] = "up" if net_move > 0 else "down" if net_move < 0 else "flat"
+
+        if net_move >= 0:
+            mfe = max(closes) - baseline_close
+            mae = min(closes) - baseline_close  # <= 0
+        else:
+            mfe = baseline_close - min(closes)
+            mae = baseline_close - max(closes)  # <= 0
+
+        total_volume = sum(m.volume for m in window)
+        volume_expansion = (total_volume / (typical_minute_volume * horizon)) if typical_minute_volume else None
+        shock_score = pystats.mean(m.transition_shock_score for m in window)
+
+        checkpoints.append(
+            ActualOutcomeCheckpoint(
+                horizon_minutes=horizon, direction=direction, point_move=round(net_move, 2),
+                pct_move=round(net_move / baseline_close * 100, 4) if baseline_close else None,
+                vol_normalized_move=round(abs(net_move) / atr_14, 3) if atr_14 else None,
+                mfe=round(mfe, 2), mae=round(mae, 2),
+                volume_expansion=round(volume_expansion, 3) if volume_expansion is not None else None,
+                shock_score=round(shock_score, 1),
+            )
+        )
+    return checkpoints

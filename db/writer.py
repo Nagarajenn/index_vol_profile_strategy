@@ -598,3 +598,47 @@ def insert_option_chain_snapshot_detail(symbol: str, session_date: date, checkpo
         """,
         rows,
     )
+
+
+# --- Phase 9D: actual outcome + forecast evaluation -----------------------
+# (market_transition/cas_windows.py::compute_actual_outcome_checkpoints,
+# scripts/run_forecast_evaluation.py)
+
+
+def insert_transition_actual_outcome(symbol: str, session_date: date, checkpoint) -> None:
+    """`checkpoint` is a market_transition.cas_windows.ActualOutcomeCheckpoint."""
+    _insert_from_dataclass(
+        "transition_actual_outcome", checkpoint,
+        extra_cols={"symbol": symbol, "session_date": session_date},
+        conflict_cols=("symbol", "session_date", "horizon_minutes"),
+    )
+
+
+def insert_forecast_evaluation(
+    symbol: str, session_date: date, forecast_verdict: str, actual_direction_15min: str,
+    directionally_correct: bool | None, brier_score: float | None, predicted_probability_of_actual: float | None,
+    is_false_positive: bool | None, is_false_negative: bool | None,
+) -> None:
+    """Written once a day has BOTH a frozen 14:59 forecast and a computed
+    15-min actual outcome -- never edits either. Re-runnable (upsert on
+    symbol/session_date), but only ever called once those two immutable
+    inputs exist, matching "do not optimize the model after seeing the
+    outcome" (the forecast itself is never touched here)."""
+    execute(
+        """
+        INSERT INTO forecast_evaluation
+            (symbol, session_date, forecast_verdict, actual_direction_15min, directionally_correct,
+             brier_score, predicted_probability_of_actual, is_false_positive, is_false_negative)
+        VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (symbol, session_date) DO UPDATE SET
+            forecast_verdict = EXCLUDED.forecast_verdict, actual_direction_15min = EXCLUDED.actual_direction_15min,
+            directionally_correct = EXCLUDED.directionally_correct, brier_score = EXCLUDED.brier_score,
+            predicted_probability_of_actual = EXCLUDED.predicted_probability_of_actual,
+            is_false_positive = EXCLUDED.is_false_positive, is_false_negative = EXCLUDED.is_false_negative,
+            computed_at = now()
+        """,
+        (
+            symbol, session_date, forecast_verdict, actual_direction_15min, directionally_correct,
+            brier_score, predicted_probability_of_actual, is_false_positive, is_false_negative,
+        ),
+    )
