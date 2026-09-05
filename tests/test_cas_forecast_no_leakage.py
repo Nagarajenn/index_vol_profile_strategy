@@ -13,6 +13,7 @@ from datetime import date, time
 import pytest
 
 from market_transition.cas_forecast import FORECAST_CHECKPOINTS, build_transition_forecast
+from market_transition.cas_windows import PreTransitionWindow
 from tests.fixtures.synthetic_candles import make_candles
 
 BIN_SIZE = 1.0
@@ -79,3 +80,44 @@ def test_thin_data_returns_an_honestly_labeled_forecast_not_none():
     assert forecast is not None
     assert forecast.confidence_label == "Insufficient data"
     assert forecast.n_analogs == 0
+
+
+def _flat_pre_window() -> PreTransitionWindow:
+    """A window shaped to trigger the "bearish price but Put OI building"
+    contradiction rule from market_transition/transition_state.py."""
+    return PreTransitionWindow(
+        window_index=6, window_label="14:55-14:59", open=100.0, close=99.0, high=100.5, low=98.5,
+        net_point_change=-1.0, pct_change=-1.0, volume=1000.0, rvol_pct=100.0, volume_acceleration_ratio=1.0,
+        buy_volume_estimate=400.0, sell_volume_estimate=600.0, dominance_ratio=0.4, dominant_side="sell",
+        vwap_at_window_end=99.5, price_distance_from_vwap=-0.5, price_distance_from_vwap_pct=-0.5, vwap_slope=0.0,
+        poc_at_window_end=99.5, poc_change_during_window=-0.5, poc_slope=-0.5, vah=100.0, val=98.0,
+        pcr=1.0, pcr_change=0.0, call_oi_change=100.0, put_oi_change=500.0, iv_change=0.0, option_pressure_score=0.0,
+        market_regime="Trending", institutional_bias_label="Neutral", institutional_bias_score=0, news_risk_score=None,
+    )
+
+
+def test_pre_window_wiring_produces_a_conflicted_verdict_when_contradictory():
+    candles = _session_candles(post_3pm=False)
+    forecast = build_transition_forecast(
+        time(14, 59), symbol="NIFTY", session_date=date(2026, 8, 27),
+        today_candles=candles, prior_day_candles=None, historical_by_date={},
+        history=[], cas_history=[], correlations=[], bin_size=BIN_SIZE, expiry_type=None,
+        pre_window=_flat_pre_window(),
+    )
+    assert forecast is not None
+    assert forecast.contradictory_factors != []
+    # n_analogs is 0 here (empty history) so INSUFFICIENT_EVIDENCE takes
+    # priority over CONFLICTED -- the contradiction is still captured and
+    # reported even though it isn't what determines the verdict this time.
+    assert forecast.verdict == "INSUFFICIENT_EVIDENCE"
+
+
+def test_no_pre_window_supplied_means_no_contradictions_computed():
+    candles = _session_candles(post_3pm=False)
+    forecast = build_transition_forecast(
+        time(14, 59), symbol="NIFTY", session_date=date(2026, 8, 27),
+        today_candles=candles, prior_day_candles=None, historical_by_date={},
+        history=[], cas_history=[], correlations=[], bin_size=BIN_SIZE, expiry_type=None,
+    )
+    assert forecast is not None
+    assert forecast.contradictory_factors == []

@@ -392,6 +392,22 @@ CREATE TABLE IF NOT EXISTS cas_transition_forecasts (
     confidence_label TEXT NOT NULL,
     top_contributing_factors JSONB,
     historical_similarity_score DOUBLE PRECISION NOT NULL,
+    -- Phase 9C (spec Parts 1, 9-11): the unified UP/DOWN/NO-MATERIAL-MOVE
+    -- read, layered on top of the existing 7-checkpoint forecast row
+    -- rather than a parallel table -- see market_transition/verdict.py.
+    probability_up DOUBLE PRECISION,
+    probability_down DOUBLE PRECISION,
+    expected_move_low DOUBLE PRECISION,
+    expected_move_high DOUBLE PRECISION,
+    expected_move_pct DOUBLE PRECISION,
+    expected_move_percentile DOUBLE PRECISION,
+    transition_risk_tier TEXT,
+    verdict TEXT,
+    primary_driver TEXT,
+    secondary_driver TEXT,
+    tertiary_driver TEXT,
+    contradictory_factors JSONB,
+    option_bias TEXT,
     computed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE (symbol, session_date, checkpoint_time)
 );

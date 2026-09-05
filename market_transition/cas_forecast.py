@@ -15,7 +15,7 @@ already-computed Phase 7A transition_type/magnitude_tier -- closing the
 loop between the two phases rather than fitting a second model.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date, time
 
 import pandas as pd
@@ -29,6 +29,14 @@ from market_transition.models import (
     TransitionOutcome,
 )
 from market_transition.scoring import MIN_ANALOGS, find_analogs, score_day
+from market_transition.transition_state import build_market_state_vector
+from market_transition.verdict import (
+    classify_transition_risk_tier,
+    compute_expected_move_range,
+    compute_verdict,
+    percentile_rank,
+    reshape_drivers,
+)
 
 FORECAST_CHECKPOINTS: list[time] = [
     time(14, 30), time(14, 35), time(14, 40), time(14, 45), time(14, 50), time(14, 55), time(14, 59),
@@ -47,6 +55,23 @@ class TransitionForecast:
     confidence_label: str
     top_contributing_factors: list[ContributingFactor]
     historical_similarity_score: float
+    # Phase 9C (spec Parts 1, 9-11): the unified "is the market more likely
+    # to move UP, DOWN, or stay within a normal range" read -- additive,
+    # safe defaults so every existing caller/test that builds a
+    # TransitionForecast directly keeps working unchanged.
+    probability_up: float = 0.0
+    probability_down: float = 0.0
+    expected_move_low: float | None = None
+    expected_move_high: float | None = None
+    expected_move_pct: float | None = None
+    expected_move_percentile: float | None = None
+    transition_risk_tier: str | None = None  # NORMAL/MODERATE/LARGE/EXTREME -- Phase 7A's MagnitudeTier vocabulary
+    verdict: str = "INSUFFICIENT_EVIDENCE"
+    primary_driver: str | None = None
+    secondary_driver: str | None = None
+    tertiary_driver: str | None = None
+    contradictory_factors: list[str] = field(default_factory=list)
+    option_bias: str | None = None
 
 
 def _magnitude_probabilities(
@@ -94,6 +119,9 @@ def build_transition_forecast(
     bin_size: float,
     expiry_type: ExpiryType | None,
     k: int = 10,
+    pre_window=None,  # market_transition.cas_windows.PreTransitionWindow ending at/near checkpoint_time, for the state-vector/contradiction read -- optional, Phase 9C
+    option_bias: str | None = None,  # option_chain.snapshot_features.classify_option_positioning's read at/before checkpoint_time -- optional, Phase 9C
+    atr_14: float | None = None,  # for transition_risk_tier -- same day-level ATR Phase 7A already computes elsewhere
 ) -> TransitionForecast | None:
     """Builds the leakage-safe query (compute_pre_window_features clamped to
     `checkpoint_time`) and scores it against `history`/`correlations` --
@@ -140,6 +168,31 @@ def build_transition_forecast(
     if len(analogs) < MIN_ANALOGS:
         confidence = "Insufficient data"
 
+    # Phase 9C: unified UP/DOWN/NO-MATERIAL-MOVE verdict, expected-move
+    # range, transition risk tier, and driver reshaping -- all additive
+    # synthesis over what's already computed above, per market_transition/
+    # verdict.py and transition_state.py.
+    contradictions: list[str] = []
+    if pre_window is not None:
+        contradictions = build_market_state_vector(pre_window, option_bias=option_bias).contradictions
+
+    signed_moves = [d.outcome.post_transition_move for d, _ in analogs if d.outcome.post_transition_move is not None]
+    expected_move_low, expected_move_high = compute_expected_move_range(signed_moves)
+    expected_move_mid = ((expected_move_low + expected_move_high) / 2) if (expected_move_low is not None and expected_move_high is not None) else None
+
+    baseline_price = None
+    same_day_before_cutoff = today_candles[today_candles["timestamp"].dt.time <= checkpoint_time]
+    if not same_day_before_cutoff.empty:
+        baseline_price = float(same_day_before_cutoff["close"].iloc[-1])
+    expected_move_pct = (expected_move_mid / baseline_price * 100) if (expected_move_mid is not None and baseline_price) else None
+
+    all_magnitudes = [abs(d.outcome.post_transition_move) for d in history if d.outcome.post_transition_move is not None]
+    expected_move_percentile = percentile_rank(abs(expected_move_mid), all_magnitudes) if expected_move_mid is not None else None
+
+    transition_risk_tier = classify_transition_risk_tier(expected_move_mid, atr_14)
+    verdict = compute_verdict(len(analogs), score.probability_up, score.probability_down, score.probability_flat, contradictions)
+    primary_driver, secondary_driver, tertiary_driver, contradictory_factors = reshape_drivers(score.top_contributing_factors, contradictions)
+
     return TransitionForecast(
         checkpoint_time=f"{checkpoint_time:%H:%M}",
         probability_no_material_transition=round(p_no_material, 3),
@@ -151,4 +204,17 @@ def build_transition_forecast(
         confidence_label=confidence,
         top_contributing_factors=score.top_contributing_factors,
         historical_similarity_score=score.historical_similarity_score,
+        probability_up=score.probability_up,
+        probability_down=score.probability_down,
+        expected_move_low=expected_move_low,
+        expected_move_high=expected_move_high,
+        expected_move_pct=round(expected_move_pct, 3) if expected_move_pct is not None else None,
+        expected_move_percentile=expected_move_percentile,
+        transition_risk_tier=transition_risk_tier,
+        verdict=verdict,
+        primary_driver=primary_driver,
+        secondary_driver=secondary_driver,
+        tertiary_driver=tertiary_driver,
+        contradictory_factors=contradictory_factors,
+        option_bias=option_bias,
     )

@@ -33,16 +33,20 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, time
 
+import pandas as pd
+
+from analytics.breakout_boxes import compute_atr
 from config.instruments import INSTRUMENTS
 from config.settings import IST
 from db import reader as db_reader
 from db import writer as db_writer
 from market_transition.cas_forecast import FORECAST_CHECKPOINTS, build_transition_forecast
 from market_transition.cas_transition import CAS_EFFECTIVE_DATE, extract_cas_transition_record
-from market_transition.cas_windows import PreTransitionWindow, build_post_transition_minutes, build_pre_transition_windows
+from market_transition.cas_windows import PRE_WINDOW_BOUNDARIES, PreTransitionWindow, build_post_transition_minutes, build_pre_transition_windows
 from market_transition.expiry_calendar import classify_expiry_day
 from market_transition.research import extract_all_records
 from market_transition.statistics import run_correlation_study
+from option_chain.snapshot_features import classify_option_positioning, compute_snapshot_features
 
 logger = logging.getLogger(__name__)
 
@@ -91,16 +95,72 @@ def compute_and_persist_windowed_day(
         db_writer.insert_cas_post_transition_minute(symbol, session_date, m)
         n_minutes += 1
 
+    atr_14 = _compute_prior_day_atr_14(historical_by_date)
+
     for checkpoint in FORECAST_CHECKPOINTS:
+        # Leakage-safe pairing: only the pre-window whose own end time is
+        # <= this checkpoint may be used (e.g. the 14:59 checkpoint gets
+        # the 14:55-14:59 window, but the 14:30 checkpoint gets none yet --
+        # passing the FINAL window to every checkpoint would leak later
+        # windows' information into earlier forecasts).
+        matching_window = _pre_window_for_checkpoint(pre_windows, checkpoint)
+        option_bias = _option_bias_at(symbol, session_date, checkpoint)
+
         forecast = build_transition_forecast(
             checkpoint, symbol, session_date, day_candles, prior_day_candles, historical_by_date,
             old_records, cas_history, correlations, bin_size, expiry_type,
+            pre_window=matching_window, option_bias=option_bias, atr_14=atr_14,
         )
         if forecast:
             db_writer.insert_cas_transition_forecast(symbol, session_date, forecast)
             n_forecasts += 1
 
     return n_windows, n_minutes, n_forecasts
+
+
+def _pre_window_for_checkpoint(pre_windows: list[PreTransitionWindow], checkpoint: time) -> PreTransitionWindow | None:
+    """The latest pre-transition window whose own end time is <= `checkpoint`
+    -- None for the 14:30 checkpoint itself, since no 5-min window has
+    closed yet at that instant."""
+    match = None
+    for w, (_, w_end) in zip(pre_windows, PRE_WINDOW_BOUNDARIES):
+        if w_end <= checkpoint:
+            match = w
+        else:
+            break
+    return match
+
+
+def _option_bias_at(symbol: str, session_date: date, checkpoint: time) -> str | None:
+    """Fresh option-chain classification at/before `checkpoint` -- a
+    separate ad-hoc read, not tied to Phase 9A's 8 fixed daily checkpoints
+    (14:59 specifically isn't one of them)."""
+    row = db_reader.get_option_chain_raw_near(symbol, session_date, at_or_before=checkpoint.strftime("%H:%M:%S"))
+    if row is None:
+        return None
+    features = compute_snapshot_features(row["raw_payload"])
+    return classify_option_positioning(features) if features else None
+
+
+def _compute_prior_day_atr_14(historical_by_date: dict) -> float | None:
+    """Daily-bar ATR(14) as of the most recent day in `historical_by_date`
+    (all strictly-past days) -- the same "prior day's own ATR, never
+    today's" discipline Phase 7A's magnitude-tier classification already
+    uses, just recomputed here since the raw atr_14 value itself isn't
+    persisted anywhere retrievable at this granularity."""
+    if not historical_by_date:
+        return None
+    daily_rows = []
+    for d, df in sorted(historical_by_date.items()):
+        if df.empty:
+            continue
+        daily_rows.append({"date": d, "high": df["high"].max(), "low": df["low"].min(), "close": df["close"].iloc[-1]})
+    if len(daily_rows) < 2:
+        return None
+    daily_df = pd.DataFrame(daily_rows)
+    atr_series = compute_atr(daily_df)
+    value = atr_series.iloc[-1]
+    return float(value) if pd.notna(value) else None
 
 
 @dataclass
@@ -185,9 +245,15 @@ def maybe_update(symbol: str, now: datetime) -> None:
     def option_lookup(at_time, _symbol=symbol, _session_date=session_date):
         return db_reader.get_option_summary_near(_symbol, _session_date, at_or_before=at_time.strftime("%H:%M:%S"))
 
+    # Computed unconditionally (cheap, same recompute-per-call philosophy
+    # as everywhere else) so the forecast loop below always has the day's
+    # pre-transition windows available for its leakage-safe pre_window
+    # pairing, even on a tick after 14:59 (e.g. a late-starting process
+    # catching up on earlier checkpoints all at once).
+    windows = build_pre_transition_windows(today_candles, ctx.historical_by_date, option_lookup, ctx.events, ctx.bin_size, session_date)
+
     n_windows = n_minutes = 0
     if now_time <= time(14, 59):
-        windows = build_pre_transition_windows(today_candles, ctx.historical_by_date, option_lookup, ctx.events, ctx.bin_size, session_date)
         for w in windows:
             db_writer.insert_cas_pretransition_window(symbol, session_date, w)
             n_windows += 1
@@ -208,12 +274,17 @@ def maybe_update(symbol: str, now: datetime) -> None:
             db_writer.insert_cas_post_transition_minute(symbol, session_date, m)
             n_minutes += 1
 
+    atr_14 = _compute_prior_day_atr_14(ctx.historical_by_date)
+
     n_forecasts = 0
     for checkpoint in FORECAST_CHECKPOINTS:
         if checkpoint <= now_time and checkpoint not in ctx.written_forecast_checkpoints:
+            matching_window = _pre_window_for_checkpoint(windows, checkpoint)
+            option_bias = _option_bias_at(symbol, session_date, checkpoint)
             forecast = build_transition_forecast(
                 checkpoint, symbol, session_date, today_candles, ctx.prior_day_candles, ctx.historical_by_date,
                 ctx.old_records, ctx.cas_history, ctx.correlations, ctx.bin_size, ctx.expiry_type,
+                pre_window=matching_window, option_bias=option_bias, atr_14=atr_14,
             )
             if forecast:
                 db_writer.insert_cas_transition_forecast(symbol, session_date, forecast)

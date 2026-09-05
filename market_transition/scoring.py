@@ -227,6 +227,7 @@ def score_day(
             statistical_confidence="Insufficient data",
             explanation=_explanation(query, 50.0, 0.5, 0.5, len(analogs), 0.0, [], "Insufficient data"),
             computed_at=datetime.now(timezone.utc),
+            probability_up=1 / 3, probability_down=1 / 3, probability_flat=1 / 3,  # honest even split -- no usable analogs
         )
 
     analog_days = [d for d, _ in analogs]
@@ -265,6 +266,7 @@ def score_day(
     confidence = _confidence_from_factor_count(len(factors), len(analogs), similarity)
     explanation = _explanation(query, risk_score, p_reversal, p_continuation, len(analogs), similarity, top_factors, confidence)
 
+    n = len(analog_days)
     return DailyTransitionScore(
         symbol=query.symbol,
         session_date=query.session_date,
@@ -278,4 +280,5 @@ def score_day(
         statistical_confidence=confidence,
         explanation=explanation,
         computed_at=datetime.now(timezone.utc),
+        probability_up=round(up_count / n, 3), probability_down=round(down_count / n, 3), probability_flat=round(other / n, 3),
     )

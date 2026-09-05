@@ -115,6 +115,15 @@ class DailyTransitionScore:
     statistical_confidence: ConfidenceLabel = "Insufficient data"
     explanation: str = ""
     computed_at: datetime | None = None
+    # Phase 9C: the unified UP/DOWN/NO-MATERIAL-MOVE read (spec Part 9) --
+    # exposes the SAME up_count/down_count/other tally score_day() already
+    # computes internally from analogs' real post_transition_move sign,
+    # just as proportions rather than only the derived expected_direction
+    # label. Safe defaults so every existing call site/fixture that builds
+    # a DailyTransitionScore directly keeps working unchanged.
+    probability_up: float = 0.0
+    probability_down: float = 0.0
+    probability_flat: float = 0.0
 
 
 @dataclass

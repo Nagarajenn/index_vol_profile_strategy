@@ -4,6 +4,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import pytest
+
 from market_transition.models import DailyTransitionRecord, PreWindowFeatures, TransitionOutcome
 from market_transition.scoring import _confidence_from_factor_count, find_analogs, score_day
 from market_transition.statistics import run_correlation_study
@@ -78,6 +80,27 @@ def test_score_day_insufficient_data_with_empty_history():
     assert result.probability_continuation == 0.5
     assert result.probability_reversal == 0.5
     assert result.top_contributing_factors == []
+    # Phase 9C: an honest even split, not a fabricated lean, when there
+    # aren't even enough analogs to vote.
+    assert result.probability_up == pytest.approx(1 / 3)
+    assert result.probability_down == pytest.approx(1 / 3)
+    assert result.probability_flat == pytest.approx(1 / 3)
+
+
+def test_score_day_exposes_up_down_flat_proportions_that_sum_to_one():
+    history = _build_known_history()
+    correlations = run_correlation_study(history)
+    query = _record(999, poc_migration=60, outcome="continuation")
+
+    result = score_day(query, history, correlations, k=10)
+
+    total = result.probability_up + result.probability_down + result.probability_flat
+    assert total == pytest.approx(1.0, abs=0.01)
+    # The high-poc-migration group in _build_known_history is all
+    # "reversal" (post_transition_move negative -- see _record's outcome
+    # mapping), so the up/down/flat vote should lean down, matching the
+    # reversal/continuation vote's own lean for the same query.
+    assert result.probability_down > result.probability_up
 
 
 def test_score_day_excludes_query_date_from_its_own_analogs():

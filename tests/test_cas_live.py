@@ -45,6 +45,7 @@ def _patch_db(monkeypatch, *, today_candles_empty: bool = False):
     monkeypatch.setattr(cas_live.db_reader, "load_cas_daily_transitions", lambda symbol, limit=10_000: [])
     monkeypatch.setattr(cas_live.db_reader, "list_classified_events_between", lambda start, end: [])
     monkeypatch.setattr(cas_live.db_reader, "get_option_summary_near", lambda symbol, session_date, at_or_before: None)
+    monkeypatch.setattr(cas_live.db_reader, "get_option_chain_raw_near", lambda symbol, session_date, at_or_before: None)
     monkeypatch.setattr(cas_live.db_reader, "load_final_pretransition_windows", lambda symbol: {})
     monkeypatch.setattr(cas_live, "classify_expiry_day", lambda symbol, session_date: None)
 

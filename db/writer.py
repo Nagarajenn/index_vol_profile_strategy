@@ -490,10 +490,12 @@ def insert_cas_post_transition_minute(symbol: str, session_date: date, minute) -
 
 def insert_cas_transition_forecast(symbol: str, session_date: date, forecast) -> None:
     """`forecast` is a market_transition.cas_forecast.TransitionForecast."""
-    field_names = [f for f in forecast.__dataclass_fields__.keys() if f != "top_contributing_factors"]
-    columns = ["symbol", "session_date"] + field_names + ["top_contributing_factors"]
+    json_fields = ("top_contributing_factors", "contradictory_factors")
+    field_names = [f for f in forecast.__dataclass_fields__.keys() if f not in json_fields]
+    columns = ["symbol", "session_date"] + field_names + list(json_fields)
     values = [symbol, session_date] + [getattr(forecast, f) for f in field_names] + [
-        _jsonb([asdict(c) for c in forecast.top_contributing_factors]) if forecast.top_contributing_factors else None
+        _jsonb([asdict(c) for c in forecast.top_contributing_factors]) if forecast.top_contributing_factors else None,
+        _jsonb(forecast.contradictory_factors) if forecast.contradictory_factors else None,
     ]
     placeholders = ",".join(["%s"] * len(columns))
     conflict_cols = ("symbol", "session_date", "checkpoint_time")
