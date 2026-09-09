@@ -29,7 +29,11 @@ import pandas as pd
 from analytics.vwap import compute_vwap
 from analytics.volume_profile import compute_volume_profile
 from market_transition.expiry_calendar import ExpiryType
-from option_chain.snapshot_features import OptionSnapshotFeatures, compute_snapshot_features
+from option_chain.snapshot_features import (
+    OptionSnapshotFeatures,
+    classify_option_positioning,
+    compute_snapshot_features,
+)
 
 # The exact 8 checkpoints Milestone 10's scratchpad reconstruction used --
 # carried forward unchanged, not redefined, per "do not change the
@@ -162,6 +166,7 @@ def build_option_checkpoint_features(session_date: date, option_lookup_fn: Optio
             out[f"opt_{key}_stale"] = age_sec > MAX_SNAPSHOT_AGE_SEC
         for f, v in asdict(features).items():
             out[f"opt_{key}_{f}"] = v
+        out[f"opt_{key}_position_classification"] = classify_option_positioning(features)
         prior = features
     return out
 
