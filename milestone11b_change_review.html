@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Milestone 11B Report</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1020px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.3em;color:#1a3a5c;margin-top:2.2em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.05em;color:#2c3e50;margin-top:1.5em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.88em}
+ th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.8em;line-height:1.5}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.74em;font-weight:bold;color:#fff}
+ .pass{background:#2e7d32}.new{background:#1a5c8a}.mod{background:#f9a825;color:#222}
+ .drop{background:#8e8e8e}.insuff{background:#c62828}.contra{background:#6a1b9a}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .toc a{display:block;margin:3px 0;color:#1a3a5c;text-decoration:none}
+ .toc a:hover{text-decoration:underline}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+</style>
+</head>
+<body>
+
+<h1>Milestone 11B — Code Change Review<br><span style="font-size:0.6em;font-weight:normal;color:#555">Incremental Direction Intelligence: 11 candidate features tested against the frozen Milestone 11A control</span></h1>
+
+<p><b>Branch:</b> <code>market-transition-cas-analysis</code> · <b>Scope:</b> one new research module, one orchestrator script, one additive change to an existing research file (verified byte-identical control output before/after), new tests. No production forecast/CAS/scoring/API/UI/schema/Dhan-capture code touched. The frozen Milestone 11A control (<code>direction_baseline.py</code>) was not modified.</p>
+
+<div class="toc">
+<b>Contents</b>
+<a href="#summary">Headline result</a>
+<a href="#files">Files changed</a>
+<a href="#design">Design: how the "control + 1 feature" test works</a>
+<a href="#scorecard">Feature scorecard</a>
+<a href="#why">Why the 3 "survivors" don't count</a>
+<a href="#tests">Test coverage</a>
+<a href="#next">What happens on commit</a>
+</div>
+
+<h2 id="summary">Headline result</h2>
+<div class="warn"><b>No candidate feature is retained.</b> 11 features were tested one at a time against the frozen control; 3 nominally beat the control's Validation accuracy, but all 3 did so on 4-or-fewer scoreable observations (most rows tied 2-2 and abstained), concentrated in one symbol. Once that's accounted for, the honest classification is <b>INSUFFICIENT_EVIDENCE</b> across the board — not a promising signal, not a proven edge, just noise from a tiny sample. This negative result is itself the useful output of this milestone.</p></div>
+
+<h2 id="files">Files changed</h2>
+<table>
+<tr><th>File</th><th>Status</th><th>What it does</th></tr>
+<tr><td><code>market_transition/direction_features_11b.py</code></td><td><span class="tag new">NEW</span></td><td>Trajectory math (slope/monotonicity/excursion/reversal), the generic 4-way vote combiner, all 11 candidate definitions with documented a priori sign rationale, the Divergence and Expiry Regime diagnostics.</td></tr>
+<tr><td><code>scripts/run_milestone11b.py</code></td><td><span class="tag new">NEW</span></td><td>Orchestrator — reuses the Milestone 11A pickle directly, zero new DB reads.</td></tr>
+<tr><td><code>tests/test_direction_features_11b.py</code></td><td><span class="tag new">NEW</span></td><td>28 tests: trajectory math, vote logic, threshold fitting, symbol breakdown, and 2 end-to-end leakage tests.</td></tr>
+<tr><td><code>market_transition/direction_dataset.py</code></td><td><span class="tag mod">MODIFIED</span> (additive)</td><td>+6/-1 lines. Added capture of <code>opt_{checkpoint}_position_classification</code> via the existing, unmodified <code>classify_option_positioning()</code>. Verified: the frozen control's Validation/Test JSON report is <b>byte-identical</b> before and after this change.</td></tr>
+</table>
+
+<h3>The only change to an existing file</h3>
+<pre>from option_chain.snapshot_features import (
+    OptionSnapshotFeatures,
+    classify_option_positioning,   # + new import
+    compute_snapshot_features,
+)
+...
+        for f, v in asdict(features).items():
+            out[f"opt_{key}_{f}"] = v
+        out[f"opt_{key}_position_classification"] = classify_option_positioning(features)  # + new line
+        prior = features</pre>
+
+<h2 id="design">Design: how the "control + 1 feature" test works</h2>
+<ul>
+<li>Every numeric candidate's threshold is a <b>Training-only median</b>, fixed before any Validation/Test look — same discipline as the frozen control.</li>
+<li>Every candidate's <b>sign is a documented, pre-specified a priori rationale</b> (mirroring the control's own established PCR/imbalance/straddle signs, or <code>classify_option_positioning</code>'s own bullish/bearish reasoning) — never fit or flipped based on which direction "worked."</li>
+<li>The combined model is a plain <b>4-way majority vote</b>: the control's existing 3 votes + this one candidate's vote. A genuine 2-2 tie is an honest abstention (no prediction) — never arbitrarily broken.</li>
+<li><b>Divergence</b> and <b>Expiry Regime</b> are deliberately <i>not</i> folded into a vote — per the spec's explicit instruction, they're reported as diagnostic splits of the control's own accuracy instead.</li>
+</ul>
+
+<h2 id="scorecard">Feature scorecard</h2>
+<table>
+<tr><th>Feature</th><th>Val Acc (n)</th><th>vs Control</th><th>Test Acc (n)</th><th>vs Control</th><th>Decision</th></tr>
+<tr><td>IV Skew (level)</td><td>62.5% (8)</td><td>−7.5pp</td><td>50.0% (4)</td><td>−12.5pp</td><td><span class="tag drop">DROP</span></td></tr>
+<tr><td>PCR Trajectory slope</td><td>75.0% (4)</td><td>+5pp</td><td>100% (2)</td><td>+37.5pp</td><td><span class="tag insuff">INSUFFICIENT DATA</span></td></tr>
+<tr><td>IV Skew Trajectory slope</td><td>75.0% (4)</td><td>+5pp</td><td>66.7% (3)</td><td>+4.2pp</td><td><span class="tag insuff">INSUFFICIENT DATA</span></td></tr>
+<tr><td>Straddle Trajectory slope</td><td>50.0% (6)</td><td>−20pp</td><td>75.0% (4)</td><td>+12.5pp</td><td><span class="tag contra">CONTRADICTORY</span></td></tr>
+<tr><td>Volume Imbalance Trajectory slope</td><td>62.5% (8)</td><td>−7.5pp</td><td>75.0% (4)</td><td>+12.5pp</td><td><span class="tag contra">CONTRADICTORY</span></td></tr>
+<tr><td>PCR Change (14:50→14:59)</td><td>75.0% (4)</td><td>+5pp</td><td>100% (1)</td><td>n/a</td><td><span class="tag insuff">INSUFFICIENT DATA</span></td></tr>
+<tr><td>Call OI Buildup</td><td>57.1% (7)</td><td>−12.9pp</td><td>33.3% (3)</td><td>−29.2pp</td><td><span class="tag drop">DROP</span></td></tr>
+<tr><td>Put OI Buildup</td><td>50.0% (6)</td><td>−20pp</td><td>50.0% (4)</td><td>−12.5pp</td><td><span class="tag drop">DROP</span></td></tr>
+<tr><td>Call Unwinding</td><td>60.0% (5)</td><td>−10pp</td><td>50.0% (2)</td><td>−12.5pp</td><td><span class="tag drop">DROP</span></td></tr>
+<tr><td>Put Unwinding</td><td>62.5% (8)</td><td>−7.5pp</td><td>50.0% (4)</td><td>−12.5pp</td><td><span class="tag drop">DROP</span></td></tr>
+<tr><td>Position Classification</td><td>66.7% (9)</td><td>−3.3pp</td><td>60.0% (5)</td><td>−2.5pp</td><td><span class="tag drop">DROP</span></td></tr>
+</table>
+<p>Reference: frozen control alone — Validation 70.0% (n=10), Test 62.5% (n=8, tied with majority-class baseline).</p>
+
+<h2 id="why">Why the 3 nominal "survivors" don't count</h2>
+<table>
+<tr><th>Feature</th><th>Val abstained-on-tie</th><th>Test abstained-on-tie</th><th>Val symbol split</th></tr>
+<tr><td>PCR Trajectory slope</td><td>6 of 10</td><td>6 of 8</td><td>NIFTY 1, SENSEX 3</td></tr>
+<tr><td>IV Skew Trajectory slope</td><td>6 of 10</td><td>5 of 8</td><td>NIFTY 1, SENSEX 3</td></tr>
+<tr><td>PCR Change</td><td>6 of 10</td><td>7 of 8</td><td>NIFTY 1, SENSEX 3</td></tr>
+</table>
+<div class="finding">Most of the time these candidates produce a 2-2 tie against the control's own votes and contribute nothing. On the rare days they do resolve, the "improvement" is 3-4 SENSEX-heavy observations — exactly the "apparent pooled result driven by one symbol" failure mode the milestone brief named explicitly. A naive "accuracy &gt; control" check would have called these 3 features promising; looking at <i>n</i> and the abstention/symbol pattern shows that's not credible evidence.</div>
+
+<h2 id="tests">Test coverage</h2>
+<table>
+<tr><th>Suite</th><th>Result</th></tr>
+<tr><td>Full existing repo test suite (447, pre-Milestone-11B)</td><td><span class="tag pass">447 passed</span></td></tr>
+<tr><td>New Milestone 11B tests (incl. 2 end-to-end leakage tests)</td><td><span class="tag pass">28 passed</span></td></tr>
+<tr><td><b>Total</b></td><td><span class="tag pass">475 passed, 0 failed</span></td></tr>
+</table>
+<p>Reproducibility verified directly: ran the orchestrator twice back-to-back, diffed the JSON report byte-for-byte — <b>identical.</b></p>
+
+<h2 id="next">What happens on commit</h2>
+<p>Additive-only research code. The Milestone 11A dataset pickle was regenerated once (to add <code>position_classification</code>) with the frozen control's own output verified unchanged; Milestone 11B's own report/audit artifacts live under gitignored <code>data/cache/</code> and are not part of the commit. No Milestone 11C work (option opportunity engine, strike selection, or anything production) is included.</p>
+
+<footer>Milestone 11B change review — generated 2026-09-09 · Branch market-transition-cas-analysis</footer>
+</body>
+</html>

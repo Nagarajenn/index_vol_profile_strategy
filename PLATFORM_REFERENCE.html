@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Platform Reference</title>
+<style>
+ :root{
+   --ink:#1c1c1c; --muted:#5b6472; --line:#d8d4cc; --paper:#fbfaf7; --navy:#1a3a5c;
+   --card:#ffffff; --chip:#eef1f5; --ok:#2e7d32; --warn:#ef6c00; --bad:#c62828; --info:#1565c0;
+ }
+ *{box-sizing:border-box}
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1100px;margin:0 auto;padding:32px 24px 90px;color:var(--ink);background:var(--paper);line-height:1.58}
+ h1{font-size:1.8em;border-bottom:3px solid #2c3e50;padding-bottom:12px;margin-bottom:6px}
+ h2{font-size:1.32em;color:var(--navy);margin-top:2.6em;border-left:5px solid #2c3e50;padding-left:11px}
+ h3{font-size:1.08em;color:#2c3e50;margin-top:1.9em}
+ h4{font-size:0.98em;color:#39485c;margin:1.4em 0 .4em}
+ p,li{font-size:0.96em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.86em}
+ th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+ th{background:#2c3e50;color:#fff;font-weight:600}
+ tr:nth-child(even){background:#f4f2ec}
+ code{background:#ecebe6;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.79em;line-height:1.55}
+ .toc{background:#fff;border:1px solid var(--line);border-radius:8px;padding:14px 18px;margin:20px 0}
+ .toc a{display:block;margin:4px 0;color:var(--navy);text-decoration:none;font-size:0.92em}
+ .toc a:hover{text-decoration:underline}
+ .toc .sub{padding-left:18px;font-size:0.86em;color:var(--muted)}
+ .note{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0;font-size:0.93em}
+ .why{background:#e8f0fe;border-left:4px solid var(--navy);padding:10px 14px;margin:14px 0;font-size:0.93em}
+ .stop{background:#ffebee;border-left:4px solid var(--bad);padding:10px 14px;margin:14px 0;font-size:0.93em}
+ footer{margin-top:70px;padding-top:16px;border-top:1px solid var(--line);font-size:0.85em;color:var(--muted)}
+
+ /* ---- UI snapshot recreations (mirror the live MUI light theme) ---- */
+ .ui{font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f7f7f5;border:1px solid var(--line);
+     border-radius:8px;padding:14px;margin:16px 0;font-size:13px;color:#1c1c1c}
+ .ui .cap{font-family:Georgia,serif;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8a8a8a;margin-bottom:8px}
+ .ui .panel{background:var(--card);border:1px solid #e3e1dc;border-radius:6px;padding:12px 14px;margin-bottom:10px}
+ .ui .appbar{background:#fff;border:1px solid #e3e1dc;border-radius:6px;padding:9px 14px;margin-bottom:10px;
+             display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+ .ui .brand{font-size:15px;font-weight:600;letter-spacing:.4px}
+ .ui .seg{display:inline-flex;border:1px solid #cfd4dc;border-radius:5px;overflow:hidden}
+ .ui .seg span{padding:3px 12px;font-size:12px}
+ .ui .seg .on{background:#e8eaf0;font-weight:600}
+ .ui .nav{margin-left:auto;display:flex;gap:18px;font-size:12px;font-weight:600}
+ .ui .nav .a{color:#1565c0}.ui .nav .i{color:#8a8a8a}
+ .ui h5{margin:0 0 8px;font-size:14px;font-weight:700}
+ .ui .row{display:flex;flex-wrap:wrap;gap:22px;margin:8px 0}
+ .ui .stat{min-width:96px}
+ .ui .k{font-size:10.5px;color:#8a8a8a;text-transform:uppercase;letter-spacing:.05em}
+ .ui .v{font-size:15px;font-weight:700;margin-top:1px}
+ .ui .v.sm{font-size:13px;font-weight:600}
+ .ui .chip{display:inline-block;padding:2px 10px;border-radius:11px;font-size:11px;font-weight:600;background:var(--chip);color:#39485c}
+ .ui .chip.g{background:#e6f4ea;color:#1e6b2b}.ui .chip.r{background:#fdecea;color:#a52117}
+ .ui .chip.o{background:#fff3e0;color:#b45309}.ui .chip.b{background:#e7f0fb;color:#12518f}
+ .ui .live{border:1px solid #7cc48a;color:#1e6b2b;border-radius:11px;padding:2px 10px;font-size:11px}
+ .ui .sec{font-size:10.5px;color:#8a8a8a;text-transform:uppercase;letter-spacing:.06em;margin:11px 0 3px}
+ .ui .txt{font-size:12.5px;line-height:1.5}
+ .ui .imp{background:#eef4fd;border-left:3px solid #1565c0;padding:7px 10px;font-size:12.5px;border-radius:3px}
+ .ui .bar{height:7px;background:#e6e4df;border-radius:4px;overflow:hidden;width:190px;margin-top:3px}
+ .ui .bar i{display:block;height:100%;background:#c0392b}
+ .ui table{font-size:11.5px;margin:6px 0}
+ .ui th{background:#eceff3;color:#39485c;font-weight:600;padding:4px 7px;border:1px solid #e0e0dc}
+ .ui td{padding:4px 7px;border:1px solid #e8e8e4;background:#fff}
+ .ui .foot{font-size:10.5px;color:#9a9a9a;font-style:italic;margin-top:8px}
+ .ui .chartbox{background:#fff;border:1px dashed #cfcdc7;border-radius:5px;height:170px;position:relative;
+                display:flex;align-items:center;justify-content:center;color:#a8a8a8;font-size:11.5px}
+ .ui .lvl{position:absolute;right:8px;font-size:10px;padding:1px 6px;border-radius:3px;color:#fff}
+ .removed{opacity:.5;text-decoration:line-through}
+ .pill{display:inline-block;padding:2px 9px;border-radius:10px;font-size:0.74em;font-weight:bold;color:#fff;vertical-align:middle}
+ .pill.live{background:#2e7d32}.pill.res{background:#6a1b9a}.pill.rm{background:#8e8e8e}
+</style>
+</head>
+<body>
+
+<h1>Trading Intelligence Terminal — Platform Reference</h1>
+<p style="color:#5b6472;margin-top:0">Complete documentation of what exists today: every live UI surface, the exact logic behind every metric it displays, the research layer that sits behind the UI, and the state of the record as the project moves toward the paper-trading phase.</p>
+
+<table style="margin-top:18px">
+<tr><th style="width:26%">Document scope</th><td>Everything shipped and running as of 2026-09-09, captured from the live application against real market data.</td></tr>
+<tr><th>Excluded deliberately</th><td><b>Market Intelligence</b> (news/sentiment) — removed from the UI in this same change; a paper-trading UI will occupy that slot in the coming milestones. See <a href="#removed">§7</a>.</td></tr>
+<tr><th>Legend</th><td><span class="pill live">LIVE UI</span> visible in the app &nbsp; <span class="pill res">RESEARCH</span> code + artifacts, no UI &nbsp; <span class="pill rm">REMOVED</span> taken out of the UI</td></tr>
+</table>
+
+<div class="toc">
+<b>Contents</b>
+<a href="#arch">1. System architecture &amp; data flow</a>
+<a href="#terminal">2. Screen 1 — Terminal <span class="pill live">LIVE UI</span></a>
+<span class="sub"><a href="#p-decision">2.1 AI Decision Card</a> · <a href="#p-vpi">2.2 Volume Profile Intelligence</a> · <a href="#p-chart">2.3 Price Chart</a> · <a href="#p-vie">2.4 Volume Intelligence</a> · <a href="#p-amd">2.5 Session AMD</a> · <a href="#p-oc">2.6 Option Chain</a></span>
+<a href="#mti">3. Screen 2 — Market Transition Intelligence <span class="pill live">LIVE UI</span></a>
+<a href="#casday">4. Screen 3 — CAS Day Detail <span class="pill live">LIVE UI</span></a>
+<a href="#research">5. Research layer (no UI) <span class="pill res">RESEARCH</span></a>
+<a href="#data">6. Data &amp; state of record</a>
+<a href="#removed">7. What was removed, and why</a>
+<a href="#next">8. Next phase — paper trading</a>
+</div>
+
+<h2 id="arch">1. System architecture &amp; data flow</h2>
+<pre>Dhan API (1-min candles + full option chain, ~1/min all session)
+      │
+      ▼
+pipeline/live_loop.py ──► run_snapshot.py ──► PostgreSQL (ai_lab_claude / ai_poc_strategy)
+      │                         │                  raw_candles · option_chain_raw
+      │                         │                  option_chain_summary · levels_snapshots
+      │                         └──► cas_live.py ─► cas_pretransition_windows
+      │                                             cas_post_transition_minutes
+      │                                             cas_transition_forecasts
+      ▼
+FastAPI backend (read-only, allow_methods=["GET"])
+   repositories → services → routers        ← the API never writes
+      │
+      ▼
+React + TypeScript + MUI + TanStack Query (polling; no WebSocket)</pre>
+<table>
+<tr><th>Layer</th><th>Writes to DB?</th><th>Notes</th></tr>
+<tr><td>Pipeline (<code>pipeline/</code>)</td><td>Yes — the only writer</td><td>Runs 09:15–15:30 IST, 1-minute cadence, both symbols</td></tr>
+<tr><td>Backend (<code>backend/</code>)</td><td>No — strictly read-only</td><td>Separate venv (Python 3.14); enforced at CORS level</td></tr>
+<tr><td>Frontend (<code>frontend/</code>)</td><td>No</td><td>Polls 15–90s depending on panel cost</td></tr>
+<tr><td>Research (<code>market_transition/*_11a/b/c</code>)</td><td>No — reads only</td><td>Artifacts to gitignored <code>data/cache/</code></td></tr>
+</table>
+<div class="why"><b>Design rule that has held throughout:</b> every analytics engine is <i>informational</i>. None of Volume Profile Intelligence, Volume Intelligence, Session AMD, or Market Transition Intelligence feeds the Decision Card's trend/confidence/action output. That separation is deliberate and has been preserved in every milestone.</div>
+
+<h2 id="terminal">2. Screen 1 — Terminal <span class="pill live">LIVE UI</span></h2>
+<p>Route <code>/</code>. Single-symbol view (SENSEX or NIFTY), polling live data. Below is the layout as it renders today, top to bottom.</p>
+
+<div class="ui">
+  <div class="cap">Live capture · SENSEX · 2026-09-09 1:34 PM IST</div>
+  <div class="appbar">
+    <span class="brand">Trading Intelligence Terminal</span>
+    <span class="seg"><span class="on">SENSEX</span><span>NIFTY</span></span>
+    <span class="nav"><span class="a">Terminal</span><span class="i removed">Market Intelligence</span><span class="i">Market Transition Intelligence</span><span class="i">🔊</span></span>
+  </div>
+  <div class="panel">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h5 style="margin:0">SENSEX</h5>
+      <span style="font-size:12px;color:#6b7280">Should I favor calls, puts, or wait right now?</span>
+      <span class="live" style="margin-left:auto">live · 1:34:00 PM</span>
+    </div>
+    <div class="row">
+      <div class="stat"><div class="k">Trend</div><div class="v"><span class="chip">Neutral</span></div></div>
+      <div class="stat"><div class="k">Institutional Bias</div><div class="v">Neutral</div></div>
+      <div class="stat"><div class="k">Support</div><div class="v">75,042–75,150</div></div>
+      <div class="stat"><div class="k">Resistance</div><div class="v">75,300–75,400</div></div>
+      <div class="stat"><div class="k">POC</div><div class="v">75,063</div></div>
+      <div class="stat"><div class="k">VWAP</div><div class="v">75,078</div></div>
+    </div>
+    <div class="sec">AI Interpretation</div>
+    <div class="txt">Price is trading above VWAP and above today's POC, consistent with a neutral trend. Institutional positioning is currently neutral.</div>
+    <div class="sec">Confidence</div>
+    <div class="bar"><i style="width:28%"></i></div><div class="v sm">28/100</div>
+    <div class="sec">Trading Implication</div>
+    <div class="imp">No clear edge — wait for a decisive break of the 75,042–75,150 · 75,300–75,400 range with volume confirmation before choosing CE/PE.</div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
+    <div class="panel" style="flex:0 0 31%;min-width:230px">
+      <h5>Volume Profile Intelligence</h5>
+      <div class="k">Profile Shape</div><div class="v sm">B — Double Distribution</div>
+      <div class="txt" style="color:#6b7280">Two separate balance areas; market accepted two distinct price zones today.</div>
+      <div class="k" style="margin-top:8px">Opening Type</div><div class="v sm">Open-Drive</div>
+      <div class="row" style="gap:14px">
+        <div class="stat"><div class="k">Rotation</div><div class="v sm">Rotational (2)</div></div>
+        <div class="stat"><div class="k">Volume Pace</div><div class="v sm" style="color:#1e6b2b">Above Avg (212%)</div></div>
+      </div>
+      <div class="k">Initial Balance</div><div class="v sm">74,923 – 75,221 <span style="color:#8a8a8a">(298)</span></div>
+      <div class="k" style="margin-top:8px">Value Migration</div><div class="v sm" style="color:#a52117">▼ POC −575 (−0.76%)</div>
+      <div class="k" style="margin-top:8px">HVN / LVN</div><div class="v sm">75,063 · 75,188 / 75,263 · 74,913</div>
+      <div class="sec">Acceptance / Rejection</div>
+      <div class="txt">VAH 75,150 · accepted (56)<br>VAL 75,000 · accepted (48)<br>POC 75,063 · accepted (94)<br>Prior POC 75,638 · untested</div>
+    </div>
+    <div class="panel" style="flex:1;min-width:300px">
+      <h5>Price Chart — previous session + today</h5>
+      <div class="chartbox">candlesticks · VWAP line · POC/VAH/VAL bands · S/R zones · transition arrow
+        <span class="lvl" style="top:34%;background:#f39c12">VWAP 75,078</span>
+        <span class="lvl" style="top:50%;background:#2980b9">POC 75,063</span>
+        <span class="lvl" style="top:66%;background:#27ae60">VAL 75,000</span>
+      </div>
+    </div>
+  </div>
+  <div class="panel">
+    <h5>Volume Intelligence</h5>
+    <div class="row">
+      <div class="stat"><div class="k">Relative Volume</div><div class="v sm">Below Average (34%)</div></div>
+      <div class="stat"><div class="k">Buy/Sell Dominance</div><div class="v sm" style="color:#a52117">Sell (16%) · 3 min streak</div></div>
+      <div class="stat"><div class="k">Institutional Participation</div><div class="v sm">Low (30)</div></div>
+      <div class="stat"><div class="k">Volume Trend</div><div class="v sm">Increasing +12%</div></div>
+    </div>
+    <div class="k">Current Character</div><div class="v sm"><span class="chip o">Distribution</span> <span style="color:#6b7280;font-size:11.5px">rising volume with sustained sell dominance while price holds flat</span></div>
+    <div class="sec">Significant 5-Minute Intervals (today)</div>
+    <table><tr><th>Time</th><th>Volume</th><th>vs Baseline</th><th>Side</th><th>Price</th></tr>
+      <tr><td>09:20–09:24</td><td>6,109,000</td><td>15.4×</td><td>Buy</td><td>Flat</td></tr>
+      <tr><td>10:30–10:34</td><td>1,146,654</td><td>5.7×</td><td>Sell</td><td>Down</td></tr>
+      <tr><td>01:15–01:19</td><td>746,773</td><td>5.0×</td><td>Buy</td><td>Flat</td></tr>
+    </table>
+    <div class="sec">Expected Next Behaviour</div>
+    <div class="txt">Continuation <b>57%</b> · Reversal 43% · <span class="chip">Medium confidence</span> · next 10 min<br>
+      • Volume trend: Increasing (supports continuation)<br>• Character: Distribution pattern (supports continuation)</div>
+    <div class="foot">Buy/sell volumes are an estimated proxy from each candle's close position within its range (Chaikin-style), not real tick data. Informational only — does not feed the strategy engine.</div>
+  </div>
+  <div class="panel">
+    <h5>Session AMD (Accumulation / Manipulation / Distribution)</h5>
+    <div class="row">
+      <div class="stat"><div class="k">Accumulation Range</div><div class="v sm">74,969 – 75,221 <span style="color:#8a8a8a">(252 pt, 09:15–09:44)</span></div></div>
+      <div class="stat"><div class="k">Current Phase</div><div class="v sm"><span class="chip">No Clear Setup</span></div></div>
+    </div>
+    <div class="sec">Sweep Timeline</div>
+    <table><tr><th>Direction</th><th>Extreme</th><th>Breakout</th><th>Reversal</th><th>Candles</th><th>Expected</th></tr>
+      <tr><td>Swept Low</td><td>74,936</td><td>10:01</td><td>10:02</td><td>2</td><td>Up</td></tr>
+      <tr><td>Swept Low</td><td>74,915</td><td>12:03</td><td>12:17</td><td>15</td><td>Up</td></tr>
+      <tr><td>Swept High</td><td>75,251</td><td>12:44</td><td>12:44</td><td>1</td><td>Down</td></tr>
+    </table>
+    <div class="txt" style="margin-top:6px;color:#6b7280">Multiple conflicting tests of the 74,969–75,221 range today — no clean single AMD read.</div>
+  </div>
+  <div class="panel">
+    <h5>Option Chain</h5>
+    <div class="row">
+      <div class="stat"><div class="k">PCR</div><div class="v">0.82</div></div>
+      <div class="stat"><div class="k">ATM Strike</div><div class="v">75,200</div></div>
+      <div class="stat"><div class="k">ATM IV (Call)</div><div class="v">13.8%</div></div>
+      <div class="stat"><div class="k">ATM IV (Put)</div><div class="v">12.0%</div></div>
+    </div>
+  </div>
+</div>
+
+<h3 id="p-decision">2.1 AI Decision Card — <i>"Should I favor calls, puts, or wait right now?"</i></h3>
+<p>The only panel that constitutes the actual trading-decision engine. Four layers by design: Raw Values → AI Interpretation → Confidence → Trading Implication.</p>
+<table>
+<tr><th style="width:22%">Metric</th><th>Logic</th></tr>
+<tr><td><b>Trend</b></td><td>Vote of three signals, summed to a −3…+3 score mapped to a 5-level label:<br>① price vs VWAP (deadband-gated), ② EMA(20) slope over a lookback (deadband-gated), ③ market structure (HH/HL vs LH/LL from fractal swings). <code>analytics/trend_classifier.py</code></td></tr>
+<tr><td><b>Institutional Bias</b></td><td>Near-ATM Call-OI vs Put-OI change + PCR → 5-level label. Live only; returns "Unavailable (historical)" for backfilled rows. <code>analytics/institutional_bias.py</code></td></tr>
+<tr><td><b>Support / Resistance</b></td><td>Candidate levels (prior-day H/L/C, today's &amp; yesterday's VAH/VAL/POC, round numbers, swing clusters) clustered within a tolerance band into zones; nearest zone above/below price is reported as a <i>range</i>. <code>analytics/support_resistance.py</code></td></tr>
+<tr><td><b>POC / VWAP</b></td><td>See §2.2 and §2.3.</td></tr>
+<tr><td><b>Confidence 0–100</b></td><td>Weighted sum of 7 sub-scores, weights from <code>config/scoring_weights.json</code>: trend alignment 25, VWAP position 15, structure 15, institutional bias 15, trendline confluence 10, S/R proximity 10, breakout confirmation 10. Renormalizes when institutional bias is unavailable. All sub-scores are persisted as real columns so weights can be retuned later without recomputing technicals.</td></tr>
+<tr><td><b>AI Interpretation</b></td><td>Deterministic template (not an LLM call) composed from price-vs-VWAP, price-vs-POC, trend label and institutional bias. <code>backend/app/services/interpretation.py</code></td></tr>
+<tr><td><b>Trading Implication</b></td><td>Deterministic action text keyed off the confidence/trend/S-R state. Never emits a size or an order.</td></tr>
+</table>
+
+<h3 id="p-vpi">2.2 Volume Profile Intelligence</h3>
+<table>
+<tr><th style="width:22%">Metric</th><th>Logic</th></tr>
+<tr><td><b>Volume Profile / POC / Value Area</b></td><td>From 1-min candles (Dhan gives OHLCV, not tick prints): each candle's volume is distributed across the price bins it spans using <code>0.5×uniform + 0.5×triangular-centred-on-close</code>, renormalised per candle. Bin size <b>SENSEX 25 / NIFTY 5</b> points. <b>POC</b> = max-volume bin. <b>Value Area</b> = expand outward from POC, greedily adding the higher adjacent bin until ≥70% of session volume → VAH/VAL. A candle-based approximation of a true tick profile, disclosed as such.</td></tr>
+<tr><td><b>Profile Shape</b></td><td>D / P / b / B classification from the bin distribution around POC (B = two separated HVN clusters = double distribution).</td></tr>
+<tr><td><b>Opening Type</b></td><td>Open-Drive / Open-Test-Drive / Open-Rejection-Reverse / Open-Auction, from the first 30 minutes' behaviour relative to the opening print.</td></tr>
+<tr><td><b>Initial Balance</b></td><td>High/low of the first <b>60</b> minutes (<code>DEFAULT_INITIAL_BALANCE_MINUTES</code>).</td></tr>
+<tr><td><b>Rotation Factor</b></td><td>Net directional rotation across 30-minute periods — how much the market is rotating vs trending.</td></tr>
+<tr><td><b>Volume Pace</b></td><td>Cumulative volume vs the elapsed-time-aligned 20-day average. Thresholds <b>115% / 85%</b> for Above/Below Average.</td></tr>
+<tr><td><b>Value Migration</b></td><td>Today's developing POC/VAH/VAL vs the prior session's, in points and %.</td></tr>
+<tr><td><b>HVN / LVN</b></td><td>Local maxima/minima of the volume-by-price histogram, capped at 5 nodes each.</td></tr>
+<tr><td><b>Acceptance / Rejection</b></td><td>Per level, counts candles that traded at the level and closed through vs closed back — "accepted (56)" = 56 accepting touches.</td></tr>
+</table>
+
+<h3 id="p-chart">2.3 Price Chart</h3>
+<table>
+<tr><th style="width:22%">Overlay</th><th>Logic</th></tr>
+<tr><td><b>Candles</b></td><td>5-minute bars resampled from stored 1-minute candles (<code>analytics/resample.py</code>), previous session + today. Rendered via Recharts <code>&lt;Customized&gt;</code> layer with manual SVG (wick line + body rect) using <code>yAxisMap[0].scale()</code>; x-axis is a synthetic bar index so non-trading gaps are a deliberate rendering choice.</td></tr>
+<tr><td><b>VWAP</b></td><td>Cumulative <code>Σ(typical_price × volume) / Σ(volume)</code>, <code>typical_price = (H+L+C)/3</code>, from 1-min candles, resets each session.</td></tr>
+<tr><td><b>POC / Value Area</b></td><td>Reference line + shaded band from §2.2.</td></tr>
+<tr><td><b>Support / Resistance</b></td><td>Shaded zones from the S/R clustering.</td></tr>
+<tr><td><b>Transition arrow</b></td><td>Directional marker sourced from the Live Transition Advisor (§3); a fetch failure here can never break the chart.</td></tr>
+</table>
+
+<h3 id="p-vie">2.4 Volume Intelligence</h3>
+<div class="note"><b>Foundational proxy:</b> there is no tick data — Dhan provides 1-minute OHLCV only. Buy/sell volume is estimated Chaikin-style: <code>mfm = ((close−low) − (high−close)) / (high−low)</code>, <code>buy = volume × max(mfm,0)</code>, <code>sell = volume × max(−mfm,0)</code>. Note <code>buy + sell ≤ volume</code>; the shortfall is non-directional volume for that bar. This is disclosed in the panel footer itself.</div>
+<table>
+<tr><th style="width:22%">Metric</th><th>Logic</th></tr>
+<tr><td><b>Relative Volume (RVOL)</b></td><td>Current interval &amp; cumulative volume vs elapsed-time-aligned baselines across 6 historical groupings (last 5/10/20 days, same weekday, expiry-day, monthly-expiry). Labels at <b>115% / 85%</b>. Groups with &lt;3 sample days are omitted rather than shown thin.</td></tr>
+<tr><td><b>Volume Acceleration</b></td><td><code>mean(last 5 candles) / mean(prior 5)</code>; ≥<b>1.2</b> Accelerating, ≤<b>0.8</b> Decelerating.</td></tr>
+<tr><td><b>Buy/Sell Dominance</b></td><td>Rolling <b>8-minute</b> window: <code>buy/(buy+sell)</code>; ≥<b>0.55</b> Buy, ≤<b>0.45</b> Sell. Plus consecutive same-sign minute streak.</td></tr>
+<tr><td><b>Volume Momentum</b></td><td><code>ema(volume × mfm, span 8)</code> normalised by rolling average volume, clipped to [−1,1]. Strong at ≥<b>0.35</b> with a ≥5-minute streak; ≥<b>0.15</b> plain.</td></tr>
+<tr><td><b>Institutional Participation 0–100</b></td><td><code>100 × (0.40×rvol + 0.35×blockiness + 0.25×dominance)</code>; blockiness = share of candles ≥1.5× the 10-bar mean. Labels Minimal/Low/Moderate/High/Very High at 20/40/60/80. Volume-side only — deliberately does <i>not</i> read OI (that is the Decision Card's institutional bias).</td></tr>
+<tr><td><b>Spike / Dry-up</b></td><td>Spike at ≥<b>2.5×</b> baseline; dry-up at ≤<b>0.4×</b>.</td></tr>
+<tr><td><b>Absorption / Exhaustion</b></td><td>Absorption = volume spike with <code>range ≤ 0.6×</code> the prior 10-bar average range. Exhaustion = extended consistent move + volume climax + a rejection wick ≥40% on the move's own side.</td></tr>
+<tr><td><b>Volume Trend</b></td><td>20-candle window split 10/10; ±<b>10%</b> → Increasing/Decreasing, ±<b>30%</b> → Strong variants.</td></tr>
+<tr><td><b>Current Character</b></td><td>First-match-wins: Climactic → Accumulation/Distribution (flat price + rising volume + dominance) → Markup/Markdown (directional price + dominance) → Quiet-Consolidation (safe default). Documented as a reasonable heuristic, not a canonical Wyckoff claim.</td></tr>
+<tr><td><b>Significant 5-Min Intervals</b></td><td>5-minute buckets whose volume is ≥<b>1.8×</b> the same elapsed-time bucket's historical baseline (needs ≥3 baseline days), annotated with side and whether price moved with or against the flow.</td></tr>
+<tr><td><b>Historical Comparison</b></td><td>Per historical day: <code>distance = 0.5×mean|cumulative-volume-curve Δ| + 0.5×mean|dominance-curve Δ|</code>, <code>similarity = 1/(1+distance)</code>. Top 5 shown. Needs ≥5 comparable days and ≥5 elapsed minutes, else honestly empty.</td></tr>
+<tr><td><b>Expected Next Behaviour</b></td><td>Fixed <b>10-minute</b> horizon. Weighted composite of 5 components each in [−1,1]: volume trend 0.30, momentum 0.25, character 0.20, institutional 0.15, similarity 0.10 → <code>P(continuation) = clip(0.5 + composite×0.4, 0.1, 0.9)</code> — never fully certain. Confidence drops to Low when &lt;3 components are available.</td></tr>
+<tr><td><b>AI Volume Narrative</b></td><td>Deterministic templates, max 4 observations, each behind its own trigger threshold (e.g. RVOL only speaks when \|RVOL−100\|≥20). Zero observations on a quiet minute is correct behaviour.</td></tr>
+</table>
+
+<h3 id="p-amd">2.5 Session AMD</h3>
+<p>ICT-style single-cycle session model: an opening consolidation (Accumulation), a stop-hunt beyond it that fails and reverses (Manipulation), then the real move (Distribution).</p>
+<table>
+<tr><th style="width:22%">Metric</th><th>Logic</th></tr>
+<tr><td><b>Accumulation Range</b></td><td>High/low of the first <b>30</b> minutes (<code>DEFAULT_ACCUMULATION_MINUTES</code>) — reuses <code>compute_initial_balance()</code> with an AMD-specific window, deliberately tighter than Market Profile's 60-min IB.</td></tr>
+<tr><td><b>Sweep (Manipulation)</b></td><td>Price breaks the range by ≥<code>SWEEP_MARGIN_PCT = 0.10</code> × range width, then <i>closes back inside</i> within <code>SWEEP_REVERSAL_WINDOW_MINUTES = 15</code>. Beyond that window without reversing it is classified <b>Breakout (not manipulation)</b> — an honest "this was a real move" read rather than a forced AMD label.</td></tr>
+<tr><td><b>Distribution</b></td><td>Net move since the sweep's reversal in the expected (opposite-to-sweep) direction; corroborated by buy/sell dominance since reversal. Status Confirmed / Developing / <b>Failed</b> (price re-crossed the sweep's own extreme).</td></tr>
+<tr><td><b>Current Phase</b></td><td>Accumulating · Range Established–Awaiting Move · Testing Range · Distribution · Breakout (not manipulation) · <b>No Clear Setup</b> (more than one qualifying sweep — reported honestly rather than picking one).</td></tr>
+</table>
+
+<h3 id="p-oc">2.6 Option Chain</h3>
+<table>
+<tr><th style="width:22%">Metric</th><th>Logic</th></tr>
+<tr><td><b>PCR</b></td><td><code>total put OI / total call OI</code> across the fetched chain.</td></tr>
+<tr><td><b>ATM Strike</b></td><td>Strike nearest spot, resolved per snapshot (not assumed).</td></tr>
+<tr><td><b>ATM IV (Call/Put)</b></td><td>Implied volatility at the ATM strike, each leg, straight from the Dhan payload.</td></tr>
+<tr><td><b>Expiry</b></td><td>Resolved at runtime from Dhan's own expiry list (<code>get_nearest_expiry</code>) — never hardcoded weekly/monthly.</td></tr>
+</table>
+
+<h2 id="mti">3. Screen 2 — Market Transition Intelligence <span class="pill live">LIVE UI</span></h2>
+<p>Route <code>/market-transition-intelligence</code>. The 3 PM transition research surface — <b>never feeds the trading decision engine</b>.</p>
+
+<div class="ui">
+  <div class="cap">Live capture · SENSEX · 2026-09-09 1:34 PM IST</div>
+  <div class="panel">
+    <h5>Live Market Transition Advisor — SENSEX</h5>
+    <div class="row"><div class="stat"><div class="k">State</div><div class="v sm"><span class="chip">Not Yet Active</span></div></div>
+      <div class="stat"><div class="k">As of</div><div class="v sm">01:34 PM</div></div></div>
+    <div class="txt" style="color:#6b7280">The Live Advisor only produces a read between 2:00 PM and 3:01 PM.</div>
+    <div class="txt" style="margin-top:6px">Institutional bias: Neutral · News risk: 0/100 (Neutral)</div>
+  </div>
+  <div class="panel">
+    <h5>CAS Intelligence — SENSEX</h5>
+    <div class="txt" style="color:#6b7280">27 post-CAS trading days analyzed — agrees with the original methodology's call on 9/27 (33.3%). Sample is still small — read this directionally, not as proof.</div>
+    <table style="margin-top:8px">
+      <tr><th>Date</th><th>Pre (14:31–14:59)</th><th>Post (15:00–15:39)</th><th>Pre pts</th><th>Post pts</th><th>Transition Type</th><th>Magnitude</th><th>Original engine</th><th>Vol ratio</th><th>PCR@14:59</th></tr>
+      <tr><td>2026-09-08</td><td>Down</td><td>Down</td><td>−52</td><td>−30</td><td><span class="chip g">Continuation (Down)</span></td><td><span class="chip">NORMAL</span></td><td>Neutral · differ</td><td>0.32</td><td>0.64</td></tr>
+      <tr><td>2026-09-07</td><td>Down</td><td>Up</td><td>−115</td><td>+141</td><td><span class="chip r">Reversal (Up)</span></td><td><span class="chip">NORMAL</span></td><td>Continuation · differ</td><td>1.22</td><td>0.71</td></tr>
+      <tr><td>2026-09-01</td><td>Flat</td><td>Up</td><td>0</td><td>+193</td><td><span class="chip b">Post-Window Move (Up)</span></td><td><span class="chip">NORMAL</span></td><td>Neutral · agree</td><td>1.16</td><td>0.70</td></tr>
+      <tr><td>2026-08-27</td><td>Flat</td><td>Down</td><td>0</td><td>−312</td><td><span class="chip b">Post-Window Move (Down)</span></td><td><span class="chip o">MODERATE</span></td><td>Reversal · differ</td><td>2.88</td><td>0.65</td></tr>
+    </table>
+    <div class="foot">Pre-window state and post-window outcome are classified independently — a flat pre-window no longer hides a large post-window move under "Neutral".</div>
+  </div>
+  <div class="panel">
+    <h5>CAS Factor Correlation Study <span class="chip">40 factors</span></h5>
+    <div class="txt" style="color:#6b7280">Collapsible. Per-factor correlation against the transition outcome, with N, effect size, p-value and an explicit confidence label.</div>
+  </div>
+  <div class="panel">
+    <h5>Historical Cohorts &amp; Pre-3PM Warning Indicators</h5>
+    <div class="row">
+      <div class="stat"><div class="k">Flat → Large Up</div><div class="v sm">N=0</div></div>
+      <div class="stat"><div class="k">Flat → Large Down</div><div class="v sm">N=0</div></div>
+      <div class="stat"><div class="k">Up → Reversal Down</div><div class="v sm">N=4</div></div>
+      <div class="stat"><div class="k">Down → Reversal Up</div><div class="v sm">N=4</div></div>
+      <div class="stat"><div class="k">Up → Continuation</div><div class="v sm">N=4</div></div>
+      <div class="stat"><div class="k">Down → Continuation</div><div class="v sm">N=1</div></div>
+      <div class="stat"><div class="k">Flat → No Material Move</div><div class="v sm">N=2</div></div>
+    </div>
+    <div class="foot">Below 5 days, confidence is always "Insufficient data" regardless of how low the p-value looks.</div>
+  </div>
+</div>
+
+<table>
+<tr><th style="width:22%">Component</th><th>Logic</th></tr>
+<tr><td><b>Live Advisor</b></td><td>Active only 14:00–15:01 IST. Leakage-safe by construction: <code>cutoff = min(now, PRE_WINDOW_END)</code> — it can never read a candle past its own cutoff. Freezes a snapshot, scores it once, never re-reads post-cutoff candles.</td></tr>
+<tr><td><b>CAS framing</b></td><td>NSE's Closing Auction Session from <b>2026-08-03</b>. Pre-window <b>14:31–14:59</b>, post-window <b>15:00–15:39</b>. Volume is only compared 14:31–14:59 vs 15:00–<b>15:14</b>, because Dhan's 1-min feed stops reporting reliable volume once the auction begins at 15:15 — even though price keeps moving genuinely through it.</td></tr>
+<tr><td><b>Transition Type</b></td><td>Pre-state and post-outcome classified <b>independently</b> — 7 values: CONTINUATION_UP/DOWN, REVERSAL_UP/DOWN, POST_WINDOW_INITIATION_UP/DOWN, NO_MATERIAL_TRANSITION. This fixed a real conceptual bug: a flat pre-window used to swallow a genuine −312 pt post-window move under the label "Neutral".</td></tr>
+<tr><td><b>Magnitude</b></td><td>ATR-normalised, not raw points: <code>|post move| / ATR(14) of the prior day</code>, tiered at <b>0.5 / 1.0 / 2.0</b> → NORMAL / MODERATE / LARGE / EXTREME. Returns no tier at all when ATR is unavailable rather than fabricating one.</td></tr>
+<tr><td><b>Original engine column</b></td><td>The pre-redesign 3-way call (continuation/reversal/neutral), kept and shown side-by-side so the redesign is auditable rather than silently replacing history.</td></tr>
+<tr><td><b>Factor Correlation Study</b></td><td>40 factors vs the transition outcome. Continuous factors via correlation; categorical via non-parametric tests. Every row carries N and a confidence label; <b>&lt;20 days ⇒ "Insufficient data"</b> for the primary study.</td></tr>
+<tr><td><b>Historical Cohorts</b></td><td>7 named cohorts from Transition Type × Magnitude, each compared against the rest of the sample (Mann-Whitney U + rank-biserial effect size) on its 14:55–14:59 pre-3pm state. Separate, lower threshold <code>MIN_N_FOR_COHORT_CONFIDENCE = 5</code> — with an honest note that a low p-value from a handful of days is not predictive power. Cohorts with N=0 still render, so thin cells are visible rather than hidden.</td></tr>
+</table>
+
+<h2 id="casday">4. Screen 3 — CAS Day Detail <span class="pill live">LIVE UI</span></h2>
+<p>Route <code>/market-transition-intelligence/cas-day/:symbol/:date</code>. Dedicated full-page view for a single transition day, built because the dual-resolution tables could not fit legibly inside an expandable row.</p>
+<table>
+<tr><th style="width:26%">Section</th><th>Logic</th></tr>
+<tr><td><b>3 PM Transition Forecast headline</b></td><td>Verdict + P(UP)/P(DOWN)/P(NO-MOVE), confidence, historical N, similarity, expected-move range, transition risk tier. Verdict priority: INSUFFICIENT_EVIDENCE → CONFLICTED → NO_CLEAR_EDGE → UP/DOWN/NO_MATERIAL_MOVE. It refuses to make a directional call when evidence does not support one.</td></tr>
+<tr><td><b>"Why?" drivers</b></td><td>Primary / secondary / tertiary contributing factors ranked by <code>|contribution|</code>, plus any contradictory factors detected in the 2:59 state vector.</td></tr>
+<tr><td><b>Pre-transition table — FORECAST INFORMATION</b></td><td><b>Six 5-minute windows</b> covering 14:30–14:59, ~28 fields each: OHLC, net/% change, volume, RVOL, volume acceleration, buy/sell estimate + dominance, VWAP &amp; distance &amp; slope, POC &amp; change &amp; slope, VAH/VAL, PCR &amp; change, call/put OI change, IV change, option pressure, market regime, institutional bias.</td></tr>
+<tr><td><b>Post-transition table — ACTUAL OUTCOME</b></td><td><b>Sixteen native 1-minute rows</b> 15:00–15:15, plus a single <b>15:30 closing-print</b> checkpoint (added because real, tradeable movement happens at the 3:30 close after the 3:15 session end). Each row carries a 0–100 Transition Shock Score: <code>0.25×ATR-normalised move + 0.25×volume surge + 0.20×range expansion + 0.15×buy/sell imbalance + 0.15×option pressure</code>, with the option term reweighted to zero (never fabricated) when option data is missing.</td></tr>
+<tr><td><b>Visual separation</b></td><td>The two tables are separated by a distinctly styled "3 PM TRANSITION" divider so forecast information and actual outcome can never be misread as one continuous table.</td></tr>
+<tr><td><b>Forecast vs Actual strip</b></td><td>The frozen 14:59 forecast's probabilities against what the day actually did.</td></tr>
+</table>
+<div class="why"><b>Why dual resolution:</b> pre-3pm is about the market <i>evolving toward</i> the decision, which 5-minute windows summarise cleanly; post-3pm is about how the transition actually <i>manifests</i>, which needs native 1-minute granularity. This was an explicit correction to an earlier uniform-resolution design.</div>
+
+<h2 id="research">5. Research layer (no UI) <span class="pill res">RESEARCH</span></h2>
+<p>Everything below is code + gitignored artifacts under <code>data/cache/</code>. None of it is wired to the UI or to any trading behaviour. It exists to answer one question honestly: <i>is there a real edge at 2:59 PM?</i></p>
+<table>
+<tr><th style="width:14%">Milestone</th><th>What it established</th><th>Verdict</th></tr>
+<tr><td><b>10</b></td><td>First broad research pass: 1-min option reconstruction from existing data (zero new API calls), micro-timescale study, option opportunity backtest.</td><td>Options-only vote 58.7% — <b>in-sample</b>, discovery only</td></tr>
+<tr><td><b>10.5</b></td><td>Data readiness + validation design: 46/50 usable symbol-days; rejected the proposed capture-frequency downgrade; specified the chronological split.</td><td>Design accepted</td></tr>
+<tr><td><b>11A</b></td><td>Frozen control + leakage-controlled out-of-sample test. Training-only thresholds. Found and fixed a real stale-snapshot trap (4 symbol-days excluded, never imputed).</td><td>Validation <b>70.0%</b> (n=10) · Test <b>62.5%</b> (n=8, = majority-class floor)</td></tr>
+<tr><td><b>11B</b></td><td>11 incremental features tested one at a time against the frozen control + divergence and expiry diagnostics.</td><td><b>No feature retained.</b> The 3 that nominally beat the control did so on ≤4 scoreable days, one-symbol-skewed</td></tr>
+<tr><td><b>11C</b></td><td>Option Opportunity Engine: ATM±5 × CE/PE universe, ask-entry/bid-exit realism, MFE/MAE, NO-TRADE gates, 3 strike baselines.</td><td><b>No rule retained.</b> Median P&amp;L negative for every strategy in every tier; NO TRADE (0.00%) beat them all</td></tr>
+</table>
+<h4>The frozen control (unchanged since 11A, and it must stay that way)</h4>
+<pre>Majority vote of 3 options-only features at 14:59, thresholds = TRAINING-tier medians only:
+  PCR (OI)                     sign −1   vote UP when below median
+  Call/Put volume imbalance    sign +1   vote UP when above median
+  ATM straddle change          sign +1   vote UP when above median
+
+Split (chronological, never shuffled):
+  Training    2026-08-03 → 08-21   28 symbol-days
+  Validation  2026-08-24 → 08-31   10 symbol-days
+  Test        2026-09-01 → 09-04    8 symbol-days  (locked)</pre>
+<div class="stop"><b>The honest state of the research:</b> there is no demonstrated, out-of-sample directional edge, and no demonstrated way to express one profitably in options after real ask/bid costs. Test accuracy exactly equalled the majority-class floor. Every candidate improvement collapsed under scrutiny of sample size. This is the correct and useful finding to carry forward — not a reason to keep searching for a formula that looks better.</div>
+
+<h2 id="data">6. Data &amp; state of record</h2>
+<table>
+<tr><th>Table</th><th>Grain</th><th>Written by</th></tr>
+<tr><td><code>raw_candles</code></td><td>1-min OHLCV per symbol</td><td>live loop + backfill</td></tr>
+<tr><td><code>option_chain_raw</code></td><td>Full per-strike Dhan payload, ~1/min all session</td><td>live loop</td></tr>
+<tr><td><code>option_chain_summary</code></td><td>PCR / ATM IV / OI walls per fetch</td><td>live loop</td></tr>
+<tr><td><code>levels_snapshots</code></td><td>Every computed decision card, 1/min</td><td>live loop</td></tr>
+<tr><td><code>mti_cas_daily_transitions</code></td><td>1 row per symbol-day</td><td>CAS orchestrator</td></tr>
+<tr><td><code>cas_pretransition_windows</code></td><td>6 rows/day (5-min windows)</td><td>CAS live + batch</td></tr>
+<tr><td><code>cas_post_transition_minutes</code></td><td>17 rows/day (1-min + 15:30)</td><td>CAS live + batch</td></tr>
+<tr><td><code>cas_transition_forecasts</code></td><td>7 checkpoints/day, frozen</td><td>CAS live + batch</td></tr>
+<tr><td><code>transition_actual_outcome</code></td><td>4 horizons/day, immutable</td><td>outcome script</td></tr>
+<tr><td><code>forecast_evaluation</code></td><td>1/day, written only once both forecast &amp; outcome exist</td><td>evaluation script</td></tr>
+</table>
+<p><b>Coverage:</b> option-chain history begins 2026-07-17 (Dhan has no historical option-chain API — it only accumulates forward). Candles reach back to 2026-04-09. The CAS-era research window is 2026-08-03 → 2026-09-04, 46 option-usable symbol-days. <b>Test suite: 511 passing.</b></p>
+
+<h2 id="removed">7. What was removed, and why</h2>
+<div class="note"><b>Market Intelligence (news &amp; sentiment) has been removed from the UI</b> in this change: the summary bar on the Terminal, the <code>/market-intelligence</code> route, and the top-nav link. The slot it occupied is reserved for the paper-trading UI arriving in the coming milestones.</div>
+<table>
+<tr><th style="width:34%">Change</th><th>Detail</th></tr>
+<tr><td>Terminal summary bar</td><td><code>MarketIntelligenceSummaryBar</code> removed from <code>TerminalPage.tsx</code></td></tr>
+<tr><td>Route</td><td><code>/market-intelligence</code> removed from <code>App.tsx</code></td></tr>
+<tr><td>Navigation</td><td>"Market Intelligence" link removed from <code>AppShell.tsx</code></td></tr>
+<tr><td>Component/hook/type files</td><td><b>Intentionally left in the tree, unused</b> — <code>components/market-intelligence/</code>, <code>hooks/useMarketIntelligence.ts</code>, <code>types/marketIntelligence.ts</code>, <code>api/endpoints/marketIntelligence.ts</code>, <code>pages/MarketIntelligencePage.tsx</code></td></tr>
+<tr><td>Backend / pipeline / DB</td><td><b>Untouched.</b> The news classifier keeps running and the API keeps serving; only the UI surface is gone</td></tr>
+<tr><td>Verification</td><td><code>npx tsc -b</code> clean · live browser check confirms the bar and nav link are gone and every other panel still renders real data</td></tr>
+</table>
+<p>The removal is UI-surface-only and fully reversible from git history — nothing was deleted, so restoring it later is re-adding three lines.</p>
+
+<h2 id="next">8. Next phase — paper trading</h2>
+<p>What the next phase inherits from this one:</p>
+<table>
+<tr><th style="width:30%">Asset</th><th>State</th></tr>
+<tr><td>Live pipeline &amp; data capture</td><td>✅ Stable, 1-min, both symbols, no changes needed</td></tr>
+<tr><td>Leakage-safe research harness</td><td>✅ Frozen split, Training-only fitting, truncate-vs-extended leakage tests</td></tr>
+<tr><td>Realistic option execution model</td><td>✅ Ask-entry / bid-exit, MFE/MAE, spread &amp; theta accounting (pre-cost)</td></tr>
+<tr><td>NO-TRADE as a first-class outcome</td><td>⚠️ Implemented, but its gates never bound on this sample — needs recalibration</td></tr>
+<tr><td>A validated directional edge</td><td>❌ <b>Does not exist yet</b></td></tr>
+<tr><td>A validated option-expression rule</td><td>❌ <b>Does not exist yet</b></td></tr>
+<tr><td>UI slot for paper trading</td><td>✅ Freed by the Market Intelligence removal</td></tr>
+</table>
+<div class="stop"><b>Carry this constraint forward:</b> a paper-trading agent built now would be paper-trading a signal that has not demonstrated an edge out-of-sample, and an option-expression rule that lost to not trading on median in all three tiers. That is legitimate as an <i>instrumented research experiment</i> — it keeps collecting data and validates the plumbing end-to-end — but it must never be presented, in the UI or anywhere else, as evidence that the strategy is profitable. The single most valuable input remains more trading days: the sample needs roughly 90–120 option-covered symbol-days before an expanding-window walk-forward can carry real confidence, against 46 today.</div>
+
+<footer>Platform Reference — generated 2026-09-09 · Branch <code>market-transition-cas-analysis</code> · Live data captured from the running application at 13:34 IST · Test suite 511 passing</footer>
+</body>
+</html>

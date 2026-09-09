@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Milestone 11A Report</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1000px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.3em;color:#1a3a5c;margin-top:2.2em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.05em;color:#2c3e50;margin-top:1.5em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.9em}
+ th,td{border:1px solid #ccc;padding:6px 9px;text-align:left}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.88em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.82em;line-height:1.5}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75em;font-weight:bold;color:#fff}
+ .pass{background:#2e7d32}.new{background:#1a5c8a}.mod{background:#f9a825;color:#222}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .toc a{display:block;margin:3px 0;color:#1a3a5c;text-decoration:none}
+ .toc a:hover{text-decoration:underline}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+</style>
+</head>
+<body>
+
+<h1>Milestone 11A — Code Change Review<br><span style="font-size:0.6em;font-weight:normal;color:#555">Out-of-Sample Direction Validation: dataset builder, frozen baseline, chronological split</span></h1>
+
+<p><b>Branch:</b> <code>market-transition-cas-analysis</code> · <b>Scope:</b> new research modules + one additive read-only DB accessor. No production forecast/CAS/scoring/API/UI/schema/Dhan-capture code was changed.</p>
+
+<div class="toc">
+<b>Contents</b>
+<a href="#summary">What changed, in one paragraph</a>
+<a href="#files">Files changed</a>
+<a href="#design">Design: how leakage is prevented</a>
+<a href="#tests">Test coverage</a>
+<a href="#results">Headline results</a>
+<a href="#next">What happens on commit</a>
+</div>
+
+<h2 id="summary">What changed, in one paragraph</h2>
+<p>Milestone 10 reported 58.7% accuracy for an options-only directional vote, but that number was <b>in-sample</b> — the thresholds that decide "vote up" were computed using all 46 days, including the very days being scored. Milestone 11A builds the actual out-of-sample test: a research dataset (2:59pm decision-side features, kept physically separate from the 3:00–3:15pm actual outcome), a strict chronological Training/Validation/Test split, and a re-fit of the <i>exact same, frozen</i> Milestone 10 baseline using thresholds derived from Training data only. Nothing about the baseline itself was changed — three features, same signs, same majority vote — only how its thresholds are computed and which days are used to test it.</p>
+
+<h2 id="files">Files changed</h2>
+<table>
+<tr><th>File</th><th>Status</th><th>What it does</th></tr>
+<tr><td><code>market_transition/direction_dataset.py</code></td><td><span class="tag new">NEW</span></td><td>Builds the ≤14:59 decision-side row (underlying checkpoints, option checkpoints, last-10-minute option trajectory, decision state) and the ≥15:00 outcome row, as two separate functions merged only once. Reuses <code>compute_snapshot_features</code>, <code>compute_vwap</code>, <code>compute_volume_profile</code> unmodified.</td></tr>
+<tr><td><code>market_transition/direction_baseline.py</code></td><td><span class="tag new">NEW</span></td><td>The frozen 3-feature vote (PCR OI, call/put volume imbalance, ATM straddle change), the exact chronological date-range split, Training-only median fitting, and the accuracy/precision/confusion-matrix evaluator.</td></tr>
+<tr><td><code>scripts/run_milestone11a.py</code></td><td><span class="tag new">NEW</span></td><td>Orchestrator: reads Postgres (read-only), builds the dataset for both symbols, fits/evaluates, writes a versioned pickle + JSON report + per-day audit CSV to <code>data/cache/</code> (gitignored, regenerable — not committed).</td></tr>
+<tr><td><code>db/reader.py</code></td><td><span class="tag mod">MODIFIED</span> (additive)</td><td>+22 lines. Added one new function, <code>load_actual_outcome_all_horizons()</code> — every existing function and line is untouched (see diff below).</td></tr>
+<tr><td><code>tests/test_direction_dataset.py</code></td><td><span class="tag new">NEW</span></td><td>18 tests: feature construction, and the C/D/G leakage guarantees.</td></tr>
+<tr><td><code>tests/test_direction_baseline.py</code></td><td><span class="tag new">NEW</span></td><td>15 tests: split boundaries, threshold fitting, vote signs, evaluation arithmetic.</td></tr>
+<tr><td><code>tests/test_milestone11a_leakage.py</code></td><td><span class="tag new">NEW</span></td><td>7 tests, one named per spec leakage item (A–G) for direct traceability.</td></tr>
+</table>
+
+<h3>The only change to an existing file — <code>db/reader.py</code></h3>
+<pre>def load_actual_outcome_all_horizons(symbol: str, session_date: date) -&gt; dict[int, dict]:
+    """All persisted transition_actual_outcome rows (every horizon: 1/5/10/15
+    minutes) for `symbol`/`session_date`, keyed by horizon_minutes -- used by
+    scripts/run_milestone11a.py to build the post-cutoff (&gt;=15:00) outcome
+    half of the Milestone 11A research dataset. Read-only; never called by
+    anything that also touches pre-cutoff (&lt;=14:59) data, so it cannot be a
+    leakage vector on its own."""
+    rows = fetch_all(
+        f"SELECT {', '.join(_ACTUAL_OUTCOME_ALL_COLUMNS)} FROM transition_actual_outcome "
+        "WHERE symbol = %s AND session_date = %s ORDER BY horizon_minutes",
+        (symbol, session_date),
+    )
+    result = {}
+    for r in rows:
+        d = dict(zip(_ACTUAL_OUTCOME_ALL_COLUMNS, r))
+        result[d["horizon_minutes"]] = d
+    return result</pre>
+<p>A pure <code>SELECT</code>, no writes, added alongside the existing (unmodified) <code>load_actual_outcome()</code>.</p>
+
+<h2 id="design">Design: how leakage is prevented</h2>
+<ul>
+<li><b>Two physically separate builders.</b> <code>build_pre_cutoff_features()</code> only ever calls the DB with cutoff times ≤14:59:00 (enforced by <code>db.reader.get_option_chain_raw_near</code>'s own SQL filter, and separately by this module's fixed 8-checkpoint/10-trajectory-minute constant lists — neither list contains a time past 14:59). <code>build_post_cutoff_outcomes()</code> takes no candle or option data at all — only already-fetched outcome rows — so it has no path by which pre-cutoff data could leak in.</li>
+<li><b>Column-namespace collision guard.</b> <code>merge_pre_post()</code> raises if any key overlaps between the two halves — the `under_`/`opt_`/`traj_` and `actual_` prefixes are disjoint by construction.</li>
+<li><b>Training-only thresholds.</b> <code>fit_thresholds()</code> only ever sees the exact list it's handed — the orchestrator passes it <code>df[tier=="training"]</code> and nothing else; Validation and Test are scored with that same frozen dict, never re-fit.</li>
+<li><b>Real bug caught during this build:</b> <code>get_option_chain_raw_near</code> falls back to the latest snapshot at/before 14:59 no matter how much earlier in the day that is. Two days (NIFTY/SENSEX 08-18, NIFTY/SENSEX 08-26) had no real 14:30–15:15 option capture, and would have silently scored using a stale snapshot (one over 2 hours old) mislabeled as "the 14:59 state." Added a staleness check (<code>opt_1459_stale</code>, &gt;180s old) and excluded those 4 symbol-days rather than fabricating a decision from stale data — this exactly reproduces Milestone 10.5's independently-measured "46 of 50 usable" finding.</li>
+</ul>
+
+<h2 id="tests">Test coverage</h2>
+<table>
+<tr><th>Suite</th><th>Result</th></tr>
+<tr><td>Full existing repo test suite (pre-existing, unaffected)</td><td><span class="tag pass">438 passed</span></td></tr>
+<tr><td>New Milestone 11A tests (33 + 7 leakage-checklist)</td><td><span class="tag pass">40 passed</span></td></tr>
+<tr><td><b>Total</b></td><td><span class="tag pass">447 passed, 0 failed</span></td></tr>
+</table>
+<p>Leakage checklist (spec Section 15, items A–G) — every item has its own named test in <code>test_milestone11a_leakage.py</code>: <b>all 7 PASS.</b></p>
+<p>Reproducibility verified directly: ran the orchestrator script twice back-to-back and diffed the JSON report byte-for-byte — <b>identical.</b> No dependency on system time or any non-deterministic source.</p>
+
+<h2 id="results">Headline results (research findings, not a code-review item)</h2>
+<table>
+<tr><th>Tier</th><th>N</th><th>Accuracy</th><th>Majority-class floor</th></tr>
+<tr><td>Training (fit only, not scored)</td><td>28</td><td>—</td><td>—</td></tr>
+<tr><td>Validation</td><td>10</td><td><b>70.0%</b></td><td>50.0%</td></tr>
+<tr><td>Test (locked, evaluated once)</td><td>8</td><td><b>62.5%</b></td><td>62.5% <i>(tied)</i></td></tr>
+</table>
+<div class="finding">Validation beat its own chance floor by a wide margin; Test exactly matched a trivial "always guess the majority class" baseline. Both N are small enough that neither result should be read as proof of a stable edge — full interpretation and the PROCEED_TO_INCREMENTAL_FEATURES recommendation (with caveats) is in the chat completion report already delivered.</div>
+
+<h2 id="next">What happens on commit</h2>
+<p>This commit adds new, additive-only research code — no existing behavior changes except one new read-only DB function. The dataset/report/audit artifacts it produces live under the gitignored <code>data/cache/</code> and are <b>not</b> part of the commit (regenerable by re-running <code>scripts/run_milestone11a.py</code>). Per the milestone's own stop condition, no Milestone 11B work (incremental features, strike selection, opportunity scoring, UI, production logic) is included here.</p>
+
+<footer>Milestone 11A change review — generated 2026-09-09 · Branch market-transition-cas-analysis</footer>
+</body>
+</html>

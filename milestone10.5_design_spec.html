@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Milestone 10.5 Design Spec</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1000px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.3em;color:#1a3a5c;margin-top:2.4em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.05em;color:#2c3e50;margin-top:1.6em}
+ table{border-collapse:collapse;width:100%;margin:14px 0;font-size:0.9em}
+ th,td{border:1px solid #ccc;padding:6px 9px;text-align:left}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75em;font-weight:bold;color:#fff}
+ .strong{background:#2e7d32}.moderate{background:#f9a825;color:#222}.weak{background:#ef6c00}
+ .research{background:#8e8e8e}.insufficient{background:#c62828}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.88em}
+ .toc a{display:block;margin:3px 0;color:#1a3a5c;text-decoration:none}
+ .toc a:hover{text-decoration:underline}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+ ol.big li, ul.big li{margin:6px 0}
+</style>
+</head>
+<body>
+
+<h1>Milestone 10.5 — Transition Data &amp; Validation Design<br><span style="font-size:0.6em;font-weight:normal;color:#555">Preparing the dataset and methodology for Milestone 11 (Out-of-Sample 2:59 Direction + Option Opportunity Engine)</span></h1>
+
+<p><b>Status:</b> Design and data-inspection only. No production code, schema, UI, API, or forecasting logic was modified. Every number below is a direct query result or a computation over a direct query result — nothing is fabricated or assumed. This document is a specification for Milestone 11, not an implementation of it.</p>
+
+<div class="toc">
+<b>Contents</b>
+<a href="#t1">Task 1 — Data Availability</a>
+<a href="#t2">Task 2 — Live Capture Recommendation</a>
+<a href="#t3">Task 3 — Research Dataset Design</a>
+<a href="#t4">Task 4 — Walk-Forward Validation Design</a>
+<a href="#t5">Task 5 — Direction Baseline &amp; Incremental Features</a>
+<a href="#t6">Task 6 — Option Opportunity Dataset</a>
+<a href="#t7">Task 7 — Strike Selection Research</a>
+<a href="#t8">Task 8 — Expected Move → Option Opportunity</a>
+<a href="#t9">Task 9 — NO-TRADE Conditions</a>
+<a href="#t10">Task 10 — Final Deliverable &amp; Readiness Answer</a>
+</div>
+
+<h2 id="t1">Task 1 — Data Availability (measured, not assumed)</h2>
+
+<h3>Complete symbol-days</h3>
+<table><tr><th>Symbol</th><th>Trading days</th><th>Candles/day (mean)</th><th>Min candles/day</th><th>Complete days (open+close+≥350 candles)</th></tr>
+<tr><td>NIFTY</td><td>25</td><td>384.2</td><td>375</td><td>25 / 25</td></tr>
+<tr><td>SENSEX</td><td>25</td><td>384.2</td><td>375</td><td>25 / 25</td></tr></table>
+<p>All 50 symbol-days of underlying 1-minute candle data (2026-08-03 → 2026-09-04) are complete. No fabrication needed here.</p>
+
+<h3>Option-chain coverage by minute, 14:30–15:15</h3>
+<table><tr><th>Metric</th><th>NIFTY</th><th>SENSEX</th></tr>
+<tr><td>Symbol-days with any option data</td><td>23</td><td>23</td></tr>
+<tr><td>Mean minute-coverage %</td><td>99.9%</td><td>99.8%</td></tr>
+<tr><td>Days at 100% coverage</td><td colspan="2">43 / 46 combined</td></tr>
+<tr><td>Days at ≥90% coverage</td><td colspan="2">46 / 46 (all)</td></tr>
+<tr><td>Worst day</td><td colspan="2">97.8% (1 of 46 target minutes missing) — occurred on 3 symbol-days: NIFTY 08-24, SENSEX 08-24, SENSEX 08-27</td></tr></table>
+<div class="finding">Coverage in the 14:30–15:15 window is excellent — effectively complete. This is a materially stronger starting position than Milestone 10 assumed (which treated the window as "dense but not verified minute-by-minute").</div>
+
+<h3>Full-day option capture (new finding, not previously checked)</h3>
+<p>Querying <code>option_chain_raw</code> across the entire session (not just 14:30–15:15) shows live fetches spanning 09:15 through ~15:27 every trading day, roughly 1/minute throughout (17,134 rows total across 09:00–16:00 hour buckets, roughly 1,500–2,900 rows/hour). <b>The live pipeline already captures option-chain snapshots at ~1-minute density for the entire session</b>, not just the post-2:30pm window — this materially changes the Task 2 recommendation below.</p>
+
+<h3>Strikes per snapshot, ATM±5 availability</h3>
+<table><tr><th>Symbol</th><th>Mean strikes/snapshot (full chain)</th><th>Min</th></tr>
+<tr><td>NIFTY</td><td>232.8</td><td>223</td></tr>
+<tr><td>SENSEX</td><td>173.7</td><td>163</td></tr></table>
+<p>Every sampled snapshot carries far more than the 22 strikes (ATM±5, both legs) Milestone 10/11 need — ATM±5 availability is never a binding constraint in this sample.</p>
+
+<h3>Bid/ask, Greeks, IV, OI availability</h3>
+<table><tr><th>Field</th><th>Presence</th><th>Note</th></tr>
+<tr><td>Bid/ask price</td><td>100% (as <code>top_bid_price</code>/<code>top_ask_price</code>)</td><td>Raw payload has no <code>bid_price</code>/<code>ask_price</code> keys — naming is <code>top_bid_price</code>/<code>top_ask_price</code>, already correctly mapped by the Milestone 9 reconstruction code</td></tr>
+<tr><td>Bid or ask == 0 (ATM±5 window)</td><td>0.0% of 46,486 leg-rows</td><td>No zero-quote liquidity gaps in the ATM±5 candidate universe</td></tr>
+<tr><td>Implied volatility, OI, previous_oi, volume</td><td>100% structurally present</td><td>Key always exists; value can legitimately be 0 for OI/volume on illiquid far strikes (not checked in ATM±5, which showed no zero bid/ask)</td></tr>
+<tr><td>Greeks (delta/gamma/theta/vega)</td><td>94.7% non-degenerate overall</td><td>Degenerate (all-zero) concentrated in deep-ITM legs: 2.0% of ITM calls, <b>19.1% of ITM puts</b> — a real, disclosed data-quality quirk (likely Dhan not computing meaningful greeks for very deep ITM/illiquid puts), not something to silently patch over</td></tr>
+</table>
+
+<h3>Expiry coverage</h3>
+<table><tr><th>Symbol</th><th>Distinct expiries in sample</th><th>Days per expiry</th></tr>
+<tr><td>NIFTY</td><td>6 (weekly ladder: 08-04, 08-11, 08-18, 08-25, 09-01, 09-08)</td><td>2–5 days each</td></tr>
+<tr><td>SENSEX</td><td>6 (08-06, 08-13, 08-20, 08-27, 09-03, 09-10)</td><td>1–5 days each</td></tr></table>
+<div class="warn">Confirms Milestone 10's finding: no single expiry cell has enough days for a standalone expiry-specific conclusion. This does not change until several more months of data accumulate.</div>
+
+<h3>NIFTY vs SENSEX coverage</h3>
+<p>Perfectly balanced: 23 symbol-days each, same 23 calendar dates. No symbol-coverage skew to correct for.</p>
+
+<h2 id="t2">Task 2 — Live Capture Recommendation (hypothesis tested, not accepted)</h2>
+<div class="warn"><b>The initial hypothesis (5-min capture 14:30–14:49, 1-min capture 14:50–15:15) is REJECTED as a forward recommendation</b> — not because it's unsafe, but because it would be a <i>downgrade</i> from what the live pipeline already does for free. Task 1's full-day query shows option-chain snapshots are already being captured at ~1-minute density across the <i>entire</i> session (09:15–15:27), including 14:30–14:49. Deliberately coarsening to 5-minute capture in that sub-window would discard real, currently-free data with zero cost saved (no new Dhan calls are triggered either way — this is a resolution choice at the derivation/query layer, not the capture layer).</div>
+<p><b>Revised recommendation:</b></p>
+<ul class="big">
+<li><b>14:30–15:15 (and, per the full-day finding, the rest of the session too): keep 1-minute derivation resolution.</b> This is already happening at the capture layer — no pipeline change needed, only continuing to derive features at 1-minute density from what's already stored, as Milestone 9/10 already did.</li>
+<li><b>Where sparser sampling is genuinely fine (Milestone 10 Part 18 finding, re-confirmed structurally here):</b> PCR-based features are insensitive to sampling frequency (typical 1-min noise ≈ 0.001, 5-min staleness ≈ 0.002) — an analysis pipeline that only evaluates PCR at 5-min checkpoints loses essentially nothing. <b>IV skew and ATM straddle value are the two features that need the finer 1-minute resolution</b> to avoid understating their true intraday range (staleness roughly triples between 1-min and end-of-window-only sampling).</li>
+<li><b>No new Dhan API calls are needed for Milestone 11.</b> The recommendation is entirely about which resolution the <i>research/backtest layer</i> reads at — the capture layer is already sufficient and should not be touched.</li>
+</ul>
+
+<h2 id="t3">Task 3 — Research Dataset Design (specification, no permanent table)</h2>
+<p>Proposed as a single wide, versioned <b>pickled DataFrame per row-grain</b> (research artifact, not a DB table) — one row per symbol-day, keyed <code>(symbol, session_date, feature_version)</code>. Sections, each a column block:</p>
+<table>
+<tr><th>Section</th><th>Timestamp scope</th><th>Contents</th><th>Source (reused, unmodified)</th></tr>
+<tr><td><b>DECISION STATE @ 14:59</b></td><td>≤14:59:00 only</td><td><code>atm_strike</code>, <code>spot</code>, <code>expiry</code>, <code>expiry_type</code>, day-of-week, days-to-expiry</td><td><code>option_chain_raw</code>, <code>market_transition.expiry_calendar</code></td>
+<tr><td><b>UNDERLYING FEATURES</b></td><td>≤14:59:00 only</td><td>close, momentum (1/3/5/10/15min), VWAP distance, POC/VAH/VAL + 15-min migration, compression ratio, volume share — at all 8 checkpoints (14:30…14:59)</td><td><code>m10_underlying_features.py</code> (Milestone 10, reuses <code>analytics.vwap</code>/<code>analytics.volume_profile</code>)</td></tr>
+<tr><td><b>OPTIONS FEATURES</b></td><td>≤14:59:00 only</td><td>PCR (OI &amp; volume), call/put volume imbalance, IV skew, ATM straddle value/change, OI build-up/unwinding, position classification — at all 8 checkpoints</td><td><code>option_chain.snapshot_features</code> (Milestone 9, reused unmodified)</td></tr>
+<tr><td><b>1-MIN OPTION TRAJECTORY 14:50→14:59</b></td><td>≤14:59:00 only</td><td>10-point time series (not just start/end) of PCR, IV skew, straddle value, call/put volume imbalance — captures the last-10-minute <i>shape</i>, not just the level</td><td>New derived slice of the same reconstruction, no new capture</td></tr>
+<tr><td><b>ACTUAL UNDERLYING OUTCOME 15:00→15:14</b></td><td>≥15:00:00 only</td><td>direction, point move, pct move, MFE/MAE at horizons 1/5/10/15min</td><td><code>transition_actual_outcome</code> (reused unmodified)</td></tr>
+<tr><td><b>ACTUAL CE/PE RESPONSE 15:00→15:14</b></td><td>≥15:00:00 only</td><td>ATM±5 × {CE,PE}: entry ask (frozen at 14:59), bid path 15:00-15:15, return% at 4 exit checkpoints, MFE%/MAE%, entry greeks/IV/spread%</td><td><code>m10_option_opportunity.py</code> (Milestone 10, already built)</td></tr>
+</table>
+<div class="callout"><b>Strict timestamp separation, mechanically enforced:</b> every "FEATURES"/"DECISION STATE"/"TRAJECTORY" column is computed from data timestamped ≤14:59:00; every "ACTUAL OUTCOME"/"ACTUAL RESPONSE" column from data timestamped ≥15:00:00. The dataset builder should carry this as two physically separate build functions (mirrors <code>cutoff.py</code>'s role in the unmerged Quant Feature Store branch) so a future edit cannot accidentally let a post-3pm column leak into the pre-3pm half — the same discipline already proven via <code>tests/test_cas_forecast_no_leakage.py</code>'s truncate-vs-extended bit-identical pattern.</div>
+<p><b>No permanent table proposed.</b> At N=46-50 rows this is comfortably a pickle/parquet file regenerated by a scratchpad script; a real table only becomes worth proposing once Milestone 11 is validated and a live-scoring use case exists — and per the milestone's own instruction, that would be flagged and stopped on for review, not built silently.</p>
+
+<h2 id="t4">Task 4 — Walk-Forward Validation Design</h2>
+<div class="warn">Milestone 10's 58.7% options-only accuracy was computed <b>in-sample</b> — the median thresholds that define "vote up" were fit using all 46 days, including the same days being scored. <b>This number must now be relabeled a discovery-set baseline, not a validated result</b>, exactly as this milestone's brief requires.</div>
+<h3>Chronological split (23 unique trading dates, 46 symbol-days, both symbols share every date)</h3>
+<table><tr><th>Tier</th><th>Dates</th><th>Symbol-days</th><th>Purpose</th></tr>
+<tr><td><b>Training</b></td><td>2026-08-03 → 2026-08-21 (14 dates)</td><td>28</td><td>Fit baseline thresholds (medians) and evaluate each candidate incremental feature's raw effect</td></tr>
+<tr><td><b>Validation</b></td><td>2026-08-24 → 2026-08-31 (5 dates)</td><td>10</td><td>Decide, one feature at a time, whether each Task-5 candidate feature is <i>kept</i> in the model — thresholds still come only from Training</td></tr>
+<tr><td><b>Test (held out, touched once)</b></td><td>2026-09-01 → 2026-09-04 (4 dates)</td><td>8</td><td>Final, single evaluation of the locked model — no further tuning after this is seen</td></tr>
+</table>
+<div class="callout"><b>Every threshold (medians, etc.) used to score a Validation or Test day must be computed using only Training-tier data</b> — this is the one concrete mechanical fix from Milestone 10's in-sample number. A day's own value is never used to help classify itself.</div>
+<h3>Honest caveat on statistical power</h3>
+<p>An 8-day test set means even a genuinely 60%-accurate model could show anywhere from ~25% to ~90% accuracy on Test purely from binomial sampling noise at this N. <b>A single Test-tier accuracy number from Milestone 11 must not be treated as conclusive</b> — it's a necessary discipline step (avoids re-using Training data to grade the final model), not a claim that 8 or 10 days is enough to prove or disprove the model.</p>
+<h3>Path to real walk-forward (once N grows)</h3>
+<p>A true expanding-window walk-forward (retrain thresholds after every new day, test on the next single day, roll forward) is the more statistically honest design long-term, and is exactly how the <code>market_transition/scoring.py::find_analogs</code> k-NN engine could naturally operate day-by-day. It's not proposed as Milestone 11's primary method because with daily granularity and only 46 days, each "fold" would be a single test day — too noisy to interpret in isolation, and no better than the static Test tier above at this sample size. <b>Recommendation: adopt the static 3-way split now; switch to rolling walk-forward once the option-covered sample passes roughly 90–120 symbol-days (4–6 more months of live capture)</b> — a concrete, sample-size-justified trigger rather than an arbitrary later date.</p>
+
+<h2 id="t5">Task 5 — Direction Baseline &amp; Incremental Feature Plan</h2>
+<h3>Frozen baseline (exact definition, not to be modified)</h3>
+<table><tr><th>Feature</th><th>Vote sign</th><th>Rule</th></tr>
+<tr><td>PCR (OI)</td><td>−1</td><td>vote UP if <code>pcr_oi &lt; median(pcr_oi | Training)</code></td></tr>
+<tr><td>Call/Put volume imbalance</td><td>+1</td><td>vote UP if value &gt; Training median</td></tr>
+<tr><td>ATM straddle change</td><td>+1</td><td>vote UP if value &gt; Training median</td></tr>
+</table>
+<p>Final call = majority sign of the three votes (matches Milestone 10's Model B exactly, with the one leakage fix: medians from Training only).</p>
+<h3>Incremental feature-testing plan</h3>
+<p>Each candidate is added to the frozen baseline <b>one at a time</b>, scored on Validation only (thresholds still fit on Training), and kept only if it improves Validation accuracy over the frozen 3-feature baseline. Order reflects Milestone 10's own evidence (strongest prior signal first):</p>
+<ol class="big">
+<li><b>IV skew</b> — Milestone 10 Part 6 showed this is the one feature that meaningfully sharpens near 14:59; test whether adding it improves on the (early-and-stable) PCR-driven baseline.</li>
+<li><b>1-minute option-state changes (trajectory features from Task 3's new 14:50→14:59 slice)</b> — tests whether the <i>shape</i> of the last 10 minutes (accelerating vs. decelerating PCR/IV) adds information beyond a single 14:59 level.</li>
+<li><b>Price/options divergence flag</b> (Milestone 10 Part 10: agree vs. disagree) — tests whether explicitly modeling the 70%-of-days divergence case (where options-vote alone was right 59.4% of the time) beats implicitly ignoring it.</li>
+<li><b>OI change, PCR change, straddle-change trajectory</b> — incremental versions of already-used levels; tests whether the <i>rate of change</i> adds signal beyond the level.</li>
+<li><b>Position classification</b> (BULLISH/BEARISH/NEUTRAL/MIXED/RAPIDLY_CHANGING, Milestone 9) — tests whether the categorical synthesis label adds anything beyond its own inputs.</li>
+<li><b>Expiry regime</b> (weekly vs. monthly) — given Task 1's confirmed thin per-expiry N, expect this to be flagged INSUFFICIENT DATA rather than accepted or rejected outright.</li>
+</ol>
+<p>A feature that fails to improve Validation accuracy is <b>dropped, not forced in</b> — matching Milestone 10's own finding that combining features can hurt (Model C underperformed Model B).</p>
+
+<h2 id="t6">Task 6 — Option Opportunity Dataset Specification</h2>
+<p>Universe: ATM±5 strikes × {CE, PE} = 22 candidates per symbol-day, exactly as Milestone 10 built. Fields to capture at the 14:59 decision point (already present or one-line-derivable from existing reconstructed columns — verified, not assumed):</p>
+<table><tr><th>Field</th><th>Status</th></tr>
+<tr><td>LTP, ASK, BID, volume, OI, OI change, IV, delta, gamma, theta, vega</td><td>Already captured (Milestone 9/10 reconstruction)</td></tr>
+<tr><td>Spread (ask−bid), spread % (of ask)</td><td>Already computed in Milestone 10's <code>entry_spread_pct</code>; raw spread is a one-line derivation, not yet materialized as its own column</td></tr>
+<tr><td>Moneyness, distance from spot</td><td>Directly derivable from <code>strike</code>, <code>atm_strike</code>/<code>spot</code>, and <code>atm_offset</code> already present — not yet materialized as named columns</td></tr>
+<tr><td>Expiry</td><td>Already captured per symbol-day</td></tr>
+</table>
+<p><b>Realistic pricing rule (already enforced in Milestone 10, carried forward unchanged):</b> entry = ASK at 14:59:00 (frozen, never re-read after the decision point); exit = BID at each later minute. No candidate selection may reference any price after 14:59:00 — the entry snapshot is the only information available to a Milestone 11 selection rule.</p>
+
+<h2 id="t7">Task 7 — Strike Selection Research (bucketed, symbol-specific, no cross-symbol rule imposed)</h2>
+<p>Re-bucketed Milestone 10's existing backtest (correct-side trades, exit 15:14) into the 7 requested tiers, adding MFE/MAE-derived risk/reward and spread-based liquidity — computed directly, not assumed:</p>
+<table><tr><th>Symbol</th><th>Bucket</th><th>N</th><th>Mean return</th><th>Win rate</th><th>Mean MFE</th><th>Mean MAE</th><th>Mean spread%</th><th>Risk/Reward (MFE/|MAE|)</th></tr>
+<tr><td>NIFTY</td><td>Deep ITM</td><td>46</td><td>1.89%</td><td>63%</td><td>9.95</td><td>−6.27</td><td>0.92%</td><td>1.59</td></tr>
+<tr><td>NIFTY</td><td>ITM</td><td>46</td><td>1.49%</td><td>65%</td><td>7.67</td><td>−8.12</td><td>0.42%</td><td>0.94</td></tr>
+<tr><td>NIFTY</td><td>Slight ITM</td><td>23</td><td>0.95%</td><td>65%</td><td>6.44</td><td>−9.06</td><td>0.29%</td><td>0.71</td></tr>
+<tr><td>NIFTY</td><td>ATM</td><td>23</td><td>1.60%</td><td>61%</td><td>6.90</td><td>−8.64</td><td>0.22%</td><td>0.80</td></tr>
+<tr><td>NIFTY</td><td>Slight OTM</td><td>23</td><td>1.98%</td><td>61%</td><td>7.21</td><td>−8.26</td><td>0.25%</td><td>0.87</td></tr>
+<tr><td>NIFTY</td><td>OTM</td><td>46</td><td>2.37%</td><td>61%</td><td>7.92</td><td>−7.62</td><td>0.45%</td><td>1.04</td></tr>
+<tr><td>NIFTY</td><td>Deep OTM</td><td>46</td><td>4.06%</td><td>65%</td><td>9.00</td><td>−5.29</td><td>0.95%</td><td>1.70</td></tr>
+<tr><td>SENSEX</td><td>Deep ITM</td><td>46</td><td>4.91%</td><td>72%</td><td>11.19</td><td>−6.16</td><td>0.43%</td><td>1.82</td></tr>
+<tr><td>SENSEX</td><td>ITM</td><td>46</td><td>5.72%</td><td>65%</td><td>13.35</td><td>−6.22</td><td>0.31%</td><td>2.15</td></tr>
+<tr><td>SENSEX</td><td>Slight ITM</td><td>23</td><td>4.80%</td><td>61%</td><td>12.87</td><td>−6.75</td><td>0.26%</td><td>1.91</td></tr>
+<tr><td>SENSEX</td><td>ATM</td><td>23</td><td>3.25%</td><td>57%</td><td>11.64</td><td>−7.46</td><td>0.22%</td><td>1.56</td></tr>
+<tr><td>SENSEX</td><td>Slight OTM</td><td>23</td><td>2.30%</td><td>52%</td><td>10.81</td><td>−7.73</td><td>0.23%</td><td>1.40</td></tr>
+<tr><td>SENSEX</td><td>OTM</td><td>46</td><td>2.46%</td><td>57%</td><td>9.79</td><td>−7.57</td><td>0.25%</td><td>1.29</td></tr>
+<tr><td>SENSEX</td><td>Deep OTM</td><td>46</td><td>2.52%</td><td>52%</td><td>7.94</td><td>−7.50</td><td>0.31%</td><td>1.06</td></tr>
+</table>
+<div class="warn"><b>Explicitly not concluding "NIFTY=OTM" or "SENSEX=ITM":</b> the two symbols show <i>opposite-shaped</i> patterns across the bucket range — NIFTY's risk/reward is roughly U-shaped (best at both extremes, worst near ATM), while SENSEX's declines fairly monotonically from ITM (best, 2.15) to deep OTM (worst, 1.06). This is a genuinely interesting, honestly-reported divergence between the two symbols, but the effective independent N per bucket is 23–46 <i>candidate-instances drawn from only 23 underlying symbol-days</i> (per this task's own instruction on independence) — <span class="tag research">RESEARCH ONLY</span>, not a rule to encode into any selection logic yet. Liquidity (spread%) is best (lowest) near ATM and worsens toward both deep-ITM and deep-OTM extremes for both symbols — a more consistent, believable pattern given it reflects market-making behavior rather than a 23-day-sample directional accident.</div>
+
+<h2 id="t8">Task 8 — Expected Move → Option Opportunity Methodology</h2>
+<p>Conceptual scoring design (not implemented): given the existing unified forecast's <code>probability_up</code>/<code>probability_down</code>/<code>probability_flat</code> and <code>expected_move_low/high</code> (Milestone 9, reused read-only, never modified), score each ATM±5 candidate by:</p>
+<div class="callout" style="font-family:Consolas,monospace;font-size:0.85em;white-space:pre-wrap">opportunity_score(candidate) =
+    P(favorable direction)                         # from the unified forecast, not re-derived
+  × expected_intrinsic_gain(expected_move, candidate.delta, candidate.strike)   # linear delta-approximation of payoff at the expected move
+  − theta_decay_cost(candidate.theta, holding_minutes=15)                       # known, deterministic cost over the 15-min horizon
+  − iv_crush_risk(candidate.vega, iv_regime)                                    # only a qualitative flag today -- no historical IV-crush-at-3pm study exists yet
+  − spread_cost_pct(candidate.spread_pct)                                      # realistic round-trip execution cost
+  , gated to zero whenever liquidity/data-quality checks (Task 9) fail</div>
+<p>This is a <b>documented, interpretable heuristic formula</b> to be back-tested against Task 6/7's dataset in Milestone 11 — not a fitted model, per this project's established stance on small-sample research. Its inputs (delta, theta, vega, IV, spread, premium, moneyness, liquidity) are all already captured; what's new is the combination formula itself, which must be validated exactly like Task 5's incremental features (Training→Validation→Test), not accepted on inspection.</p>
+
+<h2 id="t9">Task 9 — NO-TRADE Framework</h2>
+<p>Explicit, checkable conditions (any one triggers NO TRADE — matches Milestone 10's own finding that blind option-buying loses money on average):</p>
+<table><tr><th>Condition</th><th>Concrete threshold (research default, tunable)</th><th>Basis</th></tr>
+<tr><td>Weak directional probability</td><td><code>max(P_up, P_down) − second &lt; 0.15</code></td><td>Reuses the existing <code>NO_CLEAR_EDGE_MARGIN</code> convention from Milestone 9's verdict logic</td></tr>
+<tr><td>Conflicting evidence</td><td>Underlying-vote and options-vote disagree (Task 5's divergence flag) AND neither model's own confidence clears MODERATE</td><td>Milestone 10 Part 10: 70% of days diverge; divergence alone isn't disqualifying, but divergence + weak confidence is</td></tr>
+<tr><td>Thin analog sample</td><td><code>n_analogs &lt; 10</code></td><td>Existing <code>MIN_ANALOGS</code>-style convention in <code>market_transition/scoring.py</code></td></tr>
+<tr><td>Insufficient option liquidity</td><td>Fewer than 11 strikes/leg present within ATM±5, or entry ask == 0</td><td>Task 1's data-quality findings</td></tr>
+<tr><td>Large spread</td><td><code>spread_pct &gt; 1.0%</code> (deep ITM/OTM buckets in Task 7 averaged 0.4–1.0%; near-ATM averaged 0.2–0.3%)</td><td>Task 7's own measured spread pattern</td></tr>
+<tr><td>Expected underlying move too small</td><td><code>|expected_move| &lt; 0.3 × ATR_14</code></td><td>Mirrors Phase 7A's <code>MAGNITUDE_TIER_ATR_THRESHOLDS</code> lowest bound</td></tr>
+<tr><td>Option expected return unattractive</td><td><code>opportunity_score(best candidate) ≤ 0</code> (Task 8 formula)</td><td>Direct gate on the Task 8 score</td></tr>
+<tr><td>Data stale/incomplete</td><td>Option snapshot &gt;2 minutes old at 14:59, or any required feature is null</td><td>Mirrors Milestone 9's GOOD/DEGRADED/INSUFFICIENT data-quality tiers</td></tr>
+</table>
+<p>NO TRADE is a first-class, expected output — Task 9's own framing and Milestone 10's Part 16 findings agree this should be the <i>common</i> answer at this stage of validation, not an edge case.</p>
+
+<h2 id="t10">Task 10 — Final Deliverable Summary</h2>
+<ol class="big">
+<li><b>Data-readiness report:</b> Task 1 above — underlying data 100% complete (50/50 symbol-days); option data 46/50 symbol-days usable, ≥90% minute-complete in every case; ATM±5/bid-ask/IV/OI structurally always present; greeks degenerate on ~19% of deep-ITM puts (disclosed, not fixed); expiry cells still too thin for a standalone conclusion.</li>
+<li><b>Recommended capture frequency:</b> Task 2 — keep 1-minute derivation resolution throughout the session (already the case at the capture layer, zero new cost); no case found for coarsening any part of 14:30–15:15 to 5-minute.</li>
+<li><b>Research dataset specification:</b> Task 3 — a single versioned pickle, two physically separate build paths (pre-14:59 features vs. post-15:00 outcomes) to make timestamp leakage structurally hard to introduce.</li>
+<li><b>Walk-forward validation methodology:</b> Task 4 — static chronological 28/10/8 symbol-day Training/Validation/Test split now; graduate to a rolling expanding-window design once the option-covered sample passes ~90–120 symbol-days.</li>
+<li><b>Direction baseline specification:</b> Task 5 — Milestone 10's exact 3-feature median-split vote, frozen, re-fit only on Training-tier medians (the one concrete leakage correction).</li>
+<li><b>Incremental feature-testing plan:</b> Task 5 — 6 candidates, tested one at a time against Validation, kept only on demonstrated improvement.</li>
+<li><b>Option candidate specification:</b> Task 6 — ATM±5 × {CE,PE}, ask-entry/bid-exit, all needed fields already captured or one-line derivable.</li>
+<li><b>Strike-selection methodology:</b> Task 7 — 7-bucket structure, return/win-rate/MFE/MAE/spread/risk-reward per symbol; NIFTY and SENSEX show opposite-shaped patterns — reported, not resolved into a rule.</li>
+<li><b>Expected-move-to-option methodology:</b> Task 8 — a documented, interpretable opportunity-score formula combining the existing forecast's probabilities/expected-move with delta/theta/vega/IV/spread — to be validated, not assumed.</li>
+<li><b>NO-TRADE framework:</b> Task 9 — 8 explicit, checkable conditions, each tied to a concrete threshold and a specific piece of already-measured evidence.</li>
+<li><b>Milestone 11 implementation plan (order of build):</b>
+  <ol>
+   <li>Build the Task 3 research dataset (pure derivation from already-reconstructed Milestone 9/10 pickles + one new 14:50→14:59 trajectory slice) — no new DB reads beyond what Milestone 10 already queries.</li>
+   <li>Implement the Task 4 chronological split and re-fit the Task 5 baseline's thresholds on Training only; report the corrected (no-longer-in-sample) accuracy on Validation as the first real result.</li>
+   <li>Run the Task 5 incremental-feature loop against Validation, one feature at a time; lock the final feature set.</li>
+   <li>Evaluate the locked model on Test exactly once; report the result with its (wide, small-N) confidence caveat explicit.</li>
+   <li>Only then build the Task 6/7/8 option-opportunity scoring on top of whichever direction signal survived Test — scoring an option candidate before the direction signal is validated would be building on an unvalidated foundation.</li>
+   <li>Wire in the Task 9 NO-TRADE gate last, since it depends on thresholds (analog depth, spread, opportunity score) that only exist once steps 1–5 are complete.</li>
+  </ol>
+</li>
+</ol>
+
+<h2 style="border:none;color:#c62828">Final Question</h2>
+<p><b>Are we ready to implement Milestone 11, and exactly what should be implemented first?</b></p>
+<div class="warn">
+<p><b>Yes, ready to implement — but only the first three steps of the plan above, not the whole engine at once.</b> The data is genuinely sufficient to attempt a proper out-of-sample test (Task 1 found no material data gap that would block it), and Milestone 10 already produced a specific, falsifiable baseline (58.7% options-only vote) worth re-testing honestly. But that baseline has never been evaluated out-of-sample, and everything downstream — strike selection, the opportunity score, the NO-TRADE gate — depends on knowing whether it survives that test.</p>
+<p><b>Build first, and only:</b> the Task 3 dataset + the Task 4 chronological split + a Training-only re-fit of the Task 5 baseline, reporting its Validation-tier accuracy. That single number is the actual pivot point for this whole research line — if the baseline holds up out-of-sample (even at a reduced accuracy), the incremental-feature and option-opportunity work is worth doing; if it collapses toward 50% out-of-sample, that is itself the most important, honest finding Milestone 11 could produce, and building the option-opportunity engine on top of a signal that doesn't survive its first out-of-sample test would not be a responsible next step.</p>
+</div>
+
+<footer>Milestone 10.5 design report — generated 2026-09-07 · Scratchpad-only analysis, no production changes · NIFTY/SENSEX, 2026-08-03 to 2026-09-04</footer>
+</body>
+</html>

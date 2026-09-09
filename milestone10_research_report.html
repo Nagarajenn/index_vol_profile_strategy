@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Milestone 10: 2:59 PM Decision-Framework Research</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:980px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.3em;color:#1a3a5c;margin-top:2.4em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.05em;color:#2c3e50;margin-top:1.6em}
+ table{border-collapse:collapse;width:100%;margin:14px 0;font-size:0.92em}
+ th,td{border:1px solid #ccc;padding:6px 9px;text-align:left}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.75em;font-weight:bold;color:#fff}
+ .strong{background:#2e7d32}.moderate{background:#f9a825;color:#222}.weak{background:#ef6c00}
+ .research{background:#8e8e8e}.insufficient{background:#c62828}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.9em}
+ .toc a{display:block;margin:3px 0;color:#1a3a5c;text-decoration:none}
+ .toc a:hover{text-decoration:underline}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+</style>
+</head>
+<body>
+
+<h1>Milestone 10 — Research Discovery Report<br><span style="font-size:0.6em;font-weight:normal;color:#555">Could a 2:59 PM decision framework anticipate the 3:00–3:15 PM move and select a favorable option?</span></h1>
+
+<p><b>Status:</b> Read-only research. No production code, schema, UI, or forecasting logic was modified. No new Dhan API calls were made — every number below was derived from data already captured (<code>raw_candles</code>, <code>option_chain_raw</code>, <code>transition_actual_outcome</code>). All analysis lives in the scratchpad only.</p>
+<p><b>Sample:</b> NIFTY + SENSEX, CAS-era trading days 2026-08-03 → 2026-09-04 (25 trading days/symbol, 50 symbol-days total; 46 symbol-days have usable 1-minute option-chain coverage in the 14:30–15:15 window).</p>
+
+<div class="warn"><b>Headline, stated plainly up front:</b> with ~46–50 symbol-days of data, nothing in this report reaches a level of evidence that would justify an unattended trading rule. The single most useful, reproducible signal found is a modest (58.7% accuracy, N=46) options-only directional vote — better than chance, far from reliable. The honest recommendation is <b>WAIT (accumulate more data)</b>, not BUY CE / BUY PE, as the default answer today. Full reasoning below.</div>
+
+<div class="toc">
+<b>Contents</b>
+<a href="#inventory">1–2. Data Inventory &amp; Leakage Rule</a>
+<a href="#underlying">3–4. Underlying Engine &amp; 2:59 State Vector</a>
+<a href="#optionrecon">5–6. Option Reconstruction &amp; Micro-Timescale Study</a>
+<a href="#outcome">7. Actual Outcome Definition</a>
+<a href="#forecast">8–9. Underlying &amp; Combined Forecast Research</a>
+<a href="#divergence">10. Divergence Study</a>
+<a href="#opportunity">11–17. Option Opportunity Engine</a>
+<a href="#sampling">18. Sampling-Frequency Recommendation</a>
+<a href="#splits">19–20. Expiry &amp; NIFTY-vs-SENSEX Splits</a>
+<a href="#discipline">21–22. Statistical Discipline &amp; Robustness</a>
+<a href="#framework">23. Conceptual 2:59 Decision Framework</a>
+<a href="#final">24–26. Final Report, Answer Table, Compliance</a>
+<a href="#question">Final Question — Candid Answer</a>
+</div>
+
+<h2 id="inventory">Parts 1–2 — Data Inventory &amp; Leakage Rule</h2>
+<table>
+<tr><th>Source</th><th>Coverage</th><th>Granularity</th><th>Notes</th></tr>
+<tr><td><code>raw_candles</code></td><td>2026-08-03 → 2026-09-04, both symbols</td><td>1-minute</td><td>Full session 09:15–15:39, used for underlying features</td></tr>
+<tr><td><code>option_chain_raw</code></td><td>Same range, 14:30–15:15 window pulled</td><td>~1/minute (live tick density)</td><td>Full Dhan payload per strike already present — no new capture needed</td></tr>
+<tr><td><code>transition_actual_outcome</code></td><td>Same range</td><td>horizon=15 (15:00→15:14 close-to-close)</td><td>Reused unmodified from Milestone 9</td></tr>
+<tr><td><code>mti_cas_daily_transitions</code></td><td>Same range</td><td>Daily</td><td>expiry_type, post_direction reused for cross-checks</td></tr>
+</table>
+<p><b>Leakage rule enforced throughout:</b> every forecast-side feature is computed only from candles/option snapshots timestamped ≤14:59:00. The actual-outcome side uses only 15:00:00–15:14:00. No feature computation in this milestone reads across that boundary.</p>
+
+<h2 id="underlying">Parts 3–4 — Underlying Engine &amp; 2:59 Market-State Vector</h2>
+<p>Reused existing, unmodified <code>analytics.vwap.compute_vwap</code> and <code>analytics.volume_profile.compute_volume_profile</code> (bin size 5 for NIFTY, 25 for SENSEX — matches production convention), called at 8 checkpoints per day: 14:30/40/45/50/55/57/58/59. Computed per checkpoint: close, momentum (1/3/5/10/15-min), distance from session high/low, VWAP distance, POC/VAH/VAL + 15-min POC migration, cumulative &amp; trailing-15-min volume share, and a range-compression ratio (last-15-min range ÷ prior-15-min range).</p>
+<p>400 rows produced (50 symbol-days × 8 checkpoints). This <i>is</i> the underlying half of the "2:59 state vector" the milestone asked for — the 14:59 row of this table.</p>
+
+<h2 id="optionrecon">Parts 5–6 — Option Reconstruction &amp; Micro-Timescale Study</h2>
+<p>Reused Milestone 9's <code>option_chain.snapshot_features.compute_snapshot_features</code>/<code>extract_atm_window</code> <b>unmodified</b>, called once per available minute (not just the original 8 fixed checkpoints) across every <code>option_chain_raw</code> row 14:30–15:15. Produced 2,113 aggregate rows and 46,486 per-strike detail rows (ATM±5, both legs) — confirming Milestone 9's finding that 1-minute option-state reconstruction requires zero new Dhan calls.</p>
+<h3>Does "later is always better"? — tested directly, not assumed</h3>
+<table>
+<tr><th>Feature</th><th>14:30 separation (UP−DOWN median)</th><th>14:59 separation</th><th>Pattern</th></tr>
+<tr><td>PCR (OI)</td><td>−0.215</td><td>−0.167</td><td>Present from the open of the window; <b>narrows</b> slightly toward 3pm — the opposite of "later is better"</td></tr>
+<tr><td>IV skew</td><td>+0.120</td><td>−0.619 (peak −1.07 at 14:58)</td><td>Genuinely <b>develops late</b>, non-monotonically — noisy but real</td></tr>
+<tr><td>Call/Put volume imbalance</td><td>−0.020</td><td>−0.001</td><td>No meaningful separation at any checkpoint</td></tr>
+<tr><td>ATM straddle value</td><td>+49.6</td><td>+41.9</td><td>Roughly stable ~40–50pt gap throughout (UP days show consistently higher straddle value)</td></tr>
+</table>
+<div class="finding">Finding: the milestone's explicit "do not assume later is always better" caution is validated — PCR's informativeness is already present at 14:30 and doesn't sharpen; IV skew is the one feature that genuinely rewards waiting closer to 3pm. A single "check at T-X minutes" rule would be wrong for at least one of these two features. <span class="tag research">RESEARCH ONLY</span> N=43 (29 up / 14 down symbol-days).</div>
+
+<h2 id="outcome">Part 7 — Actual Underlying Outcome</h2>
+<p>Reused <code>transition_actual_outcome</code>, horizon=15 (native-minute close-to-close, 15:00→15:14 vs 14:59 baseline) — the same definition already reconciled in Milestone 9.5. N=50 symbol-days, all resolved directionally (up/down); zero "flat" 15-minute outcomes occurred among the 46 option-covered days in this sample.</p>
+
+<h2 id="forecast">Parts 8–9 — Underlying-Only, Options-Only, and Combined Forecast Research</h2>
+<p>All three "models" below are <b>simple, interpretable median-split majority votes</b> — never a fitted/trained model — per the spec's explicit preference for interpretable evidence over ML on a small sample.</p>
+<h3>Individual feature median-split hit rates (single feature vs. actual 15-min direction)</h3>
+<table>
+<tr><th>Feature</th><th>N</th><th>Hit rate</th></tr>
+<tr><td>POC migration (15-min)</td><td>50</td><td><b>0.60</b></td></tr>
+<tr><td>Compression ratio</td><td>50</td><td>0.58</td></tr>
+<tr><td>PCR (OI)</td><td>46</td><td><b>0.63</b> — best single feature found</td></tr>
+<tr><td>ATM straddle change</td><td>46</td><td>0.54</td></tr>
+<tr><td>15-min momentum</td><td>50</td><td>0.50 (chance)</td></tr>
+<tr><td>5-min momentum</td><td>50</td><td>0.46</td></tr>
+<tr><td>Call/Put volume imbalance</td><td>46</td><td>0.41 (worse than chance)</td></tr>
+<tr><td>VWAP distance</td><td>50</td><td>0.42 (worse than chance)</td></tr>
+</table>
+<h3>Model A (underlying-only vote: VWAP-dist + mom5 + mom15 + POC-migration)</h3>
+<p>N=50, <b>accuracy = 0.280</b> — worse than chance. Combining a good feature (POC migration, 0.60) with two weak/anti-informative ones (VWAP-dist, mom5) in an unweighted vote actively hurt performance. This is a concrete demonstration that "more features in a vote" is not automatically better on this sample size.</p>
+<h3>Model B (options-only vote: PCR + Call/Put volume imbalance + straddle change)</h3>
+<p>N=46, <b>accuracy = 0.587</b>, UP-precision 0.52, DOWN-precision 0.67 — <b>the best-performing model found in this milestone.</b></p>
+<h3>Model C (combined vote: A + B features together)</h3>
+<p>N=46, accuracy = 0.522 — <b>worse than Model B alone.</b> Directly answers the spec's "do not assume combining helps — show evidence": the evidence here says combining hurt, because Model A's weak features diluted Model B's real signal.</p>
+<div class="finding"><span class="tag moderate">MODERATE (single-model)</span> Model B (options-only) is the one candidate directional signal in this entire study that both beats chance and survived a naive-combination stress test. Confidence is capped at MODERATE, not STRONG, given N=46 and no out-of-sample validation beyond this one pass.</div>
+
+<h2 id="divergence">Part 10 — Divergence Study</h2>
+<p>Simplified to the core question the spec cared about: when the underlying-only vote (Model A) and options-only vote (Model B) disagree, which is more often right?</p>
+<table>
+<tr><th>Scenario</th><th>N</th><th>Result</th></tr>
+<tr><td>Models AGREE</td><td>14 (30% of days)</td><td>Accuracy when agreeing: 0.571</td></tr>
+<tr><td>Models DISAGREE (divergence)</td><td>32 (70% of days)</td><td>Underlying-vote correct 0.500 · Options-vote correct 0.594</td></tr>
+</table>
+<div class="finding">Divergence is the <b>common</b> case (70% of days), not the exception — underlying price action and options positioning frequently point different ways at 2:59pm. When they do, the options-side has a modest edge (59.4% vs 50.0%), consistent with Model B's overall edge. <span class="tag weak">WEAK</span>, N=32.</div>
+
+<h2 id="opportunity">Parts 11–17 — Option Opportunity Engine</h2>
+<p><b>Realistic pricing throughout:</b> entry = ask price at 14:59; exit = bid price at each later minute (never midpoint/LTP, per the explicit instruction not to substitute a non-executable price). Candidate universe: ATM±5 strikes (11 strikes), both CE and PE, for every symbol-day with option coverage — 1,012 candidate trade-instances across 46 symbol-days.</p>
+
+<h3>Part 16 — Does direction even matter? (validates the whole exercise)</h3>
+<table>
+<tr><th>Group</th><th>N</th><th>Mean return</th><th>Win rate</th></tr>
+<tr><td>ALL candidates, direction ignored (buying blind)</td><td>1,012</td><td>−0.49%</td><td>45.5%</td></tr>
+<tr><td>Correct-side only (oracle — bought the leg that matched the actual move)</td><td>506</td><td><b>+2.99%</b></td><td>61.7%</td></tr>
+<tr><td>Wrong-side only</td><td>506</td><td>−3.98%</td><td>29.2%</td></tr>
+</table>
+<div class="finding">Buying options with no directional view is a losing proposition on average (theta + spread costs dominate) — this is the honest baseline every forecast must beat. The gap between correct-side (+2.99%) and wrong-side (−3.98%) confirms direction is the dominant driver of outcome, which is why the forecast-accuracy question (Part 8/9) matters so much. <span class="tag moderate">MODERATE</span>, N=1,012 candidate-instances (but see the independence caveat in Part 21/22 below).</div>
+
+<h3>Part 15 — Strike Selection Study (oracle: correct-side only, exit at 15:14)</h3>
+<table>
+<tr><th>Symbol</th><th>Offset from ATM</th><th>N</th><th>Mean return</th><th>Win rate</th></tr>
+<tr><td>NIFTY</td><td>ATM (0)</td><td>23</td><td>1.60%</td><td>61%</td></tr>
+<tr><td>NIFTY</td><td>Deep OTM (+5)</td><td>23</td><td>4.17%</td><td>65%</td></tr>
+<tr><td>NIFTY</td><td>Deep ITM (−5)</td><td>23</td><td>1.65%</td><td>61%</td></tr>
+<tr><td>SENSEX</td><td>ATM (0)</td><td>23</td><td>3.25%</td><td>57%</td></tr>
+<tr><td>SENSEX</td><td>ITM (−2)</td><td>23</td><td><b>6.10%</b></td><td><b>65%</b></td></tr>
+<tr><td>SENSEX</td><td>OTM (+5)</td><td>23</td><td>2.31%</td><td>48%</td></tr>
+</table>
+<div class="finding">SENSEX shows a fairly consistent pattern — ITM strikes (−2 to −5) outperformed OTM strikes (+1 to +5) on both return and win rate in this sample. NIFTY does not show the same clean pattern (deep OTM had the highest average return, likely a few large-percentage-move outliers on low-premium options rather than a reliable edge). <span class="tag research">RESEARCH ONLY</span> — N=23 days per symbol is too small to generalize a "prefer ITM" rule, and the two symbols disagree.</div>
+
+<h3>Parts 12–13 — Theta / IV / Delta Decomposition</h3>
+<table>
+<tr><th>Entry-time variable</th><th>Spearman ρ vs. return</th><th>p-value</th></tr>
+<tr><td>Delta</td><td>0.116</td><td>0.009</td></tr>
+<tr><td>Bid-ask spread %</td><td>0.139</td><td>0.002</td></tr>
+<tr><td>Theta</td><td>0.069</td><td>0.120</td></tr>
+<tr><td>Vega</td><td>−0.031</td><td>0.483</td></tr>
+<tr><td>IV</td><td>−0.055</td><td>0.220</td></tr>
+<tr><td>ATM offset</td><td>−0.032</td><td>0.470</td></tr>
+</table>
+<div class="warn"><b>Important caveat (see Part 21/22):</b> N=506 here is <i>not</i> 506 independent observations — it's 11 correlated strikes × 46 days. The true independent sample size is 46. The apparently "significant" p-values for delta and spread% are almost certainly inflated by this pooling and should <b>not</b> be read as real statistical significance. Treated honestly, this decomposition is <span class="tag insufficient">INSUFFICIENT DATA</span> to draw a reliable theta/IV/delta conclusion.</div>
+
+<h2 id="sampling">Part 18 — Option Sampling-Frequency Recommendation</h2>
+<p>Testing the user's original 8-snapshots/day hypothesis directly against the now-available 1-minute reconstruction, rather than accepting it.</p>
+<table>
+<tr><th>Feature</th><th>1-min-to-1-min noise (typical step)</th><th>Staleness at 5-min sampling</th><th>Staleness at single end-of-window snapshot</th></tr>
+<tr><td>PCR (OI)</td><td>0.001</td><td>0.002</td><td>0.015</td></tr>
+<tr><td>IV skew</td><td>0.157</td><td>0.148</td><td>0.391</td></tr>
+<tr><td>ATM straddle value</td><td>1.15 pts</td><td>1.00 pts</td><td>4.50 pts</td></tr>
+</table>
+<div class="finding"><b>Nuanced answer, not accept/reject:</b> PCR is essentially unaffected by sparser sampling — a 5-min or even single-snapshot read is nearly as good as 1-minute for this feature. IV skew and ATM straddle value are noisier and genuinely lose fidelity as sampling sparsens (staleness roughly triples from 1-min to end-of-window-only). <b>Recommendation:</b> the original 8-fixed-checkpoint design is adequate for PCR-driven signals but would understate the true intraday range of IV-skew/straddle-based signals — if those features end up mattering more (Part 6 suggests IV skew is the late-developing one), a denser late-window sample (e.g. every 1–2 min from 14:50–14:59) is worth the marginal cost; a full all-day 1-min capture is not shown to add value beyond that. <span class="tag moderate">MODERATE</span>, N=46 symbol-days.</div>
+
+<h2 id="splits">Parts 19–20 — Expiry &amp; NIFTY-vs-SENSEX Splits</h2>
+<table>
+<tr><th>Split</th><th>N</th><th>Mean return (correct-side, ATM)</th></tr>
+<tr><td>NIFTY monthly expiry</td><td>1</td><td>−11.51% <span class="tag insufficient">INSUFFICIENT DATA</span></td></tr>
+<tr><td>NIFTY weekly expiry</td><td>3</td><td>−6.39% <span class="tag insufficient">INSUFFICIENT DATA</span></td></tr>
+<tr><td>SENSEX monthly expiry</td><td>1</td><td>+47.68% <span class="tag insufficient">INSUFFICIENT DATA</span></td></tr>
+<tr><td>SENSEX weekly expiry</td><td>4</td><td>−3.49% <span class="tag insufficient">INSUFFICIENT DATA</span></td></tr>
+<tr><td>NIFTY overall</td><td>23</td><td>1.60%</td></tr>
+<tr><td>SENSEX overall</td><td>23</td><td>3.25%</td></tr>
+</table>
+<div class="warn">Expiry-day splits are unusable this milestone — N=1 to N=7 per cell. The NIFTY-vs-SENSEX difference in absolute return magnitude is plausibly a scale artifact (SENSEX's larger index level/strike step naturally produces larger % swings), not evidence SENSEX is "more predictable." No expiry or symbol-based recommendation is defensible yet.</div>
+
+<h2 id="discipline">Parts 21–22 — Statistical Discipline &amp; Robustness</h2>
+<div class="callout"><b>Discipline applied throughout this report:</b> every number carries its N. Spearman (not Pearson) used for all correlations given small, likely non-normal samples. Confidence labels follow: <span class="tag strong">STRONG</span> N≥100 &amp; consistent effect · <span class="tag moderate">MODERATE</span> N≥30 &amp; a single clean pass · <span class="tag weak">WEAK</span> N 10–30 or noisy · <span class="tag research">RESEARCH ONLY</span> suggestive pattern, N&lt;10 or high noise · <span class="tag insufficient">INSUFFICIENT DATA</span> N too small to say anything. Nothing in this report is labeled STRONG.</div>
+<h3>Robustness check: range-compression threshold sensitivity (proxy for "volume acceleration")</h3>
+<table>
+<tr><th>Threshold</th><th>N high / low</th><th>Up-rate high</th><th>Up-rate low</th></tr>
+<tr><td>≥1.1</td><td>23 / 27</td><td>47.8%</td><td>33.3%</td></tr>
+<tr><td>≥1.2</td><td>18 / 32</td><td>44.4%</td><td>37.5%</td></tr>
+<tr><td>≥1.3</td><td>15 / 35</td><td>46.7%</td><td>37.1%</td></tr>
+<tr><td>≥1.5</td><td>7 / 32</td><td>42.9%</td><td>39.5%</td></tr>
+</table>
+<div class="finding">The direction of the effect (higher compression/expansion → somewhat higher up-rate) is consistent across all four thresholds — a genuine robustness positive — but the magnitude is small (5–14 percentage points) and N shrinks fast at the stricter thresholds. <span class="tag weak">WEAK</span>, do not treat any single threshold as a hard rule.</div>
+<h3>Independence caveat (restated)</h3>
+<p>Any statistic computed across the 11-strike candidate universe (Parts 12–16) has an effective independent N equal to the number of <i>days</i> (46), not the number of candidate rows (506–1,012). This report labels those sections accordingly and this caveat should travel with any reuse of these numbers.</p>
+
+<h2 id="framework">Part 23 — Conceptual 2:59 PM Decision Framework (research design only, not implemented)</h2>
+<ol>
+<li>Check data completeness (≥11 strikes/side within ATM±5, option snapshot ≤2 min stale) — else → <b>NO TRADE</b>.</li>
+<li>Compute the underlying 2:59 state vector (VWAP distance, momentum, POC migration, compression ratio).</li>
+<li>Compute the options 2:59 state vector (PCR, IV skew, straddle trend, call/put volume imbalance).</li>
+<li>Score Model B (options-only vote) — the only individually-validated edge found this milestone.</li>
+<li>Check historical analog depth (via the existing <code>find_analogs</code>/k-NN engine) — thin sample → downgrade confidence.</li>
+<li>Check underlying-vs-options divergence — if they disagree (the common case, 70% of days), weight toward the options-side per Part 10's finding, but flag CONFLICTED.</li>
+<li>If Model B says UP → CE candidate; DOWN → PE candidate. Prefer ATM-to-modestly-ITM strikes only where symbol-specific evidence supports it (SENSEX only, per Part 15) — otherwise default to ATM.</li>
+<li>Apply realistic ask-entry pricing; downgrade the opportunity score when bid-ask spread% is wide (execution-cost risk, Part 12/13).</li>
+<li>Final gate: if Model B's margin over 50% is thin AND analog N is thin AND divergence is flagged → <b>NO TRADE</b>. This is a mandatory output category, not a fallback of last resort — Part 16 shows blind/undirected option buying loses money on average.</li>
+</ol>
+<p>This is a conceptual pipeline for future validation — no code in the production repository implements it.</p>
+
+<h2 id="final">Parts 24–26 — Final Answer Table &amp; Compliance</h2>
+<table>
+<tr><th>#</th><th>Question</th><th>Answer</th><th>Evidence</th><th>N</th><th>Confidence</th></tr>
+<tr><td>1</td><td>Can price action alone (2:30–2:59) forecast direction?</td><td>Weak at best; one feature (POC migration) beats chance, a naive multi-feature vote does worse than chance</td><td>Part 8/9</td><td>50</td><td class="tag weak">WEAK</td></tr>
+<tr><td>2</td><td>Can option positioning alone forecast direction?</td><td>Yes, modestly — best single model found (58.7% acc.)</td><td>Part 9 (Model B)</td><td>46</td><td class="tag moderate">MODERATE</td></tr>
+<tr><td>3</td><td>Does combining underlying + options help?</td><td>No — combined model underperformed options-only</td><td>Part 9 (Model C)</td><td>46</td><td class="tag moderate">MODERATE</td></tr>
+<tr><td>4</td><td>Is later (closer to 2:59) always more informative?</td><td>No — PCR is early-and-stable, IV skew is late-developing</td><td>Part 6</td><td>43</td><td class="tag research">RESEARCH ONLY</td></tr>
+<tr><td>5</td><td>How often do underlying and options signals disagree?</td><td>70% of days — divergence is the common case</td><td>Part 10</td><td>46</td><td class="tag weak">WEAK</td></tr>
+<tr><td>6</td><td>When they disagree, which side is more often right?</td><td>Options-side, modestly (59% vs 50%)</td><td>Part 10</td><td>32</td><td class="tag research">RESEARCH ONLY</td></tr>
+<tr><td>7</td><td>Does directional accuracy matter for option P&amp;L?</td><td>Yes, decisively — correct-side vs wrong-side is a ~7-point return swing</td><td>Part 16</td><td>1,012 (46 indep.)</td><td class="tag moderate">MODERATE</td></tr>
+<tr><td>8</td><td>Which strike (ATM±5) performs best when direction is known?</td><td>SENSEX: modest ITM preference; NIFTY: no clean pattern</td><td>Part 15</td><td>23/symbol</td><td class="tag research">RESEARCH ONLY</td></tr>
+<tr><td>9</td><td>Does delta/theta/vega/IV at entry predict return?</td><td>No reliable relationship once pooling artifact is corrected for</td><td>Part 12/13</td><td>46 (indep.)</td><td class="tag insufficient">INSUFFICIENT DATA</td></tr>
+<tr><td>10</td><td>Is blind (non-directional) option buying profitable?</td><td>No — loses money on average</td><td>Part 16</td><td>1,012</td><td class="tag moderate">MODERATE</td></tr>
+<tr><td>11</td><td>Is NO TRADE a real, necessary output?</td><td>Yes — mandatory given thin analog depth most days</td><td>Part 16/23</td><td>—</td><td class="tag moderate">MODERATE</td></tr>
+<tr><td>12</td><td>Is 8 fixed snapshots/day enough sampling?</td><td>Adequate for PCR; understates IV-skew/straddle range</td><td>Part 18</td><td>46</td><td class="tag moderate">MODERATE</td></tr>
+<tr><td>13</td><td>Does expiry type change the answer?</td><td>Cannot say — cells too thin</td><td>Part 19</td><td>1–7</td><td class="tag insufficient">INSUFFICIENT DATA</td></tr>
+<tr><td>14</td><td>Does NIFTY vs SENSEX change the answer?</td><td>Same qualitative pattern; magnitude differences likely a scale artifact</td><td>Part 20</td><td>23/23</td><td class="tag weak">WEAK</td></tr>
+<tr><td>15</td><td>Is the effect robust to the exact threshold chosen?</td><td>Direction is stable across 4 thresholds tested; magnitude is small</td><td>Part 22</td><td>7–35</td><td class="tag weak">WEAK</td></tr>
+</table>
+
+<div class="callout"><b>Compliance restatement:</b> no production code, database schema, API, UI, or existing forecasting logic was modified. No trading signals were implemented. No new Dhan API calls were made. No missing option observations were fabricated — every "insufficient data" cell above is reported as such rather than filled in. No permanent table was created; everything lives in the scratchpad as temporary pickled DataFrames and one-off scripts.</div>
+
+<h2 id="question">Final Question — Candid Answer</h2>
+<p><b>Does the data support a reliable BUY CE / BUY PE / WAIT decision at 2:59 PM today?</b></p>
+<p><b>Not yet, and it would be dishonest to say otherwise.</b> This milestone found exactly one candidate edge worth carrying forward — an options-positioning-only vote (PCR + call/put volume imbalance + straddle change) that beats chance at 58.7% accuracy. That is a real, reproducible signal, not noise from overfitting (it's three simple, pre-specified features combined by an unweighted majority vote, not a tuned model) — but 58.7% on N=46 days is a thin edge, not a tradeable one on its own. Every attempt to strengthen it by adding more features (underlying price action, deeper strike selection, theta/IV decomposition) either added nothing or made it worse once independence and sample-size were accounted for honestly.</p>
+<p>What would change this answer: (1) more days — each additional month of CAS-era data adds roughly 20 more symbol-days, and the effective sample here (46) is still an order of magnitude below what would let any of today's WEAK/RESEARCH-ONLY findings graduate to MODERATE or STRONG; (2) an out-of-sample test — everything in this report is a single in-sample pass, with no held-out validation; (3) resolving the SENSEX-vs-NIFTY strike-selection disagreement with more data before committing to either symbol's pattern.</p>
+<p>Until then, the honest default at 2:59 PM is <b>WAIT</b> — not because nothing was found, but because what was found isn't yet strong enough to act on with real capital.</p>
+
+<footer>Milestone 10 research report — generated 2026-09-05 · Scratchpad-only analysis, no production changes · NIFTY/SENSEX, 2026-08-03 to 2026-09-04</footer>
+</body>
+</html>

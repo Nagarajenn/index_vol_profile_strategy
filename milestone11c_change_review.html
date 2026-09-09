@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Milestone 11C Report</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1020px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.3em;color:#1a3a5c;margin-top:2.2em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.05em;color:#2c3e50;margin-top:1.5em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.88em}
+ th,td{border:1px solid #ccc;padding:6px 8px;text-align:left}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.8em;line-height:1.5}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.74em;font-weight:bold;color:#fff}
+ .pass{background:#2e7d32}.new{background:#1a5c8a}.mod{background:#f9a825;color:#222}.no{background:#c62828}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .toc a{display:block;margin:3px 0;color:#1a3a5c;text-decoration:none}
+ .toc a:hover{text-decoration:underline}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+ .big{font-size:1.4em;font-weight:bold}
+</style>
+</head>
+<body>
+
+<h1>Milestone 11C — Option Opportunity Engine<br><span style="font-size:0.6em;font-weight:normal;color:#555">Can the 2:59 PM direction signal be expressed profitably through an index option?</span></h1>
+
+<p><b>Branch:</b> <code>market-transition-cas-analysis</code> · <b>Scope:</b> research only. Three new pure modules, one orchestrator, four test files. No production forecast/CAS/scoring/API/UI/schema/Dhan-capture code touched by this milestone's engine. <b>Zero references to any Dhan order-placement API</b> (verified by grep across every new file).</p>
+
+<div class="warn"><b>Headline: the engine does not beat not trading.</b> On a median basis, NO TRADE (0.00%) outperformed the opportunity engine <i>and</i> all three strike-selection baselines in <b>every single tier</b>. The engine also never once returned NO TRADE on this sample — its economic gates never bound. No option-expression rule is retained.</div>
+
+<div class="toc">
+<b>Contents</b>
+<a href="#files">Files added</a>
+<a href="#design">How the engine works</a>
+<a href="#results">Results: Training / Validation / Test</a>
+<a href="#baselines">Baseline comparison — the key table</a>
+<a href="#separation">Direction correct ≠ option profitable</a>
+<a href="#leak">Leakage &amp; reproducibility</a>
+<a href="#limits">Limitations that must be resolved</a>
+<a href="#rec">Recommendation</a>
+</div>
+
+<h2 id="files">Files added</h2>
+<table>
+<tr><th>File</th><th>Status</th><th>Purpose</th></tr>
+<tr><td><code>market_transition/option_features_11c.py</code></td><td><span class="tag new">NEW</span></td><td>ATM±5 × CE/PE candidate universe, 14:59 feature capture, post-cutoff realized outcomes (MFE/MAE/bid-based exits), underlying outcome. Reuses <code>extract_atm_window</code> and 11A's <code>DECISION_CUTOFF</code>/<code>MAX_SNAPSHOT_AGE_SEC</code> unmodified.</td></tr>
+<tr><td><code>market_transition/option_opportunity_11c.py</code></td><td><span class="tag new">NEW</span></td><td>Opportunity score, NO-TRADE gates, ranking, and the 3 comparison baselines.</td></tr>
+<tr><td><code>market_transition/option_evaluator_11c.py</code></td><td><span class="tag new">NEW</span></td><td>All aggregation/statistics.</td></tr>
+<tr><td><code>scripts/run_milestone11c.py</code></td><td><span class="tag new">NEW</span></td><td>Orchestrator — reuses the 11A dataset pickle and the frozen <code>predict_row</code> control (never re-fit).</td></tr>
+<tr><td>4 test files (36 tests)</td><td><span class="tag new">NEW</span></td><td><code>test_option_features_11c</code>, <code>test_option_opportunity_11c</code>, <code>test_option_evaluator_11c</code>, <code>test_milestone11c_leakage</code></td></tr>
+<tr><td>Existing modules</td><td><span class="tag pass">UNCHANGED</span></td><td>No modifications to any file outside the four new ones.</td></tr>
+</table>
+
+<h2 id="design">How the engine works</h2>
+<h3>The score (fixed before any Validation/Test look)</h3>
+<pre>score = |delta| × expected_move_points        # linear payoff approximation
+        − spread                              # ask − bid, the real round-trip cost
+        − |theta| × (15 / 375)                # 15-min share of a per-trading-day theta
+
+expected_move_points = Training-only median |realized 15-min move|
+                     → NIFTY 8.85 pts, SENSEX 23.85 pts</pre>
+<h3>Execution realism</h3>
+<p>Entry = <b>ASK</b> at 14:59 (frozen). Exit = <b>BID</b> at 15:00 / 15:05 / 15:10 / 15:15. Never LTP, never midpoint. MFE/MAE are computed on the bid path and reported as diagnostics only, never as an assumed executed return. Pre-cost — no brokerage/tax model exists, so none was invented.</p>
+<h3>NO-TRADE gates (all pre-registered)</h3>
+<p>Data-quality (no snapshot / stale snapshot / empty chain) → no clear edge (control abstains) → empty universe → no eligible candidate (missing quote, or spread &gt; 5%) → top score ≤ 0. Checked in fixed order so the reason is always traceable.</p>
+
+<h2 id="results">Results</h2>
+<table>
+<tr><th>Tier</th><th>N days</th><th>Trade freq.</th><th>Direction acc.</th><th>Mean P&amp;L%</th><th>Median P&amp;L%</th><th>Win rate</th><th>Mean MFE</th><th>Mean MAE</th></tr>
+<tr><td>Training</td><td>28</td><td>100%</td><td>57.1%</td><td>−3.28</td><td>−1.62</td><td>36%</td><td>+3.14</td><td>−6.23</td></tr>
+<tr><td>Validation</td><td>10</td><td>100%</td><td>70.0%</td><td>+0.17</td><td>−1.00</td><td>38%</td><td>+6.94</td><td>−4.80</td></tr>
+<tr><td>Test <i>(locked)</i></td><td>8</td><td>100%</td><td>75.0%</td><td>−0.13</td><td>−0.57</td><td>33%</td><td>+2.88</td><td>−5.41</td></tr>
+</table>
+<div class="finding">Mean adverse excursion exceeds mean favorable excursion in all three tiers — a long option held 15 minutes across this sample spent more time further underwater than it ever got ahead. Average spread cost was small (0.24–0.27% of ask), so <b>spread is not the binding cost</b>; theta and the smallness of the realized move are.</div>
+
+<h2 id="baselines">Baseline comparison — the key table</h2>
+<table>
+<tr><th>Tier</th><th>Engine median</th><th>ATM median</th><th>Nearest-OTM median</th><th>Nearest-ITM median</th><th>NO TRADE</th></tr>
+<tr><td>Training</td><td>−1.62</td><td>−2.64</td><td>−2.25</td><td>−2.17</td><td class="big">0.00</td></tr>
+<tr><td>Validation</td><td>−1.00</td><td>−1.90</td><td>−1.75</td><td>−1.60</td><td class="big">0.00</td></tr>
+<tr><td>Test</td><td>−0.57</td><td>−0.20</td><td>−0.40</td><td>−0.07</td><td class="big">0.00</td></tr>
+</table>
+<div class="warn"><b>Every strategy, in every tier, has a negative median P&amp;L.</b> The engine beats the naive baselines on median in Training and Validation and loses to them on Test — but that comparison is secondary, because none of them clear the only bar that matters: doing nothing. A few larger winners pull the <i>mean</i> up (Validation +0.17%), while the <i>typical</i> day loses money.</div>
+
+<h2 id="separation">Direction correct ≠ option profitable</h2>
+<table>
+<tr><th>Tier</th><th>Direction correct: win rate / mean</th><th>Direction wrong: win rate / mean</th></tr>
+<tr><td>Training</td><td>53.8% / +0.49% (n=13)</td><td>16.7% / −7.35% (n=12)</td></tr>
+<tr><td>Validation</td><td>60.0% / +3.70% (n=5)</td><td>0.0% / −5.69% (n=3)</td></tr>
+<tr><td>Test</td><td>25.0% / −0.95% (n=4)</td><td>50.0% / +1.49% (n=2)</td></tr>
+</table>
+<p>Training and Validation show the sane relationship — getting direction right matters a lot. <b>Test inverts it</b> (direction-correct days did worse), but with n=4 vs n=2 that is noise, reported for completeness rather than interpreted. Critically, even on direction-correct Training days the mean option return was only +0.49% — <b>being right about direction was not sufficient to be profitable after costs</b>.</p>
+
+<h2 id="leak">Leakage &amp; reproducibility</h2>
+<table>
+<tr><th>Check</th><th>Result</th></tr>
+<tr><td>Candidate construction has no parameter through which post-14:59 data could be passed (signature-level test)</td><td><span class="tag pass">PASS</span></td></tr>
+<tr><td>Selection deterministic and independent of any later snapshot</td><td><span class="tag pass">PASS</span></td></tr>
+<tr><td>Stale-snapshot gate (reused from 11A) rejects a pre-14:59 fallback masquerading as the 14:59 state</td><td><span class="tag pass">PASS</span></td></tr>
+<tr><td>Deterministic ranking / tie-break by strike</td><td><span class="tag pass">PASS</span></td></tr>
+<tr><td>Full test suite</td><td><span class="tag pass">511 passed, 0 failed</span></td></tr>
+<tr><td>Two consecutive orchestrator runs, JSON diffed</td><td><span class="tag pass">byte-identical</span></td></tr>
+<tr><td>Any Dhan order/buy/sell/cancel API referenced</td><td><span class="tag no">NONE</span></td></tr>
+</table>
+
+<h2 id="limits">Limitations that must be resolved before paper trading</h2>
+<ol>
+<li><b>The gates never fire.</b> All 46 symbol-days produced a positive top score; <code>SPREAD_TOO_WIDE</code> and <code>EXPECTED_BENEFIT_NONPOSITIVE</code> fired zero times. Trade frequency was 100% in every tier — so the engine currently has no ability to distinguish a good setup from a bad one. Recalibration is needed, but doing it now against these same results would be tuning on Test.</li>
+<li><b>The score structurally favors the extremes</b> of the ATM±5 window (max-delta deep ITM, or minimum-absolute-cost deep OTM) over near-ATM strikes — a consequence of an unnormalized raw-points formula, not necessarily an economic signal.</li>
+<li><b>Theta units are an assumption</b> — assumed per-trading-day, scaled ×15/375. If Dhan's convention differs, every theta-cost number is indicative only.</li>
+<li><b><code>expiry_type</code> is NaN for most rows</b> in the reused 11A dataset, so the expiry breakdown could not be computed. Pre-existing gap, not introduced here.</li>
+<li><b>Sample size</b> — 28/10/8 symbol-days. The effective statistical unit is the symbol-day, <i>not</i> the 22 candidate rows per day; nothing here is a statistically strong claim.</li>
+</ol>
+
+<h2 id="rec">Recommendation</h2>
+<div class="warn"><p class="big">C. NO — insufficient evidence; continue data collection.</p>
+<p>Not "CONDITIONAL", because the flaw is in the option-expression logic itself (gates that never bind, a formula biased to chain extremes), not merely in the weak direction signal underneath it. Against the retention criteria, the rule is deterministic and leakage-clean but fails on <i>economic meaningfulness</i>: it does not beat not trading.</p>
+<p><b>No option-expression rule is retained. No paper-trading agent is authorized by this milestone.</b></p></div>
+
+<footer>Milestone 11C report — generated 2026-09-09 · Branch market-transition-cas-analysis · Research only, no production trading behavior changed</footer>
+</body>
+</html>
