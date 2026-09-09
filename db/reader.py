@@ -342,6 +342,28 @@ def load_actual_outcome(symbol: str, session_date: date, horizon_minutes: int = 
     return dict(zip(("direction", "point_move"), row))
 
 
+_ACTUAL_OUTCOME_ALL_COLUMNS = ["horizon_minutes", "direction", "point_move", "pct_move", "mfe", "mae"]
+
+
+def load_actual_outcome_all_horizons(symbol: str, session_date: date) -> dict[int, dict]:
+    """All persisted transition_actual_outcome rows (every horizon: 1/5/10/15
+    minutes) for `symbol`/`session_date`, keyed by horizon_minutes -- used by
+    scripts/run_milestone11a.py to build the post-cutoff (>=15:00) outcome
+    half of the Milestone 11A research dataset. Read-only; never called by
+    anything that also touches pre-cutoff (<=14:59) data, so it cannot be a
+    leakage vector on its own."""
+    rows = fetch_all(
+        f"SELECT {', '.join(_ACTUAL_OUTCOME_ALL_COLUMNS)} FROM transition_actual_outcome "
+        "WHERE symbol = %s AND session_date = %s ORDER BY horizon_minutes",
+        (symbol, session_date),
+    )
+    result = {}
+    for r in rows:
+        d = dict(zip(_ACTUAL_OUTCOME_ALL_COLUMNS, r))
+        result[d["horizon_minutes"]] = d
+    return result
+
+
 def list_cas_forecast_dates(symbol: str) -> list[date]:
     """Every distinct session_date `symbol` has a persisted 14:59 forecast
     for -- drives scripts/run_forecast_evaluation.py's day loop."""
