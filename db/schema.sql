@@ -576,3 +576,212 @@ CREATE TABLE IF NOT EXISTS forecast_evaluation (
     UNIQUE (symbol, session_date)
 );
 CREATE INDEX IF NOT EXISTS idx_forecast_evaluation_symbol_date ON forecast_evaluation (symbol, session_date DESC);
+
+-- ============================================================
+-- Milestone 11D: paper trading agent. Entirely simulated -- no row in
+-- any table below ever corresponds to a real order. Additive: nothing
+-- above this block is modified, and the existing raw market tables
+-- remain the source of truth for market data.
+-- ============================================================
+
+-- The immutable 14:59 decision snapshot, including every NO TRADE.
+-- Never updated after insert: post-entry management appends to
+-- paper_position_events instead. Keyed by strategy+config hash so
+-- decisions taken under different settings can never be pooled silently.
+CREATE TABLE IF NOT EXISTS paper_decisions (
+    id BIGSERIAL PRIMARY KEY,
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    decision_timestamp TIMESTAMPTZ NOT NULL,
+    decision TEXT NOT NULL CHECK (decision IN ('TRADE_CALL', 'TRADE_PUT', 'NO_TRADE')),
+    decision_reason TEXT NOT NULL,
+    no_trade_reason TEXT,
+    trend_assessment TEXT NOT NULL,
+    confidence SMALLINT NOT NULL,
+
+    strategy_version TEXT NOT NULL,
+    decision_version TEXT NOT NULL,
+    configuration_version TEXT NOT NULL,
+    configuration_hash TEXT NOT NULL,
+
+    spot DOUBLE PRECISION,
+    trend_label TEXT,
+    institutional_bias_label TEXT,
+    vwap DOUBLE PRECISION,
+    poc DOUBLE PRECISION,
+    vah DOUBLE PRECISION,
+    val DOUBLE PRECISION,
+    support_low DOUBLE PRECISION,
+    support_high DOUBLE PRECISION,
+    resistance_low DOUBLE PRECISION,
+    resistance_high DOUBLE PRECISION,
+    atr_14 DOUBLE PRECISION,
+
+    rvol_pct DOUBLE PRECISION,
+    dominant_side TEXT,
+    volume_character TEXT,
+    amd_phase TEXT,
+
+    pcr DOUBLE PRECISION,
+    atm_iv_call DOUBLE PRECISION,
+    atm_iv_put DOUBLE PRECISION,
+    option_snapshot_age_sec DOUBLE PRECISION,
+
+    transition_verdict TEXT,
+    probability_up DOUBLE PRECISION,
+    probability_down DOUBLE PRECISION,
+    probability_no_move DOUBLE PRECISION,
+    expected_move_low DOUBLE PRECISION,
+    expected_move_high DOUBLE PRECISION,
+    transition_risk_tier TEXT,
+    n_analogs INTEGER,
+
+    option_type TEXT,
+    strike DOUBLE PRECISION,
+    expiry DATE,
+    entry_bid DOUBLE PRECISION,
+    entry_ask DOUBLE PRECISION,
+    entry_spread DOUBLE PRECISION,
+    entry_spread_pct DOUBLE PRECISION,
+    option_delta DOUBLE PRECISION,
+
+    dynamic_stop DOUBLE PRECISION,
+    dynamic_target DOUBLE PRECISION,
+    underlying_invalidation DOUBLE PRECISION,
+    underlying_target DOUBLE PRECISION,
+    reward_risk DOUBLE PRECISION,
+    risk_amount DOUBLE PRECISION,
+    quantity INTEGER,
+    capital_allocated DOUBLE PRECISION,
+
+    supporting_factors JSONB,
+    conflicting_factors JSONB,
+    risk_factors JSONB,
+    explanation JSONB,
+    data_quality TEXT NOT NULL,
+    missing_fields JSONB,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date, configuration_hash)
+);
+CREATE INDEX IF NOT EXISTS idx_paper_decisions_date ON paper_decisions (session_date DESC, symbol);
+
+-- One simulated position per approved decision. entry_price is always the
+-- ASK and exit_price always the BID -- see paper_trading/broker.py. All
+-- P&L is PRE-COST: no validated brokerage/tax model exists in this
+-- project, so none is invented here.
+CREATE TABLE IF NOT EXISTS paper_positions (
+    id BIGSERIAL PRIMARY KEY,
+    decision_id BIGINT REFERENCES paper_decisions (id),
+    symbol TEXT NOT NULL,
+    session_date DATE NOT NULL,
+    option_type TEXT NOT NULL CHECK (option_type IN ('CE', 'PE')),
+    strike DOUBLE PRECISION NOT NULL,
+    expiry DATE,
+    quantity INTEGER NOT NULL,
+
+    entry_timestamp TIMESTAMPTZ NOT NULL,
+    entry_bid DOUBLE PRECISION,
+    entry_ask DOUBLE PRECISION,
+    entry_ltp DOUBLE PRECISION,
+    entry_spread DOUBLE PRECISION,
+    entry_spread_pct DOUBLE PRECISION,
+    entry_price DOUBLE PRECISION NOT NULL,
+    capital_allocated DOUBLE PRECISION NOT NULL,
+    spot_at_entry DOUBLE PRECISION,
+
+    initial_stop DOUBLE PRECISION NOT NULL,
+    initial_target DOUBLE PRECISION NOT NULL,
+    current_stop DOUBLE PRECISION NOT NULL,
+    current_target DOUBLE PRECISION NOT NULL,
+
+    is_open BOOLEAN NOT NULL DEFAULT true,
+    exit_timestamp TIMESTAMPTZ,
+    exit_bid DOUBLE PRECISION,
+    exit_ask DOUBLE PRECISION,
+    exit_price DOUBLE PRECISION,
+    exit_reason TEXT,
+    gross_pnl DOUBLE PRECISION,
+    costs DOUBLE PRECISION,
+    net_pnl DOUBLE PRECISION,
+    pnl_basis TEXT NOT NULL DEFAULT 'PRE_COST',
+    return_pct DOUBLE PRECISION,
+    mfe_pct DOUBLE PRECISION,
+    mae_pct DOUBLE PRECISION,
+    underlying_move DOUBLE PRECISION,
+    direction_correct BOOLEAN,
+    data_quality TEXT NOT NULL DEFAULT 'GOOD',
+
+    strategy_version TEXT NOT NULL,
+    configuration_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (symbol, session_date, entry_timestamp)
+);
+CREATE INDEX IF NOT EXISTS idx_paper_positions_open ON paper_positions (is_open, session_date DESC);
+
+-- Append-only audit of every management minute while a position is open.
+-- This is what makes it possible to ask, after five sessions, whether the
+-- dynamic management helped or hurt.
+CREATE TABLE IF NOT EXISTS paper_position_events (
+    id BIGSERIAL PRIMARY KEY,
+    position_id BIGINT NOT NULL REFERENCES paper_positions (id) ON DELETE CASCADE,
+    event_timestamp TIMESTAMPTZ NOT NULL,
+    minutes_in_trade SMALLINT NOT NULL,
+    event_type TEXT NOT NULL,
+    underlying_price DOUBLE PRECISION,
+    option_bid DOUBLE PRECISION,
+    option_ask DOUBLE PRECISION,
+    unrealized_pnl DOUBLE PRECISION,
+    momentum TEXT,
+    current_stop DOUBLE PRECISION,
+    current_target DOUBLE PRECISION,
+    note TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (position_id, event_timestamp)
+);
+
+-- End-of-day virtual account state. Balance carries across sessions;
+-- only the daily counters reset.
+CREATE TABLE IF NOT EXISTS paper_account_snapshots (
+    id BIGSERIAL PRIMARY KEY,
+    session_date DATE NOT NULL,
+    starting_capital DOUBLE PRECISION NOT NULL,
+    current_capital DOUBLE PRECISION NOT NULL,
+    available_capital DOUBLE PRECISION NOT NULL,
+    capital_in_trade DOUBLE PRECISION NOT NULL,
+    realized_pnl DOUBLE PRECISION NOT NULL,
+    unrealized_pnl DOUBLE PRECISION NOT NULL,
+    daily_pnl DOUBLE PRECISION NOT NULL,
+    total_pnl DOUBLE PRECISION NOT NULL,
+    daily_drawdown DOUBLE PRECISION NOT NULL,
+    max_drawdown DOUBLE PRECISION NOT NULL,
+    trade_count INTEGER NOT NULL,
+    win_count INTEGER NOT NULL,
+    loss_count INTEGER NOT NULL,
+    consecutive_wins INTEGER NOT NULL,
+    consecutive_losses INTEGER NOT NULL,
+    average_win DOUBLE PRECISION,
+    average_loss DOUBLE PRECISION,
+    largest_win DOUBLE PRECISION,
+    largest_loss DOUBLE PRECISION,
+    profit_factor DOUBLE PRECISION,
+    strategy_version TEXT NOT NULL,
+    configuration_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (session_date, configuration_hash)
+);
+
+-- Operational state of the paper engine, including the kill switch. One
+-- row per session per config.
+CREATE TABLE IF NOT EXISTS paper_sessions (
+    id BIGSERIAL PRIMARY KEY,
+    session_date DATE NOT NULL,
+    agent_state TEXT NOT NULL,
+    kill_switch_active BOOLEAN NOT NULL DEFAULT false,
+    kill_switch_reason TEXT,
+    last_heartbeat TIMESTAMPTZ,
+    strategy_version TEXT NOT NULL,
+    configuration_hash TEXT NOT NULL,
+    notes TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (session_date, configuration_hash)
+);

@@ -6,6 +6,7 @@ from app.api.v1.routers import (
     levels_detail,
     market_intelligence,
     market_transition,
+    paper_trading,
     session_amd,
     symbols,
     volume_intelligence,
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
     app.include_router(session_amd.router, prefix="/api/v1", tags=["session-amd"])
     app.include_router(market_intelligence.router, prefix="/api/v1", tags=["market-intelligence"])
     app.include_router(market_transition.router, prefix="/api/v1", tags=["market-transition"])
+    app.include_router(paper_trading.router, prefix="/api/v1", tags=["paper-trading"])
 
     return app
 

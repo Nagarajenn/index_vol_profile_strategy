@@ -6,6 +6,7 @@ from config.instruments import INSTRUMENTS
 from config.settings import IST, LIVE_LOOP_INTERVAL_MIN, SESSION_CLOSE, SESSION_OPEN
 from dhan_client.client import reset_client
 from pipeline import cas_live
+from paper_trading.tick import run_tick as run_paper_tick
 from pipeline.run_snapshot import run_snapshot
 from pipeline.trading_calendar import is_trading_day
 
@@ -108,6 +109,16 @@ def run_live_loop(
                 cas_live.maybe_update(symbol, datetime.now(IST))
             except Exception:
                 logger.exception("CAS live update failed for %s", symbol)
+
+            try:
+                # Milestone 11D: paper trading agent. SIMULATED ONLY -- it
+                # cannot place a real order (see paper_trading/safety.py).
+                # Reads only what run_snapshot just persisted; makes no
+                # external calls. Like the CAS hook above, a failure here
+                # must never break the core snapshot tick.
+                run_paper_tick(symbol, datetime.now(IST))
+            except Exception:
+                logger.exception("Paper agent tick failed for %s", symbol)
 
         iterations += 1
         if max_iterations is not None and iterations >= max_iterations:

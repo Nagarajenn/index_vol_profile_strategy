@@ -7,10 +7,12 @@ from app.repositories.levels_snapshot_repository import LevelsSnapshotRepository
 from app.repositories.market_intelligence_repository import MarketIntelligenceRepository
 from app.repositories.market_transition_repository import MarketTransitionRepository
 from app.repositories.option_chain_repository import OptionChainRepository
+from app.repositories.paper_trading_repository import PaperTradingRepository
 from app.services.dashboard_service import DashboardService
 from app.services.live_transition_advisor_service import LiveTransitionAdvisorService
 from app.services.market_intelligence_service import MarketIntelligenceService
 from app.services.market_transition_service import MarketTransitionService
+from app.services.paper_trading_service import PaperTradingService
 from app.services.session_amd_service import SessionAmdService
 from app.services.volume_intelligence_service import VolumeIntelligenceService
 from app.services.volume_profile_intelligence_service import VolumeProfileIntelligenceService
@@ -85,3 +87,13 @@ def get_live_transition_advisor_service(
     mi_service: MarketIntelligenceService = Depends(get_market_intelligence_service),
 ) -> LiveTransitionAdvisorService:
     return LiveTransitionAdvisorService(candle_repo, mti_repo, levels_repo, mi_service)
+
+
+def get_paper_trading_repository(session: AsyncSession = Depends(get_db_session)) -> PaperTradingRepository:
+    return PaperTradingRepository(session)
+
+
+def get_paper_trading_service(
+    repo: PaperTradingRepository = Depends(get_paper_trading_repository),
+) -> PaperTradingService:
+    return PaperTradingService(repo)

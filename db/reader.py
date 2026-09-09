@@ -372,3 +372,73 @@ def list_cas_forecast_dates(symbol: str) -> list[date]:
         (symbol,),
     )
     return [r[0] for r in rows]
+
+
+_PAPER_LEVELS_COLUMNS = [
+    "as_of", "close", "trend_label", "trend_score", "confidence_score",
+    "today_poc", "today_vah", "today_val", "vwap_now",
+    "support_low", "support_high", "resistance_low", "resistance_high",
+    "institutional_bias_label", "institutional_bias_score",
+]
+
+
+def get_levels_snapshot_near(symbol: str, session_date: date, at_or_before: str = "14:59:00") -> dict | None:
+    """Latest levels_snapshots row for `symbol` on `session_date` at/before
+    `at_or_before` -- the paper agent's read of the existing Decision Card
+    state at its 14:59 cutoff. Read-only; the `at_or_before` clamp is what
+    makes it leakage-safe, exactly as get_option_chain_raw_near is."""
+    row = fetch_one(
+        f"""
+        SELECT {", ".join(_PAPER_LEVELS_COLUMNS)}
+        FROM levels_snapshots
+        WHERE symbol = %s AND as_of::date = %s AND as_of::time <= %s
+        ORDER BY as_of DESC LIMIT 1
+        """,
+        (symbol, session_date, at_or_before),
+    )
+    return dict(zip(_PAPER_LEVELS_COLUMNS, row)) if row else None
+
+
+_PAPER_FORECAST_COLUMNS = [
+    "checkpoint_time", "verdict", "probability_up", "probability_down",
+    "probability_no_material_transition", "expected_move_low", "expected_move_high",
+    "transition_risk_tier", "confidence_label", "n_analogs", "historical_similarity_score",
+    "primary_driver", "secondary_driver", "tertiary_driver",
+]
+
+
+def get_transition_forecast_full(symbol: str, session_date: date, checkpoint_time: str = "14:59") -> dict | None:
+    """The full frozen forecast row (wider than load_frozen_forecast, which
+    only serves scripts/run_forecast_evaluation.py's narrower need)."""
+    row = fetch_one(
+        f"""
+        SELECT {", ".join(_PAPER_FORECAST_COLUMNS)}
+        FROM cas_transition_forecasts
+        WHERE symbol = %s AND session_date = %s AND checkpoint_time = %s
+        """,
+        (symbol, session_date, checkpoint_time),
+    )
+    return dict(zip(_PAPER_FORECAST_COLUMNS, row)) if row else None
+
+
+_PAPER_WINDOW_COLUMNS = [
+    "window_index", "window_label", "net_point_change", "volume", "rvol_pct",
+    "dominant_side", "price_distance_from_vwap", "poc_change_during_window", "pcr",
+]
+
+
+def load_pretransition_windows(symbol: str, session_date: date) -> list[dict]:
+    """All six 14:30-14:59 pre-transition windows for one session, ascending
+    -- how the market ARRIVED at the decision point, not just the 14:59
+    snapshot. Complements load_final_pretransition_windows(), which returns
+    only window_index=6 across every date."""
+    rows = fetch_all(
+        f"""
+        SELECT {", ".join(_PAPER_WINDOW_COLUMNS)}
+        FROM cas_pretransition_windows
+        WHERE symbol = %s AND session_date = %s
+        ORDER BY window_index
+        """,
+        (symbol, session_date),
+    )
+    return [dict(zip(_PAPER_WINDOW_COLUMNS, r)) for r in rows]

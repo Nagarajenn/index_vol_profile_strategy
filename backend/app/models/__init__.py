@@ -13,9 +13,21 @@ from app.models.market_transition import (
     MtiFactorCorrelation,
 )
 from app.models.option_chain import OptionChainRaw, OptionChainSummary
+from app.models.paper_trading import (
+    PaperAccountSnapshot,
+    PaperDecision,
+    PaperPosition,
+    PaperPositionEvent,
+    PaperSession,
+)
 from app.models.raw_candle import RawCandle, RawDailyCandle
 
 __all__ = [
+    "PaperAccountSnapshot",
+    "PaperDecision",
+    "PaperPosition",
+    "PaperPositionEvent",
+    "PaperSession",
     "Base",
     "RawCandle",
     "RawDailyCandle",
