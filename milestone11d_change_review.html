@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Milestone 11D Report</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1180px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.3em;color:#1a3a5c;margin-top:2.2em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.05em;color:#2c3e50;margin-top:1.5em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.88em}
+ th,td{border:1px solid #ccc;padding:6px 8px;text-align:left;vertical-align:top}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.8em;line-height:1.5}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.74em;font-weight:bold;color:#fff}
+ .pass{background:#2e7d32}.new{background:#1a5c8a}.mod{background:#f9a825;color:#222}.no{background:#c62828}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .toc a{display:block;margin:3px 0;color:#1a3a5c;text-decoration:none}
+ .toc a:hover{text-decoration:underline}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+ /* ---- UI snapshot recreation: mimics the live MUI light theme ---- */
+ .ui{background:#f4f6f8;padding:14px;border:1px solid #d5d5d5;border-radius:6px;font-family:Roboto,"Helvetica Neue",Arial,sans-serif;font-size:13px;color:#1c252e;line-height:1.4}
+ .ui *{box-sizing:border-box}
+ .ui .bar{background:#1976d2;color:#fff;padding:8px 14px;border-radius:4px 4px 0 0;display:flex;align-items:center;gap:18px;font-size:14px;margin:-14px -14px 14px}
+ .ui .bar .brand{font-weight:600;font-size:15px}
+ .ui .bar .nav{margin-left:auto;display:flex;gap:16px;font-size:12px;font-weight:600;opacity:.85}
+ .ui .bar .nav .on{opacity:1;text-decoration:underline}
+ .ui .paper{background:#fff;border-radius:4px;box-shadow:0 1px 3px rgba(0,0,0,.13);padding:12px 14px;margin-bottom:14px}
+ .ui .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+ .ui .row>.paper{flex:1;min-width:300px}
+ .ui .ttl{font-weight:700;font-size:14px;margin:0 0 8px}
+ .ui .chip{display:inline-block;padding:2px 9px;border-radius:11px;font-size:11px;font-weight:700;line-height:1.6}
+ .ui .c-warn{background:#ed6c02;color:#fff}
+ .ui .c-out{border:1px solid #bbb;color:#444}
+ .ui .c-def{background:#e0e0e0;color:#222}
+ .ui .c-err{background:#d32f2f;color:#fff}
+ .ui .c-info{background:#0288d1;color:#fff}
+ .ui .metrics{display:flex;gap:26px;flex-wrap:wrap;margin-top:10px}
+ .ui .m .lbl{font-size:11px;color:#637381;text-transform:uppercase;letter-spacing:.5px}
+ .ui .m .val{font-size:19px;font-weight:700;line-height:1.3}
+ .ui .stats{display:flex;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+ .ui .s{min-width:96px}
+ .ui .s .lbl{font-size:11px;color:#637381}
+ .ui .s .val{font-size:13px;font-weight:600}
+ .ui .cap{font-size:11px;color:#637381;display:block;margin-top:8px}
+ .ui .hr{border:0;border-top:1px solid #e4e4e4;margin:9px 0}
+ .ui .notrade{background:rgba(0,0,0,.04);border-radius:4px;padding:7px 9px;margin-bottom:9px}
+ .ui .notrade b{font-size:13px}
+ .ui ul{margin:2px 0 0;padding-left:17px}
+ .ui li{font-size:11.5px}
+ .ui .fl{min-width:220px;flex:1}
+ .ui .fl .h{font-size:11px;font-weight:700;text-transform:uppercase}
+ .ui .g{color:#2e7d32}.ui .r{color:#d32f2f}.ui .w{color:#ed6c02}
+ .ui table{font-size:11.5px;margin:6px 0 0;background:#fff}
+ .ui th{background:#fafafa;color:#444;font-weight:600;border-bottom:1px solid #e0e0e0;border-top:0;border-left:0;border-right:0;padding:5px 7px}
+ .ui td{border:0;border-bottom:1px solid #f0f0f0;padding:5px 7px}
+ .ui tr:nth-child(even){background:#fff}
+ .shot-label{font-size:0.85em;color:#555;font-style:italic;margin:6px 0 4px}
+</style>
+</head>
+<body>
+
+<h1>Milestone 11D &mdash; Paper Trading Agent + Command Center<br><span style="font-size:0.6em;font-weight:normal;color:#555">Fully simulated. &#8377;15,000 virtual capital. Zero connection to any Dhan order endpoint.</span></h1>
+
+<p><b>Branch:</b> <code>market-transition-cas-analysis</code> &middot; <b>Commit:</b> <code>becc16b</code> &middot; <b>Strategy version:</b> <code>11d-paper-v1</code> &middot; <b>Config hash:</b> <code>9c7c362d7e0c6a14</code></p>
+
+<div class="warn"><b>Safety statement first.</b> The paper engine cannot place a real order. There are zero references to <code>place_order</code>, <code>modify_order</code>, <code>cancel_order</code>, <code>buy_order</code>, <code>sell_order</code>, the Dhan broker client, or <code>dhanhq</code> anywhere in <code>paper_trading/</code>, and a test asserts this by scanning the package's own source on every run. The backend API that feeds the Command Center is registered <code>allow_methods=["GET"]</code>, so <b>no action taken in the UI can cause a trade of any kind</b>, paper or real. There is no "Go Live" button and no code path that could become one without a deliberate new milestone.</div>
+
+<div class="warn"><b>This is not evidence of profitability.</b> Milestones 11A&ndash;11C found no validated directional edge and no validated option-expression rule. The paper agent exists to test whether the platform reads the market coherently, knows when <i>not</i> to trade, and manages risk sensibly &mdash; not to make money. All P&amp;L is <b>PRE-COST</b>: no brokerage or tax model exists in this project, so none was invented.</div>
+
+<div class="toc">
+<b>Contents</b>
+<a href="#ui">UI snapshot &mdash; Paper Trading Command Center (live)</a>
+<a href="#a">A. Repository inspection &middot; B. Architecture</a>
+<a href="#c">C/D. Files added and modified</a>
+<a href="#e">E. Database &middot; F. Backend endpoints &middot; G. Frontend</a>
+<a href="#h">H. Agent state machine</a>
+<a href="#i">I. Decision methodology (gate order)</a>
+<a href="#j">J&ndash;N. Trend, option selection, stop, target, management</a>
+<a href="#o">O/P. Risk controls and paper account</a>
+<a href="#q">Q&ndash;S. Tests, leakage, real-order safety</a>
+<a href="#t">T&ndash;V. Worked examples</a>
+<a href="#w">W. Unresolved limitations</a>
+<a href="#x">X. Starting the five-session experiment</a>
+</div>
+
+<h2 id="ui">UI snapshot &mdash; Paper Trading Command Center</h2>
+<p>The Command Center lives at <code>/paper-trading</code>, in the navigation slot Market Intelligence vacated in commit <code>bcbbf1d</code>. Below is the page as it renders against the live database, reproduced faithfully in HTML (same layout, same labels, same values) so this document stays readable standalone with no image assets &mdash; the same convention <code>PLATFORM_REFERENCE.html</code> uses.</p>
+
+<p class="shot-label">Snapshot 1 &mdash; live page, 2026-09-10 (Day 2 of 5, before the 14:59 freeze).</p>
+
+<div class="ui">
+ <div class="bar">
+  <span class="brand">Trading Intelligence Terminal</span>
+  <span style="background:rgba(255,255,255,.18);border-radius:3px;padding:3px 10px;font-size:12px">SENSEX</span>
+  <span style="opacity:.6;font-size:12px">NIFTY</span>
+  <span class="nav"><span>Terminal</span><span class="on">Paper Trading</span><span>Market Transition Intelligence</span></span>
+ </div>
+
+ <div class="paper">
+  <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+   <span style="font-weight:700;font-size:16px">Paper Trading Command Center</span>
+   <span class="chip c-warn">PAPER MODE - NO REAL ORDERS</span>
+   <span class="chip c-out">MARKET MONITORING</span>
+   <span style="margin-left:auto;font-size:11px;color:#637381">11d-paper-v1 - config 9c7c362d7e0c6a14 - Day 2 of 5</span>
+  </div>
+  <div class="metrics">
+   <div class="m"><div class="lbl">Virtual Capital</div><div class="val">Rs 15,000</div></div>
+   <div class="m"><div class="lbl">Current Balance</div><div class="val">Rs 15,000</div></div>
+   <div class="m"><div class="lbl">Today's P&amp;L</div><div class="val">Rs 0</div></div>
+   <div class="m"><div class="lbl">Total P&amp;L</div><div class="val">Rs 0</div></div>
+   <div class="m"><div class="lbl">Max Drawdown</div><div class="val">0.0%</div></div>
+   <div class="m"><div class="lbl">Trades</div><div class="val">0</div></div>
+  </div>
+  <span class="cap">Simulated experiment on virtual capital. All P&amp;L is PRE-COST (no brokerage or tax model exists in this project, so none is assumed). Results are not evidence that the strategy is profitable.</span>
+ </div>
+
+ <div class="paper" style="color:#637381">
+  No 14:59 decision has been frozen yet today. The agent monitors the market from 09:15 and freezes its decision for each symbol at 14:59 IST.
+ </div>
+
+ <div class="row">
+  <div class="paper">
+   <div class="ttl">Paper Experiment Metrics</div>
+   <span class="cap" style="margin-top:0">Deliberately NOT labelled strategy performance. Five sessions is far too small a sample to characterise a strategy, and all figures are pre-cost.</span>
+   <div class="stats" style="margin-top:9px">
+    <div class="s"><div class="lbl">Trades</div><div class="val">0</div></div>
+    <div class="s"><div class="lbl">Wins</div><div class="val">0</div></div>
+    <div class="s"><div class="lbl">Losses</div><div class="val">0</div></div>
+   </div>
+   <div class="stats">
+    <div class="s"><div class="lbl">Win Rate</div><div class="val">--</div></div>
+    <div class="s"><div class="lbl">Today's P&amp;L</div><div class="val">Rs 0</div></div>
+    <div class="s"><div class="lbl">Total P&amp;L</div><div class="val">Rs 0</div></div>
+   </div>
+   <div class="stats">
+    <div class="s"><div class="lbl">Balance</div><div class="val">Rs 15,000</div></div>
+    <div class="s"><div class="lbl">Max Drawdown</div><div class="val">0.0%</div></div>
+    <div class="s"><div class="lbl">Average Win</div><div class="val">--</div></div>
+   </div>
+   <div class="stats" style="margin-bottom:0">
+    <div class="s"><div class="lbl">Average Loss</div><div class="val">--</div></div>
+    <div class="s"><div class="lbl">Profit Factor</div><div class="val">--</div></div>
+    <div class="s"><div class="lbl">Consecutive Losses</div><div class="val">0</div></div>
+   </div>
+  </div>
+  <div class="paper">
+   <div class="ttl">Decision vs Outcome</div>
+   <span class="cap" style="margin-top:0">Direction correctness and option profitability are tracked separately: a correct call that lost money is not a bad trade, and a wrong call that made money is not evidence of skill.</span>
+   <div style="margin-top:10px;color:#637381">No decisions recorded yet today.</div>
+  </div>
+  <div class="paper">
+   <div class="ttl">Data Health</div>
+   <div>Agent state: <b>MARKET MONITORING</b></div>
+   <div>Last heartbeat: <b>52s ago</b></div>
+   <div>Database: <b>OK</b></div>
+   <span class="cap">The agent ticks once a minute from the live pipeline. A stale heartbeat during market hours means the pipeline is not running.</span>
+  </div>
+ </div>
+
+ <div class="paper">
+  <div class="ttl">Paper Trade Journal</div>
+  <div style="color:#637381">No completed paper trades yet. Every 14:59 decision -- including NO TRADE -- is still journaled above.</div>
+  <span class="cap">Entry fills are at the ASK and exits at the BID -- never LTP or midpoint. P&amp;L is pre-cost.</span>
+ </div>
+
+ <span class="cap" style="padding:0 2px">This is an instrumented research experiment on virtual capital, not a live trading system and not evidence that the strategy is profitable. Milestones 11A-11C found no validated directional edge and no validated option-expression rule; the paper agent exists to test whether the platform reads the market coherently, knows when NOT to trade, and manages risk sensibly.</span>
+</div>
+
+<p class="shot-label">Snapshot 2 &mdash; the two decision cards, rendered from the real frozen rows for 2026-09-09 (Day 1). These are the exact values persisted in <code>paper_decisions</code>, not illustrations.</p>
+
+<div class="ui">
+ <div class="row">
+  <div class="paper" style="min-width:430px">
+   <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+    <span style="font-weight:700;font-size:15px">NIFTY</span>
+    <span class="chip c-def">NO TRADE</span>
+    <span class="chip c-out">DOWN</span>
+    <span style="margin-left:auto;font-size:11px;color:#637381">14:59 decision - frozen</span>
+   </div>
+   <div class="notrade">
+    <b>NO TRADE - EXPECTED MOVE TOO SMALL</b>
+    <div style="font-size:11px;color:#637381">A NO TRADE day is a valid outcome. The market state the agent saw is shown below regardless.</div>
+   </div>
+   <div class="stats">
+    <div class="s"><div class="lbl">Spot</div><div class="val">23,486</div></div>
+    <div class="s"><div class="lbl">Confidence</div><div class="val">45/100</div></div>
+    <div class="s"><div class="lbl">P(UP)</div><div class="val">60%</div></div>
+    <div class="s"><div class="lbl">P(DOWN)</div><div class="val">40%</div></div>
+    <div class="s"><div class="lbl">P(NO MOVE)</div><div class="val">100%</div></div>
+    <div class="s"><div class="lbl">Expected Move</div><div class="val">-34 to 23 pts</div></div>
+    <div class="s"><div class="lbl">Transition Risk</div><div class="val">NORMAL</div></div>
+    <div class="s"><div class="lbl">Analogs</div><div class="val">N=10</div></div>
+   </div>
+   <div class="stats">
+    <div class="s"><div class="lbl">VWAP</div><div class="val">23,519</div></div>
+    <div class="s"><div class="lbl">POC</div><div class="val">23,518</div></div>
+    <div class="s"><div class="lbl">Support</div><div class="val">23,450-23,478</div></div>
+    <div class="s"><div class="lbl">Resistance</div><div class="val">23,495-23,518</div></div>
+    <div class="s"><div class="lbl">PCR</div><div class="val">0.71</div></div>
+    <div class="s"><div class="lbl">RVOL</div><div class="val">66%</div></div>
+    <div class="s"><div class="lbl">Data</div><div class="val">GOOD</div></div>
+   </div>
+   <hr class="hr">
+   <div class="row">
+    <div class="fl"><div class="h g">Supporting</div><ul>
+     <li>Trend classifier reads Strong Bearish</li>
+     <li>Price -33 below VWAP</li>
+     <li>VWAP sloping down</li>
+     <li>Sell dominance 60%</li>
+     <li>PCR 0.71 -- call writing caps upside</li>
+     <li>Transition forecast P(UP) 60% vs P(DOWN) 40%</li>
+    </ul></div>
+    <div class="fl"><div class="h r">Conflicting</div><ul>
+     <li>Resistance 9 pts overhead (inside 0.5x ATR)</li>
+     <li>Support 8 pts below (inside 0.5x ATR)</li>
+    </ul></div>
+   </div>
+  </div>
+
+  <div class="paper" style="min-width:430px">
+   <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+    <span style="font-weight:700;font-size:15px">SENSEX</span>
+    <span class="chip c-def">NO TRADE</span>
+    <span class="chip c-out">DOWN</span>
+    <span style="margin-left:auto;font-size:11px;color:#637381">14:59 decision - frozen</span>
+   </div>
+   <div class="notrade">
+    <b>NO TRADE - EXPECTED MOVE TOO SMALL</b>
+    <div style="font-size:11px;color:#637381">A NO TRADE day is a valid outcome. The market state the agent saw is shown below regardless.</div>
+   </div>
+   <div class="stats">
+    <div class="s"><div class="lbl">Spot</div><div class="val">74,938</div></div>
+    <div class="s"><div class="lbl">Confidence</div><div class="val">57/100</div></div>
+    <div class="s"><div class="lbl">P(UP)</div><div class="val">50%</div></div>
+    <div class="s"><div class="lbl">P(DOWN)</div><div class="val">50%</div></div>
+    <div class="s"><div class="lbl">P(NO MOVE)</div><div class="val">100%</div></div>
+    <div class="s"><div class="lbl">Expected Move</div><div class="val">-97 to 75 pts</div></div>
+    <div class="s"><div class="lbl">Transition Risk</div><div class="val">NORMAL</div></div>
+    <div class="s"><div class="lbl">Analogs</div><div class="val">N=10</div></div>
+   </div>
+   <div class="stats">
+    <div class="s"><div class="lbl">VWAP</div><div class="val">75,080</div></div>
+    <div class="s"><div class="lbl">POC</div><div class="val">75,063</div></div>
+    <div class="s"><div class="lbl">Support</div><div class="val">74,700-74,800</div></div>
+    <div class="s"><div class="lbl">Resistance</div><div class="val">75,025-75,124</div></div>
+    <div class="s"><div class="lbl">PCR</div><div class="val">0.66</div></div>
+    <div class="s"><div class="lbl">RVOL</div><div class="val">179%</div></div>
+    <div class="s"><div class="lbl">Data</div><div class="val">GOOD</div></div>
+   </div>
+   <hr class="hr">
+   <div class="row">
+    <div class="fl"><div class="h g">Supporting</div><ul>
+     <li>Trend classifier reads Strong Bearish</li>
+     <li>Price -141 below VWAP</li>
+     <li>VWAP sloping down</li>
+     <li>Sell dominance 60%</li>
+     <li>Relative volume 179% -- participation confirms the move</li>
+     <li>PCR 0.66 -- call writing caps upside</li>
+    </ul></div>
+    <div class="fl"><div class="h r">Conflicting</div><ul>
+     <li>Resistance 87 pts overhead (inside 0.5x ATR)</li>
+     <li>Support 138 pts below (inside 0.5x ATR)</li>
+    </ul></div>
+   </div>
+  </div>
+ </div>
+</div>
+
+<div class="callout"><b>Two honest notes on Snapshot 2.</b> (1) These rows were frozen at 16:03 IST by a post-close catch-up run using the 14:59 data cutoff &mdash; not by a live 14:59 tick; the cutoff is correct, the wall-clock freeze time is not what it will be in a live session. (2) They were written 18 minutes <i>before</i> the supporting/conflicting classification fix landed in the same commit, which is why <i>"Transition forecast P(UP) 60% vs P(DOWN) 40%"</i> still appears under SUPPORTING for a DOWN verdict on the NIFTY card. Re-running that state today classifies it as CONFLICTING. <code>paper_decisions</code> is insert-once by design, so the row was left exactly as frozen rather than rewritten.</div>
+
+<p class="shot-label">Snapshot 3 &mdash; the Open Position panel. It has never been populated by a real session (the agent has produced only NO TRADE so far), so this is the <b>lifecycle rehearsal</b>: synthetic quotes fed through the real <code>evaluate_minute</code> engine, reproduced here by re-running it. Every value below is engine output, not hand-written.</p>
+
+<div class="ui">
+ <div class="paper">
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:9px">
+   <span style="font-weight:700;font-size:15px">SENSEX 74900 PE</span>
+   <span class="chip c-info">OPEN</span>
+   <span style="margin-left:auto;font-size:11px;color:#637381">rehearsal &mdash; not a real session</span>
+  </div>
+  <div class="stats">
+   <div class="s"><div class="lbl">Entry (ASK)</div><div class="val">150.00</div></div>
+   <div class="s"><div class="lbl">Quantity</div><div class="val">40</div></div>
+   <div class="s"><div class="lbl">Capital</div><div class="val">Rs 6,000</div></div>
+   <div class="s"><div class="lbl">Current Bid</div><div class="val">200.00</div></div>
+   <div class="s"><div class="lbl">Unrealized</div><div class="val g">Rs 2,000</div></div>
+   <div class="s"><div class="lbl">MFE</div><div class="val">--</div></div>
+   <div class="s"><div class="lbl">MAE</div><div class="val">--</div></div>
+  </div>
+  <hr class="hr">
+  <div class="stats">
+   <div class="s"><div class="lbl">Original SL</div><div class="val">134.00</div></div>
+   <div class="s"><div class="lbl">Current SL</div><div class="val g">175.00</div></div>
+   <div class="s"><div class="lbl">Original Target</div><div class="val">211.00</div></div>
+   <div class="s"><div class="lbl">Current Target</div><div class="val">211.00</div></div>
+  </div>
+  <table>
+   <tr><th>Time</th><th>Min</th><th>Event</th><th style="text-align:right">Underlying</th><th style="text-align:right">Bid</th><th style="text-align:right">Unrealized</th><th>Momentum</th><th>Note</th></tr>
+   <tr><td>15:00</td><td>1</td><td>HOLD</td><td align="right">74900</td><td align="right">165.00</td><td align="right" class="g">Rs 600</td><td>STRONG</td><td>No change -- momentum intact, stop and target unchanged</td></tr>
+   <tr><td>15:01</td><td>2</td><td>HOLD</td><td align="right">74860</td><td align="right">180.00</td><td align="right" class="g">Rs 1,200</td><td>STRONG</td><td>No change -- momentum intact, stop and target unchanged</td></tr>
+   <tr><td>15:02</td><td>3</td><td>HOLD</td><td align="right">74820</td><td align="right">192.00</td><td align="right" class="g">Rs 1,680</td><td>STRONG</td><td>No change -- momentum intact, stop and target unchanged</td></tr>
+   <tr><td>15:03</td><td>4</td><td>TRAIL</td><td align="right">74780</td><td align="right">200.00</td><td align="right" class="g">Rs 2,000</td><td>STRONG</td><td>Tightened stop to 175.00 -- 50% of a 50.00 gain locked in</td></tr>
+  </table>
+ </div>
+</div>
+
+<div class="finding"><b>What Snapshot 3 proves.</b> The management path is real and reachable, not dead code behind a NO-TRADE wall: entry filled at the <b>ASK</b> (150.00, never the 149.00 LTP or the 149.00 midpoint), the stop stayed put while momentum held, and the trail engaged only once the position was meaningfully ahead &mdash; moving the stop 134 &rarr; 175 to lock in half of a 50-point gain, while leaving the target untouched. <code>tighten_stop</code> returns <code>False</code> on any attempted widening, so a stop can only ever move in the position's favour.</div>
+
+<h2 id="a">A. Repository inspection &middot; B. Architecture</h2>
+<p>Before writing anything I read the existing schema (21 tables), <code>db/writer.py</code>'s <code>_insert_from_dataclass</code> pattern, the backend's repository&rarr;service&rarr;router convention with <code>Depends()</code> DI, the frontend's hook/endpoint/panel conventions, <code>pipeline/live_loop.py</code>'s try/except hook pattern (established by the CAS live hook), and the 11A&ndash;11C research modules. Reused rather than rebuilt: <code>extract_atm_window</code>, 11C's <code>build_candidate_universe</code>, <code>compute_atr</code>, <code>config.instruments.round_number_step</code>, the existing trend classifier, the levels snapshots, the CAS pre-transition windows and the frozen CAS forecast.</p>
+<pre>existing analytics  ->  paper decision layer  ->  paper execution simulator  ->  paper journal  ->  command center
+(unmodified)            (new: gates + risk)      (new: ASK/BID simulator)      (new: append-only)  (new: read-only UI)</pre>
+
+<h2 id="c">C. Files added &middot; D. Files modified</h2>
+<table>
+<tr><th>Path</th><th>Status</th><th>Purpose</th></tr>
+<tr><td><code>paper_trading/safety.py</code></td><td><span class="tag new">NEW</span></td><td><code>PAPER_MODE = True</code>, <code>FORBIDDEN_SOURCE_FRAGMENTS</code>, <code>RealOrderAttemptError</code>, and <code>scan_package_for_real_order_calls()</code> which reads the package's own source at test time.</td></tr>
+<tr><td><code>paper_trading/config.py</code></td><td><span class="tag new">NEW</span></td><td>Frozen <code>PaperConfig</code> dataclass + <code>config_hash()</code>. Every decision is stamped with the hash so runs under different settings can never be pooled by accident.</td></tr>
+<tr><td><code>paper_trading/broker.py</code></td><td><span class="tag new">NEW</span></td><td><code>PaperBroker.buy</code> (ASK) / <code>.sell</code> (BID, explicit fallback + <code>data_exception</code>), <code>compute_pnl</code> returning <code>basis="PRE_COST"</code>, and a <code>__getattr__</code> that raises <code>RealOrderAttemptError</code> for any unknown attribute &mdash; so even a typo'd <code>broker.place_order(...)</code> raises instead of silently doing nothing.</td></tr>
+<tr><td><code>paper_trading/market_state.py</code></td><td><span class="tag new">NEW</span></td><td>Assembles the 14:59 market picture from existing analytics reads only.</td></tr>
+<tr><td><code>paper_trading/trend_assessment.py</code></td><td><span class="tag new">NEW</span></td><td>10 bounded votes &rarr; direction verdict + confidence + supporting/conflicting evidence.</td></tr>
+<tr><td><code>paper_trading/option_selection.py</code></td><td><span class="tag new">NEW</span></td><td>Qualification band then percentage-terms ranking over the ATM&plusmn;5 window.</td></tr>
+<tr><td><code>paper_trading/risk.py</code></td><td><span class="tag new">NEW</span></td><td>Underlying-first stop and target, translated to premium via delta.</td></tr>
+<tr><td><code>paper_trading/decision.py</code></td><td><span class="tag new">NEW</span></td><td>The fixed-order gate chain that produces one frozen <code>PaperDecision</code> per symbol per day.</td></tr>
+<tr><td><code>paper_trading/position_manager.py</code></td><td><span class="tag new">NEW</span></td><td><code>evaluate_minute</code>, <code>tighten_stop</code> (refuses to widen), <code>classify_momentum</code>, <code>_maybe_trail</code>.</td></tr>
+<tr><td><code>paper_trading/account.py</code>, <code>journal.py</code>, <code>tick.py</code>, <code>agent.py</code>, <code>models.py</code></td><td><span class="tag new">NEW</span></td><td>Virtual account arithmetic, append-only journal, per-minute tick entry point, state machine, and the dataclass vocabulary.</td></tr>
+<tr><td><code>scripts/run_paper_agent.py</code></td><td><span class="tag new">NEW</span></td><td>Manual/diagnostic entry point and the kill switch (<code>--kill-switch on|off</code>).</td></tr>
+<tr><td>Backend: <code>models/</code>, <code>schemas/</code>, <code>repositories/</code>, <code>services/</code>, <code>api/v1/routers/paper_trading.py</code></td><td><span class="tag new">NEW</span></td><td>5 files, read-only.</td></tr>
+<tr><td>Frontend: <code>types/</code>, <code>api/endpoints/</code>, <code>hooks/</code>, <code>pages/PaperTradingPage.tsx</code>, <code>components/paper-trading/</code> (4)</td><td><span class="tag new">NEW</span></td><td>The Command Center.</td></tr>
+<tr><td>6 test files (84 tests)</td><td><span class="tag new">NEW</span></td><td><code>test_paper_safety</code> (12), <code>test_paper_leakage</code> (5), <code>test_paper_engine</code> (34), <code>test_paper_decision</code> (16), <code>test_paper_agent</code> (12), <code>test_paper_journal</code> (5)</td></tr>
+<tr><td><code>db/schema.sql</code></td><td><span class="tag mod">MODIFIED</span></td><td>+5 additive tables. No existing table altered.</td></tr>
+<tr><td><code>db/reader.py</code></td><td><span class="tag mod">MODIFIED</span></td><td>+3 read-only accessors.</td></tr>
+<tr><td><code>pipeline/live_loop.py</code></td><td><span class="tag mod">MODIFIED</span></td><td>One hooked call in its own try/except &mdash; a paper-agent failure can never break the snapshot pipeline.</td></tr>
+<tr><td><code>pyproject.toml</code></td><td><span class="tag mod">MODIFIED</span></td><td>Added <code>option_chain</code> and <code>paper_trading</code> to the explicit package list (the backend venv could not import the package otherwise &mdash; this caused an HTTP 500 until fixed).</td></tr>
+<tr><td>Backend <code>main.py</code> / <code>dependencies.py</code> / <code>models/__init__.py</code>; frontend <code>App.tsx</code> / <code>AppShell.tsx</code></td><td><span class="tag mod">MODIFIED</span></td><td>Registration and routing only.</td></tr>
+<tr><td>All analytics / forecast / CAS / 11A&ndash;11C research modules</td><td><span class="tag pass">UNCHANGED</span></td><td>Zero-diff. The agent reads them; it never edits them.</td></tr>
+</table>
+
+<h2 id="e">E. Database &middot; F. Backend endpoints &middot; G. Frontend</h2>
+<table>
+<tr><th>Table</th><th>Grain</th><th>Write discipline</th></tr>
+<tr><td><code>paper_decisions</code></td><td>symbol &times; session_date &times; configuration_hash</td><td><b>Insert-once.</b> A frozen decision is never updated. Re-running the agent is a no-op.</td></tr>
+<tr><td><code>paper_positions</code></td><td>one row per paper trade</td><td>Updated only by the exit path.</td></tr>
+<tr><td><code>paper_position_events</code></td><td>one row per management minute</td><td><b>Append-only.</b> An event can never modify the decision it belongs to.</td></tr>
+<tr><td><code>paper_account_snapshots</code></td><td>one row per session</td><td>Upsert.</td></tr>
+<tr><td><code>paper_sessions</code></td><td>one row per experiment session</td><td>Upsert.</td></tr>
+</table>
+<p><b>Six GET endpoints</b> under <code>/api/v1/paper-trading/</code>: <code>status</code>, <code>account</code>, <code>today</code> (the single poll the Command Center uses), <code>decisions</code>, <code>open-position</code>, <code>trades</code>. The API is registered <code>allow_methods=["GET"]</code>; only the agent process writes. The frontend polls <code>today</code> and renders the panels shown in the snapshots above.</p>
+
+<h2 id="h">H. Agent state machine</h2>
+<pre>PRE_MARKET -> MARKET_MONITORING -> PRE_14_59_ANALYSIS -> DECISION_FREEZE
+                                                              |
+                                            +-----------------+-----------------+
+                                            v                                   v
+                                         NO_TRADE                          TRADE_APPROVED
+                                            |                                   v
+                                            |                              PAPER_ENTRY
+                                            |                                   v
+                                            |                          POSITION_MANAGEMENT
+                                            |                                   v
+                                            |                              PAPER_EXIT
+                                            |                                   v
+                                            +--------> DAILY_REVIEW <---- TRADE_COMPLETE</pre>
+<p><code>PAPER_ENTRY</code> is the only state that opens a position, and it is reachable only from <code>TRADE_APPROVED</code>, which is reachable only from a decision that cleared every gate.</p>
+
+<h2 id="i">I. Decision methodology &mdash; the gate order</h2>
+<p>Gates are evaluated in a <b>fixed order</b>, so the recorded NO-TRADE reason is always the <i>first</i> disqualifier, never an arbitrary one when several apply. That makes the reason field diagnostic rather than decorative.</p>
+<table>
+<tr><th>#</th><th>Gate</th><th>Reason recorded</th></tr>
+<tr><td>1</td><td>Kill switch</td><td><code>KILL_SWITCH_ACTIVE</code></td></tr>
+<tr><td>2</td><td>Account-level risk block (daily loss / drawdown / trade count)</td><td>the specific block reason</td></tr>
+<tr><td>3</td><td>Data sufficiency</td><td><code>INSUFFICIENT_DATA</code></td></tr>
+<tr><td>4</td><td>Option snapshot freshness (&gt; 180 s)</td><td><code>STALE_OPTION_DATA</code></td></tr>
+<tr><td>5</td><td>Conflicting signals</td><td><code>CONFLICTING_SIGNALS</code></td></tr>
+<tr><td>6</td><td>Actionable trend / confidence / supporting-evidence count</td><td><code>LOW_CONFIDENCE</code>, <code>NO_CLEAR_DIRECTION</code></td></tr>
+<tr><td>7</td><td>Expected move vs ATR</td><td><code>EXPECTED_MOVE_TOO_SMALL</code></td></tr>
+<tr><td>8</td><td>Transition risk</td><td><code>TRANSITION_RISK_TOO_HIGH</code></td></tr>
+<tr><td>9</td><td>Option availability (chain, spread, delta, premium)</td><td><code>INSUFFICIENT_OPTION_DATA</code> or the selector's own reason</td></tr>
+<tr><td>10</td><td>Risk plan feasibility</td><td><code>STOP_EXCEEDS_RISK_BUDGET</code>, <code>EXPECTED_REWARD_INSUFFICIENT</code>, <code>PRICE_AT_MAJOR_SUPPORT/RESISTANCE</code>, &hellip;</td></tr>
+</table>
+<div class="callout"><b>The agent is not a wrapper around 11C.</b> Per the spec, the Milestone 11C option score is deliberately <i>not</i> hard-wired as the trading decision &mdash; 11C found no validated option-expression rule, so wiring it in would have shipped an unvalidated rule as if it were validated. The agent instead applies two structural corrections that address 11C's chain-extremes bias: a <b>qualification band</b> (delta floor + premium ceiling) before ranking, and ranking in <b>percentage terms</b> rather than absolute points.</div>
+
+<h2 id="j">J&ndash;N. Trend, option selection, stop, target, management</h2>
+<table>
+<tr><th>Layer</th><th>Method</th></tr>
+<tr><td><b>J. Trend assessment</b></td><td>10 bounded votes wrapping <i>existing</i> analytics (trend classifier, VWAP position and slope, POC, buy/sell dominance, RVOL, PCR, institutional bias, structure proximity, CAS transition forecast). The existing classifier is one input among ten, never replaced. Each vote records a <code>(sign, message)</code> pair; the net score's sign then splits those messages into SUPPORTING and CONFLICTING, so a bullish input can never be listed as supporting a DOWN verdict.</td></tr>
+<tr><td><b>K. Option selection</b></td><td>ATM&plusmn;5 window, direction-matching leg only (CE for UP, PE for DOWN). Qualify on delta &ge; 0.15, premium &le; &#8377;600, spread &le; 3%; then rank the survivors in percentage terms. <b>No symbol-specific strike rule</b> &mdash; NIFTY is not hard-coded to OTM, SENSEX is not hard-coded to ITM; both run the identical selector.</td></tr>
+<tr><td><b>L. Dynamic stop</b></td><td>Underlying-first: the nearest structural invalidation level (including soft levels &mdash; VWAP, POC, VAL), floored and capped by ATR, then translated to a premium level via delta. Structure leads; ATR only bounds it.</td></tr>
+<tr><td><b>M. Dynamic target</b></td><td>Only <i>genuine</i> S/R levels (<code>resistance_low</code> / <code>support_high</code>) are eligible as targets. Soft levels are deliberately excluded here: on 2026-09-08 SENSEX, VAL sat 6.1 points below spot while real support was 106.1 points away, which produced a nonsense 6-point target and a misleading <code>EXPECTED_REWARD_INSUFFICIENT</code>. Excluding soft levels from targets fixed it.</td></tr>
+<tr><td><b>N. Position management</b></td><td>1&ndash;19 minutes, hard forced exit at the limit. Fixed-order per-minute checks (time limit &rarr; minimum hold &rarr; target &rarr; stop &rarr; momentum failure &rarr; trail) so a minute in which two conditions fire records a deterministic reason. The stop may only tighten &mdash; see Snapshot 3.</td></tr>
+</table>
+
+<h2 id="o">O. Risk controls &middot; P. Paper account</h2>
+<table>
+<tr><th>Control</th><th>Value</th></tr>
+<tr><td>Starting virtual capital</td><td>&#8377;15,000</td></tr>
+<tr><td>Max premium at risk per trade</td><td>&#8377;6,000</td></tr>
+<tr><td>Max daily loss</td><td>&#8377;2,250</td></tr>
+<tr><td>Max account drawdown</td><td>&#8377;4,500</td></tr>
+<tr><td>Max trades per day / concurrent positions / per symbol per day</td><td>2 / 1 / 1</td></tr>
+<tr><td>Holding window</td><td>1&ndash;19 minutes</td></tr>
+<tr><td>Max option spread / min delta / max premium</td><td>3% / 0.15 / &#8377;600</td></tr>
+<tr><td>Min confidence / min reward:risk</td><td>45 / 1.2</td></tr>
+<tr><td>Max option snapshot age</td><td>180 s</td></tr>
+</table>
+<p>Sizing is deterministic: it is <b>never scaled by confidence</b> and <b>never increased after a loss</b>. Entry fills at the ASK and exits at the BID &mdash; never LTP, never midpoint. All P&amp;L carries <code>basis="PRE_COST"</code>.</p>
+
+<h2 id="q">Q. Test results &middot; R. Leakage &middot; S. Real-order safety</h2>
+<table>
+<tr><th>Suite</th><th>Result</th></tr>
+<tr><td>Pipeline (<code>pytest tests</code>)</td><td><span class="tag pass">595 PASSED</span> &mdash; 84 of them new in 11D, zero regressions</td></tr>
+<tr><td>Backend (<code>pytest backend/tests</code>)</td><td><span class="tag pass">48 PASSED</span></td></tr>
+<tr><td>Frontend (<code>npx tsc -b</code>)</td><td><span class="tag pass">CLEAN</span></td></tr>
+<tr><td>Safety scan (live re-run for this report)</td><td><code>PAPER_MODE: True | violations: NONE</code></td></tr>
+</table>
+<h3>R. Leakage tests (all pass)</h3>
+<p>Four properties are asserted: the decision uses no candle or option data after the 14:59 cutoff; post-14:59 data cannot create or change the initial decision; re-running the agent on a day whose decision is already frozen is a no-op that leaves the row byte-identical; and the recorded configuration hash matches the config actually used.</p>
+<h3>S. Real-order safety (12 tests)</h3>
+<ul>
+<li><b>Source scan</b> of the whole <code>paper_trading/</code> package: zero occurrences of <code>place_order</code>, <code>modify_order</code>, <code>cancel_order</code>, <code>buy_order</code>, <code>sell_order</code>, the Dhan broker client, or <code>dhanhq</code>. (This test once failed on a <i>docstring</i> that contained the literal string <code>dhan_client</code> &mdash; the docstring was reworded rather than the test weakened.)</li>
+<li><b>No broker import</b> anywhere in the package.</li>
+<li><code>PaperBroker.__getattr__</code> raises <code>RealOrderAttemptError</code> for any execution-shaped attribute, so an accidental call fails loudly instead of silently.</li>
+<li>The backend router set is GET-only; there is no write endpoint to attack.</li>
+</ul>
+<div class="warn"><b>Even if valid Dhan credentials are present in the environment, the paper engine has no code path that can reach an execution endpoint.</b> There is no "Go Live" button, no feature flag that enables one, and no partially-built order function waiting to be uncommented.</div>
+
+<h2 id="t">T&ndash;V. Worked examples</h2>
+<p><b>T &amp; U.</b> Both real decisions produced so far are NO TRADE, shown in full in <a href="#ui">Snapshot 2</a>. The NIFTY card is the clearest illustration of the gate order in action: the direction read was coherent (DOWN, five supporting factors), but the forecast expected move of 34 points was under 0.3&times; the 169-point ATR, so gate 7 fired and gates 8&ndash;10 were never reached &mdash; the agent never even looked for an option. <b>That is the intended behaviour.</b> A coherent direction is not sufficient reason to buy a decaying instrument for fifteen minutes.</p>
+<p><b>V.</b> The dynamic-management sequence is <a href="#ui">Snapshot 3</a>, re-run from the real engine for this document.</p>
+
+<h2 id="w">W. Unresolved limitations</h2>
+<ol>
+<li><b>The agent is very selective.</b> A dry run across 22 historical symbol-days produced <b>one</b> trade (~5%). Five sessions may therefore yield <b>zero</b> trades. That is an informative result about the market and the gates, but it may leave the management path exercised only by rehearsal. <b>I did not loosen any threshold to manufacture trades</b> &mdash; doing so would have made the experiment meaningless.</li>
+<li><b>Day 1's decisions were frozen post-close, not live.</b> The 2026-09-09 rows carry a 16:03 IST timestamp from a catch-up run using the correct 14:59 data cutoff. The data is right; the wall-clock freeze is not what a live session produces. Days 2&ndash;5 should be run through the live loop.</li>
+<li><b><code>P(NO MOVE)</code> displays as 100% next to P(UP)/P(DOWN).</b> The upstream CAS forecast keeps these as three separate tallies rather than one normalised distribution, so they do not sum to 1. This is pre-existing production behaviour surfaced by the new card, not introduced by 11D &mdash; and it is not "fixed" here because that would mean editing validated forecast logic inside a paper-trading milestone.</li>
+<li><b>Delta translation is linear</b> (ignores gamma and IV changes) when converting an underlying level into a premium level. Realised P&amp;L is always computed from actual quotes, never from this approximation &mdash; it only shapes the initial stop and target.</li>
+<li><b>All P&amp;L is PRE-COST.</b> No brokerage, STT, exchange or GST model exists in this project, so none was invented. A real net figure would be materially worse.</li>
+<li><b>The kill switch is CLI-only.</b> The UI displays its state but cannot set it, because the API is read-only by design. That is a deliberate trade-off, not an oversight.</li>
+<li><b>Five Market Intelligence frontend files remain unused</b> (2 components, 1 hook, 1 endpoint module, 1 types module) in the frontend tree (removed from the UI in <code>bcbbf1d</code>, files intentionally left in place). Harmless, but they are dead code until a future milestone deletes or revives them.</li>
+</ol>
+
+<h2 id="x">X. Starting the five-session experiment</h2>
+<pre>venv/Scripts/python.exe scripts/run_live_loop.py SENSEX NIFTY --single-session</pre>
+<p>The paper agent now ticks automatically inside that loop &mdash; no separate process is needed. Watch it at <code>http://localhost:5173/paper-trading</code>.</p>
+<table>
+<tr><th>Rule</th><th>Why</th></tr>
+<tr><td><b>Do not edit <code>paper_trading/config.py</code> during the five sessions.</b></td><td>Any change alters <code>config_hash()</code>, and sessions under different hashes cannot be pooled. The experiment would have to restart.</td></tr>
+<tr><td>Do not tune the strategy mid-experiment.</td><td>Five sessions is already far too small a sample; tuning inside it turns an experiment into a fitting exercise.</td></tr>
+<tr><td>Do not force a trade on a NO TRADE day.</td><td>NO TRADE is a valid and important outcome &mdash; arguably the primary thing being tested.</td></tr>
+<tr><td>Kill switch: <code>scripts/run_paper_agent.py --kill-switch on|off</code></td><td>Blocks new paper entries; existing records are untouched.</td></tr>
+</table>
+
+<footer>
+Milestone 11D &mdash; paper trading agent and command center. Commit <code>becc16b</code> on <code>market-transition-cas-analysis</code>. Strategy <code>11d-paper-v1</code>, config hash <code>9c7c362d7e0c6a14</code>.
+Every figure in this document was read from the live database or re-run from the live engine while writing it; none was transcribed from memory.
+<b>No live trading. No connection to any Dhan order-placement endpoint. Nothing here is evidence that the strategy is profitable.</b>
+</footer>
+
+</body>
+</html>
