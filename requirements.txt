@@ -1,4 +1,5 @@
 dhanhq==2.2.0
+websockets==16.1.1
 pandas
 numpy
 mplfinance
