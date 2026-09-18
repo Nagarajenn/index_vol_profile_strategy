@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Option Chain Capture Audit</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1180px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.3em;color:#1a3a5c;margin-top:2.2em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.05em;color:#2c3e50;margin-top:1.5em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.85em}
+ th,td{border:1px solid #ccc;padding:5px 7px;text-align:left;vertical-align:top}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.8em;line-height:1.5}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.74em;font-weight:bold;color:#fff}
+ .ready{background:#2e7d32}.partial{background:#f9a825;color:#222}.na{background:#c62828}.keep{background:#1a5c8a}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .ok{background:#e8f5e9;border-left:4px solid #2e7d32;padding:10px 14px;margin:14px 0}
+ .toc a{display:block;margin:3px 0;color:#1a3a5c;text-decoration:none}
+ .toc a:hover{text-decoration:underline}
+ .num{text-align:right}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+ .nochange{background:#2c3e50;color:#fff;padding:14px 18px;border-radius:6px;font-size:1.15em;font-weight:bold;text-align:center;letter-spacing:1px;margin:26px 0}
+</style>
+</head>
+<body>
+
+<h1>Option Chain Capture Audit<br><span style="font-size:0.6em;font-weight:normal;color:#555">Freeze-readiness check &mdash; read-only, no code changes</span></h1>
+
+<p><b>Date:</b> 2026-09-10 &middot; <b>Branch:</b> <code>market-transition-cas-analysis</code> &middot; <b>Frozen experiment:</b> <code>11d-paper-v1</code>, config hash <code>9c7c362d7e0c6a14</code></p>
+
+<div class="ok"><b>Method.</b> Every number in this report was produced by inspecting source files and running <code>SELECT</code>-only queries against the live PostgreSQL database while writing it. Nothing was inferred from the capture code alone, nothing was repaired, imputed or forward-filled, and no file, schema, configuration or pipeline was modified.</div>
+
+<div class="finding"><b>Headline finding &mdash; it changes the premise of the question.</b> Option-chain capture is <b>already full-day, every minute</b> (09:15 &rarr; 15:39), for both symbols, storing the <b>complete raw broker payload</b>. It is not CAS-window-only and it is not an aggregate. Every narrower or coarser alternative evaluated in Part K would therefore be a <i>reduction</i> of existing capability, not an upgrade. <b>No change is required.</b></div>
+
+<div class="toc">
+<b>Contents</b>
+<a href="#s1">1. Current capture implementation</a>
+<a href="#s2">2. Actual database capture frequency</a>
+<a href="#s3">3. Actual daily time coverage</a>
+<a href="#s4">4. Option field coverage</a>
+<a href="#s5">5. ATM&plusmn;5 historical coverage</a>
+<a href="#s6">6. Data quality</a>
+<a href="#s7">7. Staleness behaviour</a>
+<a href="#s8">8. Historical depth (and the Milestone 10.5 cross-check)</a>
+<a href="#s9">9. Research capabilities</a>
+<a href="#s10">10. Gaps</a>
+<a href="#s11">11&ndash;12. Recommended future capture window and frequency</a>
+<a href="#s13">13. Is any change required now?</a>
+<a href="#s14">14. Confirmation that 11D remains unchanged</a>
+</div>
+
+<h2 id="s1">1. Current capture implementation</h2>
+<table>
+<tr><th>Question</th><th>Finding</th><th>Location</th></tr>
+<tr><td>Capture module</td><td><code>get_option_chain()</code> &rarr; <code>fetch_option_chain()</code></td><td><code>option_chain/fetch.py</code>, <code>dhan_client/client.py:174</code></td></tr>
+<tr><td>Scheduler / timing mechanism</td><td>The <b>main live loop</b> &mdash; there is no separate option-chain job</td><td><code>pipeline/live_loop.py:34</code></td></tr>
+<tr><td>Actual capture interval</td><td><code>LIVE_LOOP_INTERVAL_MIN = 1</code> (one minute)</td><td><code>config/settings.py:58</code></td></tr>
+<tr><td>Start time</td><td><code>SESSION_OPEN = "09:15"</code> + <code>DATA_LAG_BUFFER_SEC = 15</code></td><td><code>config/settings.py:36</code>, <code>live_loop.py:15</code></td></tr>
+<tr><td>End time</td><td><code>SESSION_CLOSE = "15:40"</code> (NSE F&amp;O extension, effective 2026-08-03)</td><td><code>config/settings.py:43</code></td></tr>
+<tr><td>Instruments captured</td><td>NIFTY and SENSEX</td><td><code>config/instruments.py</code></td></tr>
+<tr><td>Expiries captured</td><td>Nearest expiry only &mdash; <b>resolved live from Dhan's own expiry list</b>, never hardcoded weekly/monthly</td><td><code>option_chain/fetch.py:4</code></td></tr>
+<tr><td>Strike range captured</td><td><b>The entire chain.</b> Measured average 227 strikes (NIFTY) / 175 (SENSEX) per snapshot &mdash; not a window</td><td>measured from <code>raw_payload</code></td></tr>
+<tr><td>Raw payload fields stored</td><td>The complete Dhan payload, verbatim, as JSONB</td><td><code>db/writer.py:90</code></td></tr>
+<tr><td>Derived fields stored</td><td>PCR, ATM strike, near-ATM OI deltas, totals, IV, max-OI walls &rarr; <code>option_chain_summary</code></td><td><code>option_chain/summary.py:20</code></td></tr>
+<tr><td>Filtering before persistence</td><td><b>None.</b> The payload is stored as received</td><td><code>pipeline/run_snapshot.py:152</code></td></tr>
+<tr><td>Retry logic</td><td><b>None.</b> A failed fetch is logged and that minute is skipped</td><td><code>pipeline/run_snapshot.py:135</code></td></tr>
+<tr><td>Throttling</td><td><code>MinIntervalLimiter(3.0 s)</code> guarding Dhan's 1-request/3-second option-chain cap</td><td><code>dhan_client/rate_limiter.py</code></td></tr>
+<tr><td>Skipped intervals</td><td>None by design &mdash; the option chain is fetched on every live tick</td><td><code>run_snapshot.py:131</code></td></tr>
+<tr><td>Market-hours assumptions</td><td>Trading days via <code>trading_calendar.is_trading_day</code>; loop sleeps outside 09:15&ndash;15:40</td><td><code>live_loop.py:60&ndash;90</code></td></tr>
+</table>
+
+<h2 id="s2">2. Actual database capture frequency</h2>
+<p>Measured from records, not from the code. Gap in seconds between successive distinct <code>fetched_at</code> values, across four different day types as requested.</p>
+<table>
+<tr><th>Date</th><th>Day type</th><th>Symbol</th><th class="num">N</th><th class="num">min</th><th class="num">p25</th><th class="num">median</th><th class="num">mean</th><th class="num">p75</th><th class="num">p95</th><th class="num">max</th><th class="num">missing min</th><th class="num">dupes</th></tr>
+<tr><td>2026-09-03</td><td>large continuation</td><td>NIFTY</td><td class="num">379</td><td class="num">60</td><td class="num">60</td><td class="num">60</td><td class="num">61.0</td><td class="num">60</td><td class="num">60</td><td class="num">420</td><td class="num">6</td><td class="num"><b>0</b></td></tr>
+<tr><td>2026-09-03</td><td>large continuation</td><td>SENSEX</td><td class="num">379</td><td class="num">60</td><td class="num">60</td><td class="num">60</td><td class="num">61.0</td><td class="num">60</td><td class="num">60</td><td class="num">420</td><td class="num">6</td><td class="num"><b>0</b></td></tr>
+<tr><td>2026-09-07</td><td>reversal</td><td>NIFTY</td><td class="num">370</td><td class="num">60</td><td class="num">60</td><td class="num">60</td><td class="num">62.4</td><td class="num">60</td><td class="num">60</td><td class="num">540</td><td class="num">15</td><td class="num"><b>0</b></td></tr>
+<tr><td>2026-09-07</td><td>reversal</td><td>SENSEX</td><td class="num">367</td><td class="num">60</td><td class="num">60</td><td class="num">60</td><td class="num">63.0</td><td class="num">60</td><td class="num">60</td><td class="num">540</td><td class="num">18</td><td class="num"><b>0</b></td></tr>
+<tr><td>2026-09-08</td><td>normal</td><td>both</td><td class="num">384</td><td class="num">60</td><td class="num">60</td><td class="num">60</td><td class="num">60.2</td><td class="num">60</td><td class="num">60</td><td class="num">120</td><td class="num">1</td><td class="num"><b>0</b></td></tr>
+<tr><td>2026-09-09</td><td>normal</td><td>both</td><td class="num">384</td><td class="num">60</td><td class="num">60</td><td class="num">60</td><td class="num">60.2</td><td class="num">60</td><td class="num">60</td><td class="num">120</td><td class="num">1</td><td class="num"><b>0</b></td></tr>
+<tr><td>2026-09-04</td><td>normal</td><td>both</td><td class="num">384</td><td class="num">60</td><td class="num">60</td><td class="num">60</td><td class="num">60.2</td><td class="num">60</td><td class="num">60</td><td class="num">120</td><td class="num">1</td><td class="num"><b>0</b></td></tr>
+<tr><td>2026-09-02</td><td>normal</td><td>both</td><td class="num">369</td><td class="num">60</td><td class="num">60</td><td class="num">60</td><td class="num">62.6</td><td class="num">60</td><td class="num">60</td><td class="num">540</td><td class="num">16</td><td class="num"><b>0</b></td></tr>
+</table>
+<div class="finding"><b>Strict 1-minute cadence, with zero duplicate timestamps anywhere in the entire table.</b> p25, median, p75 and p95 are all exactly 60 s on every day sampled. A clean day is 384 snapshots out of a possible 385 minutes. The occasional 420&ndash;540 s maxima are genuine fetch gaps (no retry logic exists), and on every sampled day they fall <i>outside</i> the 14:30&ndash;15:15 research window.</div>
+
+<h2 id="s3">3. Actual daily time coverage</h2>
+<p>Snapshots present / minutes in the bucket. Verified from records, not inferred from the schedule.</p>
+<table>
+<tr><th>Date</th><th>Sym</th><th>First</th><th>Last</th><th>09:15</th><th>09:30</th><th>10:00</th><th>11:00</th><th>12:00</th><th>13:00</th><th>14:00</th><th style="background:#1a5c8a">14:30</th><th style="background:#1a5c8a">15:00</th><th>15:15</th><th>15:30</th></tr>
+<tr><td>2026-09-01</td><td>both</td><td>09:49</td><td>15:39</td><td>0/15</td><td>11/30</td><td>60/60</td><td>60/60</td><td>60/60</td><td>60/60</td><td>30/30</td><td><b>30/30</b></td><td><b>15/15</b></td><td>15/15</td><td>6/10</td></tr>
+<tr><td>2026-09-02</td><td>both</td><td>09:15</td><td>15:39</td><td>15/15</td><td>30/30</td><td>60/60</td><td>52/60</td><td>60/60</td><td>60/60</td><td>30/30</td><td><b>30/30</b></td><td><b>15/15</b></td><td>15/15</td><td>2/10</td></tr>
+<tr><td>2026-09-03</td><td>both</td><td>09:15</td><td>15:39</td><td>15/15</td><td>30/30</td><td>60/60</td><td>60/60</td><td>60/60</td><td>60/60</td><td>30/30</td><td><b>30/30</b></td><td><b>15/15</b></td><td>15/15</td><td>4/10</td></tr>
+<tr><td>2026-09-04</td><td>both</td><td>09:15</td><td>15:39</td><td>15/15</td><td>30/30</td><td>60/60</td><td>60/60</td><td>60/60</td><td>60/60</td><td>30/30</td><td><b>30/30</b></td><td><b>15/15</b></td><td>15/15</td><td>9/10</td></tr>
+<tr><td>2026-09-07</td><td>NIFTY</td><td>09:15</td><td>15:39</td><td>15/15</td><td>30/30</td><td>60/60</td><td>60/60</td><td>54/60</td><td>60/60</td><td>29/30</td><td><b>30/30</b></td><td><b>15/15</b></td><td>15/15</td><td>2/10</td></tr>
+<tr><td>2026-09-07</td><td>SENSEX</td><td>09:15</td><td>15:39</td><td>15/15</td><td>30/30</td><td>59/60</td><td>59/60</td><td>54/60</td><td>60/60</td><td>28/30</td><td><b>30/30</b></td><td><b>15/15</b></td><td>15/15</td><td>2/10</td></tr>
+<tr><td>2026-09-08</td><td>both</td><td>09:15</td><td>15:39</td><td>15/15</td><td>30/30</td><td>60/60</td><td>60/60</td><td>60/60</td><td>60/60</td><td>30/30</td><td><b>30/30</b></td><td><b>15/15</b></td><td>15/15</td><td>9/10</td></tr>
+<tr><td>2026-09-09</td><td>both</td><td>09:15</td><td>15:39</td><td>15/15</td><td>30/30</td><td>60/60</td><td>60/60</td><td>60/60</td><td>60/60</td><td>30/30</td><td><b>30/30</b></td><td><b>15/15</b></td><td>15/15</td><td>9/10</td></tr>
+</table>
+<p>Answering the three specific questions posed: option-chain data <b>does</b> exist before 14:30 (from 09:15), <b>does</b> exist after 15:15 (through 15:39), and capture <b>does</b> continue to the end of the session. Every gap on these days falls outside 14:30&ndash;15:15 &mdash; <b>the CAS window was 100% complete on every day sampled.</b> The thin 15:30 bucket is expected: the session ends at 15:40, so only ~9 of those 10 minutes exist.</p>
+
+<h2 id="s4">4. Option field coverage</h2>
+<p><code>option_chain_raw</code> stores the complete raw broker payload as JSONB &mdash; nothing is discarded at write time, so any field Dhan publishes is recoverable retrospectively.</p>
+<table>
+<tr><th>Field</th><th>Raw or derived</th><th>Where</th><th>Presence (ATM&plusmn;5, 14:30&ndash;15:15)</th></tr>
+<tr><td><code>last_price</code> (LTP)</td><td>raw</td><td><code>raw_payload.oc[strike][ce|pe]</code></td><td>100%</td></tr>
+<tr><td><code>top_bid_price</code> / <code>top_ask_price</code></td><td>raw</td><td>same</td><td>100%</td></tr>
+<tr><td><code>top_bid_quantity</code> / <code>top_ask_quantity</code></td><td>raw</td><td>same</td><td>100%</td></tr>
+<tr><td><code>oi</code>, <code>previous_oi</code></td><td>raw</td><td>same</td><td>100%</td></tr>
+<tr><td><code>volume</code>, <code>previous_volume</code></td><td>raw</td><td>same</td><td>100%</td></tr>
+<tr><td><code>implied_volatility</code></td><td>raw</td><td>same</td><td>100% present &mdash; zero-valued on ITM puts, see &sect;6</td></tr>
+<tr><td><code>greeks.delta/gamma/theta/vega</code></td><td>raw</td><td>same</td><td>100% present &mdash; same ITM-put caveat</td></tr>
+<tr><td>OI <b>change</b></td><td><b>derived</b></td><td><code>oi &minus; previous_oi</code></td><td>Dhan's baseline is <b>prior-day close</b>, not intraday &mdash; an intraday delta needs consecutive snapshots diffed</td></tr>
+<tr><td><code>pcr</code>, <code>atm_strike</code>, totals, <code>max_call/put_oi_strike</code>, <code>atm_iv_call/put</code></td><td><b>derived</b></td><td><code>option_chain_summary</code></td><td>1:1 with raw (11,754 NIFTY / 11,745 SENSEX rows each)</td></tr>
+</table>
+
+<h2 id="s5">5. ATM&plusmn;5 historical coverage &mdash; 14:30 through 15:15</h2>
+<table>
+<tr><th>Date</th><th>Sym</th><th class="num">Minutes</th><th class="num">ATM&plusmn;5 complete</th><th class="num">LTP / Bid / Ask / OI / Volume</th><th class="num">IV + Greeks</th></tr>
+<tr><td>2026-09-03</td><td>NIFTY</td><td class="num">46</td><td class="num"><b>46 (100%)</b></td><td class="num">100%</td><td class="num">100%</td></tr>
+<tr><td>2026-09-03</td><td>SENSEX</td><td class="num">46</td><td class="num"><b>46 (100%)</b></td><td class="num">100%</td><td class="num">87.5%</td></tr>
+<tr><td>2026-09-07</td><td>NIFTY</td><td class="num">46</td><td class="num"><b>46 (100%)</b></td><td class="num">100%</td><td class="num">83.6%</td></tr>
+<tr><td>2026-09-07</td><td>SENSEX</td><td class="num">46</td><td class="num"><b>46 (100%)</b></td><td class="num">100%</td><td class="num">100%</td></tr>
+<tr><td>2026-09-09</td><td>NIFTY</td><td class="num">46</td><td class="num"><b>46 (100%)</b></td><td class="num">100%</td><td class="num">100%</td></tr>
+<tr><td>2026-09-09</td><td>SENSEX</td><td class="num">46</td><td class="num"><b>46 (100%)</b></td><td class="num">100%</td><td class="num">99.2%</td></tr>
+</table>
+<div class="finding"><b>14:50 &rarr; 14:59 &rarr; 15:00 &rarr; 15:15 is fully reconstructable minute by minute, with no interpolation.</b> Every one of the 46 minutes carries a complete ATM&plusmn;5 CE/PE window (1,012 legs per symbol-day). <code>raw_candles</code> supplies exactly 46 matching underlying minutes for the same window, so the option series and the spot series sit on an identical grid &mdash; which is what lead/lag analysis requires.</div>
+
+<h2 id="s6">6. Data quality</h2>
+<p>Across 1,012 ATM&plusmn;5 legs per symbol-day in the CAS window:</p>
+<table>
+<tr><th>Check</th><th>Result</th></tr>
+<tr><td>Missing values (any field)</td><td><b>0</b></td></tr>
+<tr><td>Crossed quotes (ask &lt; bid)</td><td><b>0</b></td></tr>
+<tr><td>Implausible spreads (&gt; 50% of ask)</td><td><b>0</b></td></tr>
+<tr><td>Duplicate snapshots</td><td><b>0</b></td></tr>
+<tr><td>Legs identical to the prior minute (stale quote)</td><td><b>0</b> &mdash; quotes genuinely refresh every minute</td></tr>
+<tr><td>Zero-valued LTP / bid / ask / OI / volume</td><td><b>0</b></td></tr>
+<tr><td>Zero-valued IV and Greeks</td><td>Present &mdash; localised, see below</td></tr>
+</table>
+<div class="warn"><b>The one real defect: zero IV and zero Greeks on deep-ITM puts.</b> Broken down by ATM offset, the zeros are entirely confined to strikes <i>above</i> spot on the PE side:
+<br><br>
+2026-09-03 SENSEX &mdash; <code>+2PE</code> 6/46, <code>+3PE</code> 36/46, <code>+4PE</code> 43/46, <code>+5PE</code> 42/46.<br>
+2026-09-07 NIFTY &mdash; <code>+2PE</code> 28/46, <code>+3PE</code> 46/46, <code>+4PE</code> 46/46, <code>+5PE</code> 46/46.
+<br><br>
+Dhan does not publish IV/Greeks for these illiquid legs. <b>No strike at or below spot is affected.</b> The paper agent is untouched by this (its &#8377;600 premium ceiling excludes deep-ITM options anyway), but <b>ITM-put Greeks research is not possible on this data</b>, and no amount of reprocessing will change that &mdash; the values were never published.</div>
+<div class="callout"><b>A labelling artefact worth knowing about.</b> <code>pipeline/catch_up_today.py</code> stamps its single option-chain fetch with <code>datetime.now(IST)</code> &mdash; the wall-clock catch-up time, not a checkpoint time. That is a deliberate choice (its own code comment explains that reusing one fetch across ~375 checkpoints would falsely imply OI was polled at each past minute), but it means 2026-08-18 carries rows timestamped <b>16:27</b>, after the close. Because <code>get_option_chain_raw_near(at_or_before=...)</code> filters on time, such a row can never be returned for a 14:59 query, <b>so it cannot leak into a decision</b>. It is a labelling quirk, not corruption &mdash; but a researcher filtering by date alone would need to know.</div>
+
+<h2 id="s7">7. Staleness behaviour &mdash; verified intact, unchanged</h2>
+<table>
+<tr><th>Question</th><th>Answer</th><th>Location</th></tr>
+<tr><td>Maximum permitted snapshot age</td><td><b>180 seconds</b></td><td><code>PaperConfig.max_snapshot_age_sec</code> (<code>paper_trading/config.py:48</code>); <code>MAX_SNAPSHOT_AGE_SEC</code> (<code>market_transition/direction_dataset.py:56</code>)</td></tr>
+<tr><td>Where the check occurs</td><td>Gate 4 of the decision chain, re-checked before option selection</td><td><code>paper_trading/decision.py:62</code> and <code>:109</code></td></tr>
+<tr><td>What happens when data is stale</td><td><code>NO_TRADE / STALE_OPTION_DATA</code> &mdash; <i>"refusing to treat it as the 14:59 state"</i></td><td><code>decision.py:64</code></td></tr>
+<tr><td>What happens when no valid snapshot exists</td><td><code>get_option_chain_raw_near</code> returns <code>None</code> &rarr; <code>NO_TRADE / INSUFFICIENT_DATA</code></td><td><code>db/reader.py:189</code>, <code>decision.py:60</code></td></tr>
+</table>
+<div class="finding"><b>Can the system accidentally use an old snapshot?</b> The reader deliberately <i>does</i> fall back to the latest row at-or-before the cutoff, so it can hand back an old one. The age is then computed at <code>market_state.py:155</code> and the 180-second gate rejects it. The protection is therefore <b>a check, not a query restriction</b> &mdash; which is the right design (the query stays leakage-safe, the freshness policy stays explicit and testable). Verified present, working, and untouched by this audit.</div>
+
+<h2 id="s8">8. Historical depth &mdash; and the Milestone 10.5 cross-check</h2>
+<table>
+<tr><th></th><th class="num">NIFTY</th><th class="num">SENSEX</th></tr>
+<tr><td>Earliest option-chain date</td><td class="num">2026-07-17</td><td class="num">2026-07-17</td></tr>
+<tr><td>Latest option-chain date</td><td class="num">2026-09-10</td><td class="num">2026-09-10</td></tr>
+<tr><td>Trading days with any data</td><td class="num">38</td><td class="num">39</td></tr>
+<tr><td>Total rows</td><td class="num">11,754</td><td class="num">11,745</td></tr>
+<tr><td>Full-day capture (&ge;370 snapshots, 09:15&rarr;15:39)</td><td class="num">17</td><td class="num">16</td></tr>
+<tr><td><b>CAS window 14:30&ndash;15:15 complete (46/46)</b></td><td class="num"><b>29</b></td><td class="num"><b>28</b></td></tr>
+<tr><td>CAS-era days (&ge; 2026-08-03)</td><td class="num">29</td><td class="num">29</td></tr>
+<tr><td>&mdash; of which 46/46 complete</td><td class="num"><b>25</b></td><td class="num"><b>24</b></td></tr>
+<tr><td>&mdash; partial</td><td class="num">08-24 (45/46)</td><td class="num">08-24, 08-27 (45/46)</td></tr>
+<tr><td>&mdash; zero</td><td class="num">08-18, 08-26, 09-10*</td><td class="num">08-18, 08-26, 09-10*</td></tr>
+<tr><td>Exact 14:59:00 snapshot present</td><td class="num">26 / 29 CAS-era days</td><td class="num">26 / 29 CAS-era days</td></tr>
+</table>
+<p style="font-size:0.85em;color:#666">* 2026-09-10 is today &mdash; the session was still in progress at audit time (data through 11:03).</p>
+<p><b>Storage footprint:</b> <code>option_chain_raw</code> = <b>598 MB</b>, <code>option_chain_summary</code> = 5.3 MB. That is ~7.8 MB per symbol-day, or roughly <b>3.9 GB/year</b> at the current full-day 1-minute policy for two symbols.</p>
+<div class="ok"><b>The Milestone 10.5 finding reproduces exactly.</b> Re-running this audit's query restricted to 10.5's own window (2026-08-03 &rarr; 2026-09-04) returns <b>50 symbol-days, 46 with &ge;90% minute-completeness, 4 with zero coverage</b> (2026-08-18 and 2026-08-26, both symbols). That is precisely 10.5's reported <i>"46/50 symbol-days usable, &ge;90% minute-complete in every case."</i> Its companion observation, <i>"greeks degenerate on ~19% of days,"</i> is the same ITM-put defect isolated in &sect;6. <b>Nothing differs between the earlier report and today's reality, so no explanation of a discrepancy is required</b> &mdash; two independent measurements a month apart agreeing is a meaningful check on both.</div>
+
+<h2 id="s9">9. Research capabilities</h2>
+<table>
+<tr><th>#</th><th>Research question</th><th>Status</th><th>Why</th></tr>
+<tr><td>1</td><td>14:30&ndash;14:59 option positioning</td><td><span class="tag ready">READY</span></td><td>30/30 minutes on every CAS-era day sampled</td></tr>
+<tr><td>2</td><td>14:50&ndash;14:59 minute-by-minute trajectory</td><td><span class="tag ready">READY</span></td><td>No interpolation needed</td></tr>
+<tr><td>3</td><td>14:59 snapshot</td><td><span class="tag ready">READY</span></td><td>Exact 14:59:00 row on 26/29 CAS-era days per symbol; the reader clamps at-or-before for the rest</td></tr>
+<tr><td>4</td><td>15:00&ndash;15:15 option response</td><td><span class="tag ready">READY</span></td><td>15/15 minutes, and data continues to 15:39</td></tr>
+<tr><td>5</td><td>ATM&plusmn;5 CE/PE comparison</td><td><span class="tag ready">READY</span></td><td>100% window completeness; the full chain is stored, so ATM&plusmn;N for any N</td></tr>
+<tr><td>6</td><td>PCR trajectory</td><td><span class="tag ready">READY</span></td><td>Derived per snapshot and recomputable from raw</td></tr>
+<tr><td>7</td><td>CE/PE OI change</td><td><span class="tag ready">READY</span></td><td>Caveat: intraday delta must be computed by <b>diffing consecutive snapshots</b> &mdash; the stored field is day-over-day</td></tr>
+<tr><td>8</td><td>CE/PE volume change</td><td><span class="tag ready">READY</span></td><td><code>volume</code> + <code>previous_volume</code> per leg</td></tr>
+<tr><td>9</td><td>CE/PE IV change</td><td><span class="tag partial">PARTIAL</span></td><td>Full for ATM and OTM; <b>not available for ITM puts</b> (&sect;6)</td></tr>
+<tr><td>10</td><td>Option bid/ask changes</td><td><span class="tag ready">READY</span></td><td>Bid/ask plus depth quantities, 100% present, zero crossed quotes</td></tr>
+<tr><td>11</td><td>Option lead/lag vs spot</td><td><span class="tag ready">READY</span></td><td>46 option minutes &harr; 46 candle minutes on an identical grid</td></tr>
+<tr><td>12</td><td>CE/PE pressure attribution</td><td><span class="tag ready">READY</span></td><td>Volume, OI and bid/ask depth all present per leg</td></tr>
+<tr><td>13</td><td>Response to large spot displacement</td><td><span class="tag ready">READY</span></td><td>2026-09-03 and 2026-09-07 both have complete 46/46 windows</td></tr>
+<tr><td>14</td><td>Reversal vs continuation comparison</td><td><span class="tag partial">PARTIAL</span></td><td>Data is complete, but <b>n is small</b> &mdash; ~24&ndash;25 clean CAS-era days per symbol splits thinly across cohorts</td></tr>
+<tr><td>15</td><td>Large-transition forensics</td><td><span class="tag partial">PARTIAL</span></td><td>Same reason: the data supports the study; the sample size limits what can be concluded from it</td></tr>
+</table>
+<div class="finding"><b>On the two events named in Part J.</b> Both are fully covered. <b>SENSEX 2026-09-03</b> (pre &minus;119 pts, post &minus;405 pts) and <b>SENSEX 2026-09-07</b> (pre &minus;115 pts, post +141 pts) each have <b>46/46 option minutes and 46/46 underlying minutes</b> across 14:30&ndash;15:15, with bid/ask, OI, volume and &mdash; except ITM puts on 09-03 SENSEX &mdash; IV and Greeks at every minute. <b>The forensic study described in Part J is data-supported today.</b> Per the audit's instructions, it was not performed here.</div>
+
+<h2 id="s10">10. Gaps</h2>
+<ol>
+<li><b>Sample size, not data quality, is the binding constraint.</b> ~24&ndash;25 clean CAS-era days per symbol. This is the single biggest limitation on everything in &sect;9, and it resolves only with time.</li>
+<li><b>ITM-put IV and Greeks are absent</b> &mdash; broker-side, not recoverable by reprocessing.</li>
+<li><b>Two CAS-era days have no window data at all</b> &mdash; 2026-08-18 and 2026-08-26.</li>
+<li><b>Intraday OI delta requires snapshot diffing</b>; the stored field uses Dhan's prior-day-close baseline.</li>
+<li><b>No retry on a failed fetch</b> &mdash; the minute is simply lost. This is the source of the 540-second gaps on 09-02 and 09-07.</li>
+<li><b><code>catch_up_today</code> timestamps with wall-clock time</b>, producing post-close <code>fetched_at</code> values (&sect;6).</li>
+</ol>
+
+<h2 id="s11">11&ndash;12. Recommended future capture window and frequency</h2>
+<table>
+<tr><th>Option</th><th>Transition research</th><th>Option-expression</th><th>Lead / lag</th><th>Accumulation &amp; positioning</th><th>Pre-event reconstruction</th><th>SMC-style events</th><th>14:59&rarr;15:15 study</th><th>Storage</th><th>API load</th><th>Verdict</th></tr>
+<tr><td><b>A &mdash; 1 min, 09:15&rarr;close</b></td><td>Full</td><td>Full</td><td>Full</td><td>Full</td><td>Full</td><td>Full</td><td>Full</td><td>7.8 MB/sym-day (~3.9 GB/yr)</td><td>2 calls/min = <b>10% of the 1-req/3 s cap</b></td><td><span class="tag keep">KEEP &mdash; this is what exists</span></td></tr>
+<tr><td>B &mdash; 1 min, 13:00&rarr;close</td><td>Full</td><td>Full</td><td>Full</td><td>Loses the morning</td><td>Partial</td><td>Partial</td><td>Full</td><td>&minus;60%</td><td>unchanged</td><td>Regression</td></tr>
+<tr><td>C &mdash; 1 min, 14:00&rarr;close</td><td>Full</td><td>Full</td><td>Full</td><td>Lost</td><td>Poor</td><td>Poor</td><td>Full</td><td>&minus;75%</td><td>unchanged</td><td>Regression</td></tr>
+<tr><td>D &mdash; 1 min, 14:30&rarr;close</td><td>Full</td><td>Full</td><td>Full</td><td>Lost</td><td><b>None</b></td><td>None</td><td>Full</td><td>&minus;82%</td><td>unchanged</td><td>Regression</td></tr>
+<tr><td>E &mdash; 5 min, 09:15&rarr;close</td><td>Coarse</td><td>Weak</td><td><b>Impossible</b></td><td>Partial</td><td>Partial</td><td>Weak</td><td>Coarse</td><td>&minus;80%</td><td>&minus;80%</td><td>Destroys &sect;5</td></tr>
+<tr><td>F &mdash; 5 min, 14:30&rarr;close</td><td>Coarse</td><td>Weak</td><td><b>Impossible</b></td><td>Lost</td><td>None</td><td>None</td><td>Coarse</td><td>&minus;96%</td><td>&minus;96%</td><td>Worst of both</td></tr>
+</table>
+
+<div class="finding" style="font-size:1.05em">
+<b>RECOMMENDED FREQUENCY:</b> 1 minute.<br>
+<b>RECOMMENDED START:</b> 09:15 (session open).<br>
+<b>RECOMMENDED END:</b> 15:40 (session close).<br><br>
+<b>REASON:</b> that is exactly what the platform already does, and this audit found no evidence for changing it. The API cost is 10% of Dhan's rate limit, storage is ~3.9 GB/year, and the CAS window is already 100% complete. Every narrower or coarser alternative trades away capability to conserve a resource that is not scarce.
+</div>
+
+<h3>Is full-day 1-minute capture genuinely necessary?</h3>
+<p>For the 14:59 CAS decision alone, <b>no</b> &mdash; Option D would be sufficient. For the Part J research programme, <b>yes</b>. Accumulation, liquidity sweeps, structural breaks and displacement are all <i>pre-event</i> phenomena: asking at 15:00 what option positioning looked like at 11:00 is only answerable if 11:00 was captured.</p>
+<div class="warn"><b>The decisive argument is asymmetry, not storage.</b> Dhan has no historical option-chain API. A minute that is not captured is <b>gone permanently</b> &mdash; it cannot be backfilled at any price. Narrowing the window is therefore an irreversible decision made on incomplete information about what future research will need, while keeping it costs ~3.9 GB/year and 10% of a rate limit. That asymmetry settles the question on its own.</div>
+
+<h2 id="s13">13. Is any change required now?</h2>
+<p><b>No.</b> The capture system already implements the recommended policy. Two minor improvements are worth considering <i>later</i> &mdash; a bounded retry on a failed fetch (which would have closed the 540-second gaps on 09-02 and 09-07), and using the checkpoint time rather than wall-clock time in the catch-up path. Neither is urgent, neither affects the CAS window, and both are explicitly out of scope while the experiment is frozen.</p>
+
+<h2 id="s14">14. Confirmation that 11D remains unchanged</h2>
+<table>
+<tr><th>Item</th><th>State</th></tr>
+<tr><td><code>strategy_version</code></td><td><b>11d-paper-v1</b> &mdash; unchanged</td></tr>
+<tr><td><code>configuration_hash</code></td><td><b>9c7c362d7e0c6a14</b> &mdash; unchanged</td></tr>
+<tr><td><code>paper_trading/config.py</code></td><td>Not modified</td></tr>
+<tr><td>Decision logic, trend assessment, option selection</td><td>Not modified</td></tr>
+<tr><td>SL logic, target logic, position management</td><td>Not modified</td></tr>
+<tr><td>Risk limits, holding period, NO-TRADE rules</td><td>Not modified</td></tr>
+<tr><td>180-second stale-data protection</td><td>Verified present and intact</td></tr>
+<tr><td>Capture frequency, production analytics, live pipeline, database schema</td><td>Not modified</td></tr>
+<tr><td>Five-session paper experiment</td><td><b>Remains frozen</b></td></tr>
+</table>
+
+<div class="nochange">NO CHANGES MADE.</div>
+
+<footer>
+Option Chain Capture Audit &mdash; read-only freeze-readiness check, 2026-09-10, branch <code>market-transition-cas-analysis</code>.
+Every figure was produced by source inspection and <code>SELECT</code>-only queries against the live database at audit time. Nothing was repaired, imputed or forward-filled.
+No file, configuration, schema or pipeline was modified, and no code was committed as part of this audit.
+</footer>
+
+</body>
+</html>

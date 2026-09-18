@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>HR-1 Boundary &amp; Impact Report</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1150px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.25em;color:#1a3a5c;margin-top:2.1em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.02em;color:#2c3e50;margin-top:1.4em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.85em}
+ th,td{border:1px solid #ccc;padding:5px 8px;text-align:left;vertical-align:top}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.8em;line-height:1.45}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.74em;font-weight:bold;color:#fff}
+ .pass{background:#2e7d32}.warn{background:#f9a825;color:#222}.fail{background:#c62828}.new{background:#1a5c8a}.none{background:#8d8d8d}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .risk{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .ok{background:#e8f5e9;border-left:4px solid #2e7d32;padding:10px 14px;margin:14px 0}
+ .num{text-align:right;font-family:Consolas,monospace}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+</style>
+</head>
+<body>
+
+<h1>HR-1 Boundary &amp; Impact Report<br><span style="font-size:0.62em;font-weight:normal;color:#555">High-Resolution Option Intelligence Capture &mdash; data capture, data quality and market-state foundation</span></h1>
+<p><b>Branch:</b> <code>market-transition-cas-analysis</code> at <code>5b8a941</code> (unchanged &mdash; nothing committed) &middot; <b>Built:</b> 2026-09-13 &middot; <b>Frozen experiment:</b> <code>11d-paper-v1</code> / <code>9c7c362d7e0c6a14</code></p>
+
+<div class="ok"><b>Boundary held.</b> Of <b>369 tracked files, exactly one changed</b>: <code>requirements.txt</code> (+1 line, approved item 26). The structure of all <b>31 existing tables</b> (681 columns, 85 indexes, 354 constraints) has the identical SHA-256 digest before and after the DDL: <code>d40188e5&hellip;51953</code>. The paper strategy hash is <code>9c7c362d7e0c6a14</code> before and after. <b>Zero order endpoints, zero REST calls, zero paper-trading integration, zero UI changes.</b></div>
+
+<div class="risk"><b>One open item &mdash; the live data feed is unproven.</b> The offline connectivity test (Sunday 23:06 IST) authenticated successfully, but Dhan closed every connection within ~0.2 s of subscribing and sent zero packets. <b>The Dhan SDK's own <code>MarketFeed</code> behaved identically</b> (closed after 0.172 s, zero packets), so this is server-side behaviour, not an HR-1 client defect. It is most likely the feed's out-of-hours behaviour, but a Data API entitlement issue cannot be ruled out offline. <b>Tuesday's 14:50 run is the first real test.</b> If the server does the same during market hours, HR now stops itself after 5 consecutive immediate closes (<code>FAILED_CONNECTION</code>) rather than retrying for 35 minutes.</div>
+
+<h2>1. Files added (35)</h2>
+<table>
+<tr><th>Group</th><th>Files</th><th>Purpose</th></tr>
+<tr><td><code>hr_capture/</code> (19)</td><td><code>__init__.py</code> <code>config.py</code> <code>schema.sql</code> <code>schema_guard.py</code> <code>timeutil.py</code> <code>protocol.py</code> <code>universe.py</code> <code>market_state.py</code> <code>bars.py</code> <code>option_state.py</code> <code>chain_state.py</code> <code>aggregator.py</code> <code>db.py</code> <code>recorder.py</code> <code>writer.py</code> <code>feed.py</code> <code>service.py</code> <code>runner.py</code> <code>README.md</code></td><td>The HR package: DDL + guard, binary protocol, universe resolution, 5 s aggregation, market state, fail-closed writer, WebSocket client, session orchestration, operations guide</td></tr>
+<tr><td><code>scripts/</code> (5)</td><td><code>hr_setup_db.py</code> <code>run_hr_capture.py</code> <code>run_hr_replay.py</code> <code>run_hr_capture_daily.bat</code> <code>run_hr_capture_daily.vbs</code></td><td>DDL validate/apply, capture entry point (live / dry-run / connectivity test), deterministic replay, scheduler launchers</td></tr>
+<tr><td><code>tests/</code> (11)</td><td><code>hr_packet_factory.py</code> <code>test_hr_protocol.py</code> <code>test_hr_bars.py</code> <code>test_hr_option_state.py</code> <code>test_hr_chain_state.py</code> <code>test_hr_market_state.py</code> <code>test_hr_universe.py</code> <code>test_hr_window_dedup.py</code> <code>test_hr_feed_reconnect.py</code> <code>test_hr_session.py</code> <code>test_hr_isolation.py</code></td><td>67 tests; synthetic binary packets, no live DB or network (repo convention)</td></tr>
+</table>
+<p>About 3,900 lines in total. Runtime output paths are already git-ignored: recordings under <code>data/cache/hr_capture/</code>, logs under <code>logs/hr/</code>.</p>
+
+<h2>2. Existing files modified (1)</h2>
+<table>
+<tr><th>File</th><th>Change</th><th>Why</th></tr>
+<tr><td><code>requirements.txt</code></td><td><code>+ websockets==16.1.1</code></td><td><code>hr_capture/feed.py</code> imports <code>websockets</code> directly; previously it was only a transitive dependency of <code>dhanhq==2.2.0</code>. Pinned to the installed version, matching the file's existing pin style. Approved item 26.</td></tr>
+</table>
+
+<h2>3. Existing files untouched</h2>
+<p>368 of 369 tracked files are byte-identical to the baseline (SHA-1 comparison of every tracked file before and after). The files the approval named explicitly are additionally <b>pinned by content hash</b> in <code>tests/test_hr_isolation.py</code>, so any future change fails the suite:</p>
+<table>
+<tr><th>Pinned file(s)</th><th>Status</th></tr>
+<tr><td><code>pipeline/live_loop.py</code></td><td><span class="tag pass">UNCHANGED</span> sha256 53a9371b&hellip;</td></tr>
+<tr><td><code>pipeline/run_snapshot.py</code> (existing 1-minute + option-chain capture)</td><td><span class="tag pass">UNCHANGED</span> sha256 256dfe7e&hellip;</td></tr>
+<tr><td><code>db/schema.sql</code> (existing OHLC and all production tables)</td><td><span class="tag pass">UNCHANGED</span> sha256 c3cf54ed&hellip;</td></tr>
+<tr><td>All 15 <code>paper_trading/*.py</code>, including <code>config.py</code> (PaperConfig), <code>decision.py</code>, <code>option_selection.py</code>, <code>risk.py</code>, <code>position_manager.py</code>, <code>tick.py</code></td><td><span class="tag pass">UNCHANGED</span> 15/15 hashes match</td></tr>
+<tr><td>CAS (<code>market_transition/</code>, <code>pipeline/cas_live.py</code>), UI (<code>frontend/</code>), API (<code>backend/</code>), Dhan REST (<code>dhan_client/</code>)</td><td><span class="tag pass">UNCHANGED</span> git reports no modifications; frontend <code>tsc -b</code> clean</td></tr>
+</table>
+
+<h2>4. Database tables added (7) &mdash; and modified (0)</h2>
+<table>
+<tr><th>Table</th><th>Grain</th><th>Idempotency key</th></tr>
+<tr><td><code>hr_capture_sessions</code></td><td>one per run</td><td>PK session_id</td></tr>
+<tr><td><code>hr_instruments</code></td><td>session &times; contract</td><td>UNIQUE (session_id, exchange_segment, security_id)</td></tr>
+<tr><td><code>hr_raw_ticks</code></td><td>one per de-duplicated packet (forensic source of truth: raw bytes, exchange + receive time)</td><td>UNIQUE (session_id, packet_seq)</td></tr>
+<tr><td><code>hr_ohlc_5s</code></td><td>contract &times; 5 s</td><td>UNIQUE (exchange_segment, security_id, bar_ts)</td></tr>
+<tr><td><code>hr_option_5s</code></td><td>option &times; 5 s</td><td>UNIQUE (exchange_segment, security_id, bar_ts)</td></tr>
+<tr><td><code>hr_option_transition_state</code></td><td>symbol &times; 5 s; includes <code>underlying_status</code> (VALID/STALE/FROZEN/MISSING) and <code>option_implied_spot_research_only</code>; <b>no BUY/SELL/ENTER/EXIT field</b></td><td>UNIQUE (symbol, bar_ts)</td></tr>
+<tr><td><code>hr_capture_events</code></td><td>audit events</td><td>&mdash;</td></tr>
+</table>
+<p>Plus 6 <code>hr_*</code> indexes on <code>hr_*</code> tables. <code>security_id</code> uniqueness includes <code>exchange_segment</code> because Dhan security IDs are not unique across exchanges.</p>
+<div class="finding"><b>How the DDL was validated before it was applied (approval item 7).</b>
+<ol>
+<li><b>Static guard</b> (<code>hr_capture/schema_guard.py</code>): every statement must be <code>CREATE TABLE IF NOT EXISTS hr_*</code> or <code>CREATE [UNIQUE] INDEX IF NOT EXISTS hr_* ON hr_*</code>. It rejects ALTER, DROP, TRUNCATE, all DML, GRANT/REVOKE, foreign keys, views, functions, triggers, schemas and extensions. Result: <b>PASS, 0 violations</b>.</li>
+<li><b>No overlap</b> with any table created by <code>db/schema.sql</code>, and no reference to any existing table (comments stripped).</li>
+<li><b>Applied with a before/after structure snapshot</b> of every pre-existing table: digest <code>d40188e5&hellip;</code> before = after; the script would have exited non-zero on any difference. The same digest was also computed independently before any HR code was written.</li>
+<li><b>A separate Postgres schema was not possible</b> (the role lacks <code>CREATE</code> on the database), so the <code>hr_</code> prefix inside <code>ai_poc_strategy</code> follows the existing <code>paper_</code>/<code>cas_</code>/<code>mti_</code> convention.</li>
+<li><b>Real-write self-test:</b> a synthetic session (dated 2000-01-03) wrote to all 7 tables &mdash; 1,202 raw ticks, 10,080 bars, 9,240 option rows, 420 state rows &mdash; with 0 failures and 0 spills. It verified BYTEA (162-byte packets), JSONB depth and summary, and the session finalisation. It was then deleted, leaving <b>0 rows in every hr_ table</b>.</li>
+</ol></div>
+
+<h2>5. Import dependencies</h2>
+<table>
+<tr><th>Direction</th><th>Allowed / actual</th><th>Enforced by</th></tr>
+<tr><td>HR &rarr; platform</td><td>Only <code>config.settings</code> (credentials, DATABASE_URL, IST), <code>config.instruments</code> (symbol/segment metadata), <code>pipeline.trading_calendar</code> (is_trading_day). All read-only, all unmodified.</td><td>AST import scan of every HR file</td></tr>
+<tr><td>HR &rarr; forbidden</td><td>Never imports <code>paper_trading</code>, <code>pipeline.live_loop</code>, <code>pipeline.run_snapshot</code>, <code>pipeline.cas_live</code>, <code>dhan_client</code>, <code>dhanhq</code>, <code>backend</code>, <code>option_chain.fetch</code>, <code>db.writer</code>, <code>db.connection</code></td><td>AST import scan</td></tr>
+<tr><td>Platform &rarr; HR</td><td><b>None.</b> No file outside <code>hr_capture/</code>, the HR scripts and the HR tests imports <code>hr_capture</code>.</td><td>Repo-wide AST scan</td></tr>
+<tr><td>Failure isolation</td><td><code>pipeline.live_loop</code>, <code>paper_trading.tick/agent/decision</code> import and the strategy hash still verifies with <code>hr_capture</code> replaced by a module that raises on any use</td><td>Subprocess test with a poisoned module</td></tr>
+<tr><td>DB reads of existing tables</td><td>Exactly two <code>SELECT</code>s: latest <code>option_chain_raw</code> row (universe) and latest <code>raw_candles</code> close (fallback spot)</td><td>Code-string scan</td></tr>
+<tr><td>DB writes</td><td><code>hr_*</code> only; <code>db.insert_sql</code> raises for any other table</td><td>Code-string scan + unit test</td></tr>
+</table>
+
+<h2>6. Dhan endpoints used</h2>
+<table>
+<tr><th>Endpoint</th><th>Used by HR?</th><th>Detail</th></tr>
+<tr><td><code>wss://api-feed.dhan.co</code> (v2 market feed)</td><td><span class="tag new">YES</span></td><td>Its own WebSocket connection. Request codes 15/17/21 (Ticker/Quote/Full subscriptions) and 12 (disconnect) only. The token is never logged.</td></tr>
+<tr><td>Dhan REST (<code>api.dhan.co</code>: candles, option chain, expiry list)</td><td><span class="tag none">NO</span></td><td>HR makes <b>zero REST calls</b>. It cannot touch the live loop's option-chain rate limit.</td></tr>
+<tr><td>Scrip master download</td><td><span class="tag none">NO</span></td><td>Reads the already-cached CSV read-only; never triggers a download.</td></tr>
+</table>
+
+<h2>7. Order endpoints touched</h2>
+<div class="ok"><b>NONE.</b> HR contains no order function, no order endpoint, no <code>dhanhq</code> import and no <code>dhan_client</code> import. A code-only scan (identifiers and non-docstring strings) finds no <code>place_order</code>, <code>modify_order</code>, <code>cancel_order</code>, <code>buy_order</code>, <code>sell_order</code>, slice/super/forever orders, <code>/orders</code> or order-update feed. The only URL literal in HR code is <code>wss://api-feed.dhan.co</code>. There is no Go-Live path and no paper-order path. The existing paper safety scan still reports <code>PAPER_MODE: True | violations: NONE</code>.</div>
+
+<h2>8. 11d-paper-v1 changes</h2>
+<table>
+<tr><th>Item</th><th>Before HR-1</th><th>After HR-1</th><th>Changed?</th></tr>
+<tr><td><code>STRATEGY_VERSION</code></td><td>11d-paper-v1</td><td>11d-paper-v1</td><td><span class="tag pass">NO</span></td></tr>
+<tr><td><code>DECISION_VERSION</code> / <code>CONFIG_VERSION</code></td><td>decision-v1 / config-v1</td><td>decision-v1 / config-v1</td><td><span class="tag pass">NO</span></td></tr>
+<tr><td><b>Configuration hash</b></td><td><b>9c7c362d7e0c6a14</b></td><td><b>9c7c362d7e0c6a14</b></td><td><span class="tag pass">NO</span></td></tr>
+<tr><td>PaperConfig fields / thresholds / gate chain / selector / SL / target / exits / account</td><td colspan="2">all 15 <code>paper_trading</code> files content-hash identical</td><td><span class="tag pass">NO</span></td></tr>
+<tr><td><code>live_loop.py</code> integration</td><td colspan="2">no HR reference anywhere in <code>live_loop.py</code>, <code>run_snapshot.py</code> or <code>paper_trading/</code></td><td><span class="tag pass">NO</span></td></tr>
+<tr><td>Data the agent reads</td><td colspan="2">HR writes only <code>hr_*</code>; the agent reads none of them</td><td><span class="tag pass">NO</span></td></tr>
+</table>
+
+<h2>9. Test results</h2>
+<table>
+<tr><th>Suite</th><th>Result</th></tr>
+<tr><td>Full pipeline suite (<code>pytest tests</code>)</td><td><span class="tag pass">662 PASSED</span> = 595 existing (unchanged) + 67 HR</td></tr>
+<tr><td>HR suite alone (<code>pytest tests/test_hr_*.py</code>)</td><td><span class="tag pass">67 PASSED</span></td></tr>
+<tr><td>Backend (<code>pytest backend/tests</code>)</td><td><span class="tag pass">48 PASSED</span></td></tr>
+<tr><td>Frontend (<code>npx tsc -b</code>)</td><td><span class="tag pass">CLEAN</span> (no frontend file changed)</td></tr>
+</table>
+<table>
+<tr><th>#</th><th>Required proof</th><th>Test(s)</th></tr>
+<tr><td>1</td><td>HR tables separate from existing tables</td><td><code>test_hr_ddl_only_creates_new_hr_objects</code>, <code>test_hr_tables_are_separate_from_existing_tables</code></td></tr>
+<tr><td>2</td><td>Existing OHLC schema unchanged</td><td><code>test_frozen_production_files_are_unchanged</code> (db/schema.sql pin) + live structure digest</td></tr>
+<tr><td>3, 4</td><td>Paper configuration, hash and version unchanged</td><td><code>test_paper_strategy_hash_and_versions_are_unchanged</code>, 15 paper_trading pins</td></tr>
+<tr><td>5, 6</td><td>No imports in either direction</td><td><code>test_hr_code_does_not_import_forbidden_platform_modules</code>, <code>test_no_existing_code_imports_hr_capture</code></td></tr>
+<tr><td>7</td><td>HR failure does not affect the existing pipeline</td><td><code>test_existing_pipeline_and_paper_agent_import_with_hr_broken</code>, <code>test_database_failure_is_contained_and_spilled</code>, <code>test_malformed_and_unregistered_data_never_raise</code></td></tr>
+<tr><td>8</td><td>Duplicates create no duplicate records</td><td><code>test_consecutive_identical_packets_are_dropped_and_counted</code>, <code>test_database_rewrites_of_the_same_packet_are_idempotent</code>, <code>test_a_b_a_state_changes_are_kept</code></td></tr>
+<tr><td>9, 10</td><td>5 s aggregation deterministic and correct</td><td><code>test_aggregation_is_deterministic</code>, <code>test_ohlc_volume_and_trade_count_from_raw_events</code>, reset/baseline/empty-bucket tests</td></tr>
+<tr><td>11</td><td>Event time and receive time preserved</td><td><code>test_exchange_time_and_receive_time_are_kept_separately</code>, <code>test_ltt_convention_is_detected_not_assumed</code></td></tr>
+<tr><td>12</td><td>Missing intervals detected</td><td><code>test_missing_intervals_are_explicit_rows_and_data_gap_state</code></td></tr>
+<tr><td>13</td><td>Reconnects recorded</td><td>9 feed tests incl. <code>test_reconnects_and_data_gaps_are_recorded_in_the_session</code>, 429 cool-down, immediate-close escalation and cap, auth stop, 805 retry-once</td></tr>
+<tr><td>14</td><td>Instrument metadata preserved</td><td><code>test_option_rows_preserve_contract_metadata</code>, universe tests</td></tr>
+<tr><td>15</td><td>Dynamic ATM, no hard-coded strikes/IDs</td><td><code>test_atm_follows_the_reference_spot</code>, <code>test_hr_source_contains_no_hard_coded_strikes_or_security_ids</code></td></tr>
+<tr><td>16</td><td>Persistence restricted to 14:55:00 &le; receive_ts &lt; 15:30:00</td><td><code>test_only_1455_to_1530_is_persisted_with_inclusive_start_exclusive_end</code>, <code>test_pre_window_packets_set_baselines_without_being_persisted</code></td></tr>
+<tr><td>17</td><td>15:15+ stale underlying representable</td><td><code>test_frozen_underlying_after_1515_is_represented_while_options_stay_active</code>, <code>test_duplicates_still_prove_the_feed_is_alive</code></td></tr>
+<tr><td>18</td><td>No order endpoint reachable</td><td><code>test_no_order_functionality_is_reachable_from_hr</code>, <code>test_hr_feed_only_builds_market_data_requests</code></td></tr>
+<tr><td>19</td><td>HR cannot alter 11d-paper-v1</td><td>frozen-file pins + hash pin + <code>test_live_loop_and_paper_trading_have_no_hr_references</code> + <code>test_hr_writes_only_hr_tables</code></td></tr>
+</table>
+<p><b>Protocol fidelity:</b> <code>test_hr_protocol.py</code> decodes identical Ticker/Quote/Full packets with both HR's parser and the Dhan SDK's <code>MarketFeed.process_*</code>, and requires identical field values &mdash; including all 5 depth levels.</p>
+
+<h2>10. Connectivity test (approval item 29) and what it changed</h2>
+<table>
+<tr><th>Experiment (2026-09-13, outside market hours)</th><th>Result</th></tr>
+<tr><td>Universe resolution from Friday's last option chain</td><td><span class="tag pass">OK</span> 48 instruments, no issues. NIFTY band ATM 23,450 (spot 23,435.10, expiry 09-15, future 68407 Sep29); SENSEX band ATM 74,800 (spot 74,781.76, expiry 09-17, future 844615 Sep24); index IDs 13 / 51 from scrip master</td></tr>
+<tr><td>HR client, 48 instruments</td><td>Handshake accepted, subscribed, closed in ~10 ms without a close frame, zero packets; after rapid retries the handshake returned <b>HTTP 429</b></td></tr>
+<tr><td>Spaced diagnostic: one ticker, compression off / default</td><td>Connected, closed after 0.177 s / 0.194 s, zero packets</td></tr>
+<tr><td><b>Dhan SDK <code>MarketFeed</code>, 3 instruments (reference)</b></td><td><b>Connected, closed after 0.172 s, zero packets &mdash; identical</b></td></tr>
+<tr><td>Server disconnect codes (805&ndash;809) received</td><td>None</td></tr>
+</table>
+<div class="callout"><b>What it proved and what it did not.</b> Proven: credentials authenticate on the feed host, the 48-instrument universe resolves with no hard-coded values, subscription messages match the SDK's, and HR's client behaves exactly like the reference client. Not proven: that data flows. The immediate close happens with the SDK too, so it is server behaviour &mdash; most likely out-of-hours, but an account entitlement problem cannot be excluded without a market-hours connection.</div>
+<div class="finding"><b>Three defects found and fixed because of this test.</b>
+<ol>
+<li><b>HTTP 429 was retried after 1&ndash;2 s.</b> Now: rate-limit cool-down of 60 &rarr; 120 &rarr; 300 s.</li>
+<li><b>The backoff reset as soon as a subscription was sent</b>, so an immediately-closing server became a 1-second reconnect loop (which is what produced the 429). Now the backoff resets only after data arrives or the connection stays up 30 s.</li>
+<li><b>No stop condition for a server that accepts and immediately drops.</b> Now: after 5 consecutive immediate closes with zero packets, the session ends as <code>FAILED_CONNECTION</code>. This bounds worst-case feed traffic on Tuesday to about 5 connections in roughly 15 seconds.</li>
+</ol>
+Each fix has a regression test.</div>
+
+<h2>11. Design corrections made during the build</h2>
+<table>
+<tr><th>Planned</th><th>Built instead</th><th>Why</th></tr>
+<tr><td>De-duplicate on payload hash across the whole session</td><td>Drop <b>consecutive</b> identical payloads per instrument and packet type; idempotent writes via <code>UNIQUE(session_id, packet_seq)</code></td><td>A no-trade option can go depth A&rarr;B&rarr;A; the third packet is a real state change that session-wide hashing would have deleted</td></tr>
+<tr><td>Assume the exchange last-trade-time epoch convention</td><td>Store the raw integer; detect <code>UTC_EPOCH</code> vs <code>IST_WALLCLOCK_EPOCH</code> per session from receive times; back-fill <code>exchange_ts</code> at session end</td><td>The SDK does not document the convention</td></tr>
+<tr><td>Separate Postgres schema</td><td><code>hr_</code> prefix in <code>ai_poc_strategy</code></td><td>Role lacks database-level <code>CREATE</code></td></tr>
+<tr><td>"IV skew" in chain state</td><td>Not included</td><td>The WebSocket feed carries no IV or Greeks; nothing is fabricated in its place</td></tr>
+</table>
+
+<h2>12. Scheduled task</h2>
+<table>
+<tr><th>Task</th><th>Schedule</th><th>Action</th><th>Settings</th></tr>
+<tr><td><code>\SensexNifty-HRCapture</code> <span class="tag new">NEW</span></td><td>Mon&ndash;Fri 14:50</td><td><code>wscript.exe //B ...\run_hr_capture_daily.vbs</code></td><td>Interactive user, Limited run level, IgnoreNew, StartWhenAvailable, <b>1 h execution limit</b> &mdash; mirrors LiveLoop except the limit (LiveLoop: 72 h)</td></tr>
+<tr><td><code>\SensexNifty-LiveLoop</code></td><td>Mon&ndash;Fri 09:10</td><td colspan="2"><span class="tag pass">UNTOUCHED</span></td></tr>
+</table>
+<p>Next run: <b>Monday 2026-09-14 14:50 &mdash; a trading holiday</b>, so the process exits at once. Verified with network, DB and universe resolution booby-trapped to fail if touched: holiday &rarr; <code>NOT_TRADING_DAY</code>, weekend &rarr; <code>NOT_TRADING_DAY</code>, start after 15:30 &rarr; <code>WINDOW_PASSED</code>. <b>First real session: Tuesday 2026-09-15.</b> The 15:35 hard stop is an in-process watchdog thread that does not depend on the event loop or on Task Scheduler.</p>
+
+<h2>13. What to check after Tuesday's session</h2>
+<pre>-- session outcome
+SELECT status, packets_received, ticks_persisted, duplicates_dropped, reconnect_count, gap_count, ltt_convention
+FROM hr_capture_sessions ORDER BY started_at DESC LIMIT 1;
+-- connection history (immediate closes, rate limits, gaps)
+SELECT event_ts, event_type, detail FROM hr_capture_events
+WHERE session_id = (SELECT session_id FROM hr_capture_sessions ORDER BY started_at DESC LIMIT 1) ORDER BY event_ts;
+-- 15:15+ behaviour
+SELECT bar_ts, market_state, underlying_status, futures_status, options_updated
+FROM hr_option_transition_state WHERE bar_ts::time >= '15:10' ORDER BY symbol, bar_ts;</pre>
+<p>Plus <code>logs/hr/hr_capture_20260915.log</code>, and the paper agent's own Tuesday decision rows, which must show <code>11d-paper-v1</code> / <code>9c7c362d7e0c6a14</code> as before.</p>
+
+<h2>14. Known limitations (disclosed, not fixed)</h2>
+<ul>
+<li><b>Live data flow is unproven</b> until Tuesday (&sect;10).</li>
+<li><b>Shared resources code cannot isolate:</b> the same Postgres instance (mitigated by 2 s batching, 5 s statement / 2 s lock timeouts, spill-to-file) and the same Dhan credentials (an expired token stops both systems regardless).</li>
+<li><b>Exchange time is 1-second resolution</b>; no sub-second exchange ordering is claimed. Bucketing uses receive time.</li>
+<li><b><code>trade_count</code> is a lower bound</b> (the feed sends snapshots, not a trade tape).</li>
+<li><b>The ATM band is fixed at 14:54</b>; a large move is recorded as a <code>BAND_EDGE</code> event, not followed.</li>
+<li><b>Not available from the feed:</b> IV/Greeks, the auction indicative price, 20-level depth for BSE (SENSEX) contracts, and any historical 5 s data.</li>
+<li><b>Market-state thresholds</b> (30 s stale/frozen) are initial descriptive defaults, not tuned on data.</li>
+</ul>
+
+<footer>
+HR-1 Boundary &amp; Impact Report, 2026-09-13. Evidence: git hash comparison of all 369 tracked files; line-ending-normalised content pins; PostgreSQL information_schema / pg_indexes / pg_constraint digests before and after; <code>pytest</code> runs (662 + 48); <code>tsc -b</code>; offline WebSocket experiments including the Dhan SDK reference client.
+<b>Nothing was committed.</b> No reversal strategy, trading signal, paper-trading integration, order path or UI change exists in HR-1.
+</footer>
+</body>
+</html>

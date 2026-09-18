@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>11D to 12A Gap Analysis</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1180px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.25em;color:#1a3a5c;margin-top:2.1em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.02em;color:#2c3e50;margin-top:1.4em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.84em}
+ th,td{border:1px solid #ccc;padding:5px 8px;text-align:left;vertical-align:top}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ .num{text-align:right;font-family:Consolas,monospace}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.74em;font-weight:bold;color:#fff}
+ .yes{background:#2e7d32}.no{background:#8d8d8d}.part{background:#f9a825;color:#222}.bad{background:#c62828}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .risk{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .ok{background:#e8f5e9;border-left:4px solid #2e7d32;padding:10px 14px;margin:14px 0}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+</style>
+</head>
+<body>
+
+<h1>11D &rarr; 12A Gap Analysis<br><span style="font-size:0.62em;font-weight:normal;color:#555">Where <code>11d-paper-v1</code> rejected, what happened next, and what <code>12A-scalp-v1</code> would need</span></h1>
+<p><b>Prepared:</b> 2026-09-18 &middot; <b>Scope:</b> read-only research &mdash; <b>no strategy, configuration, pipeline or database changes</b> &middot; <b>Control:</b> <code>11d-paper-v1</code> / <code>9c7c362d7e0c6a14</code>, unchanged</p>
+
+<div class="finding"><b>The short answer.</b>
+<ol style="margin:6px 0 0 0">
+<li><b>The premise needs one correction.</b> 11D did not reject only on conflict. Of the 10 experiment decisions: 5 were <code>CONFLICTING_SIGNALS</code>, 2 were direction-related (<code>LOW_CONFIDENCE</code>, <code>NO_CLEAR_DIRECTION</code>), 2 were <code>EXPECTED_MOVE_TOO_SMALL</code> and 1 was <code>PRICE_AT_MAJOR_SUPPORT</code>.</li>
+<li><b>The bigger gap is architectural, not a threshold.</b> 11D makes one decision per symbol per day, at 14:59, and then stops looking. Every short-lived event in 15:00&ndash;15:30 is invisible to it by design.</li>
+<li><b>Short-lived opportunities did exist.</b> Judged in hindsight, one ATM leg bought at 15:00 at the ask gave &ge;+3% within 3 minutes with a worst dip no lower than &minus;2% on <b>11 of 14</b> symbol-days. That is a hindsight label, not a claim of predictability.</li>
+<li><b>A naive event detector is not an edge.</b> On the 4 days with 5-second data, entering on large 30-second futures displacements did <b>no better than random entry</b> (60-second median best move +1.04% versus +1.21% for random). So confirmation is essential, which matches your spec.</li>
+<li><b>There is one demonstrably dangerous condition.</b> All five losses of 27% or worse (up to <b>&minus;93%</b> within 3 minutes) happened <b>on expiry-day contracts</b>, four of them from 15:15 onward. This is the one case where a hard veto is justified by evidence.</li>
+<li><b>Validation data is thin.</b> 34 days of 1-minute option chains support 1-minute research now. 5-second rules have only 4 days (36 events), which is not enough for any chronological split.</li>
+</ol></div>
+
+<h2>1. The 11D decisions</h2>
+<p>There is one decision per symbol per day at 14:59 (09-09 was taken at 16:03 during a post-market catch-up, so it is not a valid real-time decision). The five experiment days are shaded normally; 09-17 and 09-18 ran after the experiment and are included for context.</p>
+<table>
+<tr><th>Date</th><th>Symbol</th><th>Reason recorded</th><th>Trend</th><th>Inst. bias</th><th>Transition verdict</th><th>Spot &minus; VWAP</th><th>PCR</th></tr>
+<tr><td>09-09 &#9888;16:03</td><td>NIFTY</td><td>EXPECTED_MOVE_TOO_SMALL</td><td>Strong Bearish</td><td>Bearish</td><td>UP (60/40)</td><td class="num">&minus;33</td><td class="num">0.71</td></tr>
+<tr><td>09-09 &#9888;16:03</td><td>SENSEX</td><td>EXPECTED_MOVE_TOO_SMALL</td><td>Strong Bearish</td><td>Bearish</td><td>NO_CLEAR_EDGE</td><td class="num">&minus;141</td><td class="num">0.66</td></tr>
+<tr><td>09-10</td><td>NIFTY</td><td>CONFLICTING_SIGNALS</td><td>Strong Bearish</td><td>Mildly Bearish</td><td>NO_CLEAR_EDGE</td><td class="num">&minus;20</td><td class="num">0.66</td></tr>
+<tr><td>09-10</td><td>SENSEX</td><td>CONFLICTING_SIGNALS</td><td>Strong Bearish</td><td>Neutral</td><td>CONFLICTED</td><td class="num">&minus;84</td><td class="num">0.91</td></tr>
+<tr><td>09-11</td><td>NIFTY</td><td>CONFLICTING_SIGNALS</td><td>Strong Bullish</td><td>Neutral</td><td>DOWN (70%)</td><td class="num">+99</td><td class="num">1.13</td></tr>
+<tr><td>09-11</td><td>SENSEX</td><td>CONFLICTING_SIGNALS</td><td>Strong Bullish</td><td>Mildly Bullish</td><td>DOWN (70%)</td><td class="num">+429</td><td class="num">1.28</td></tr>
+<tr><td>09-15</td><td>NIFTY</td><td>PRICE_AT_MAJOR_SUPPORT</td><td>Strong Bearish</td><td>Bearish</td><td>INSUFFICIENT_EVIDENCE</td><td class="num">&minus;177</td><td class="num">0.55</td></tr>
+<tr><td>09-15</td><td>SENSEX</td><td>CONFLICTING_SIGNALS</td><td>Strong Bearish</td><td>Mildly Bearish</td><td>DOWN (70%)</td><td class="num">&minus;557</td><td class="num">0.68</td></tr>
+<tr><td>09-16</td><td>NIFTY</td><td>LOW_CONFIDENCE</td><td>Bullish</td><td>Neutral</td><td>INSUFFICIENT_EVIDENCE</td><td class="num">+14</td><td class="num">0.98</td></tr>
+<tr><td>09-16</td><td>SENSEX</td><td>NO_CLEAR_DIRECTION</td><td>Neutral</td><td>Neutral</td><td>NO_CLEAR_EDGE</td><td class="num">+36</td><td class="num">1.17</td></tr>
+<tr style="color:#777"><td>09-17</td><td>NIFTY</td><td>CONFLICTING_SIGNALS</td><td>Neutral</td><td>Neutral</td><td>INSUFFICIENT_EVIDENCE</td><td class="num">&minus;2</td><td class="num">0.98</td></tr>
+<tr style="color:#777"><td>09-17</td><td>SENSEX</td><td>CONFLICTING_SIGNALS</td><td>Bullish</td><td>Neutral</td><td>DOWN (70%)</td><td class="num">&minus;34</td><td class="num">1.14</td></tr>
+<tr style="color:#777"><td>09-18</td><td>NIFTY</td><td>CONFLICTING_SIGNALS</td><td>Strong Bullish</td><td>Neutral</td><td>INSUFFICIENT_EVIDENCE</td><td class="num">+58</td><td class="num">1.17</td></tr>
+<tr style="color:#777"><td>09-18</td><td>SENSEX</td><td>EXPECTED_MOVE_TOO_SMALL</td><td>Strong Bullish</td><td>Bullish</td><td>NO_CLEAR_EDGE</td><td class="num">+231</td><td class="num">1.26</td></tr>
+</table>
+
+<div class="callout"><b>Three structural observations about 11D itself.</b> These are recorded for the control and must not be changed.
+<ul style="margin:6px 0 0 0">
+<li><b>A risk factor that is always true.</b> "Support and resistance both inside 0.5&times;ATR" appears in <b>14 of 14</b> decisions. The daily-ATR band (about 85 points on NIFTY and 300&ndash;340 on SENSEX) is wider than typical support/resistance spacing, so this factor carries no information.</li>
+<li><b>The trend label and the transition forecast often disagree by construction.</b> The trend label describes the day so far (it is a lagging read); the transition forecast describes 15:00&ndash;15:15. On 09-11 (Strong Bullish, forecast DOWN 70%) and 09-15 SENSEX they point opposite ways, which guarantees <code>CONFLICTING_SIGNALS</code>.</li>
+<li><b>An inconsistent probability field.</b> <code>probability_no_move</code> is 1.0 on rows where <code>p_up + p_down = 1</code>. It is a display/semantics inconsistency and did not drive any decision.</li>
+</ul></div>
+
+<h2>2. What happened afterward (1-minute data, all 14 decisions)</h2>
+<p>The counterfactual is a buy of the ATM strike (fixed at the 15:00 spot) at the <b>ask</b> of the first 15:00 snapshot. "Best move" is the highest bid over the next 3 minutes and "worst dip" the lowest bid, both as % of the entry ask. The table cannot tell which came first, so a later analysis will need 5-second data.</p>
+<table>
+<tr><th>Date</th><th>Sym</th><th>Entry spread CE/PE</th><th>CE best / worst (3m)</th><th>PE best / worst (3m)</th><th>Spot range 15:00&ndash;15:15</th><th>Spot at 15:15</th><th>Clean leg in hindsight?*</th></tr>
+<tr><td>09-09</td><td>NIFTY</td><td class="num">0.17 / 0.21%</td><td class="num">&minus;0.5 / &minus;4.7</td><td class="num">+4.6 / &minus;0.1</td><td class="num">+1 / &minus;33</td><td class="num">&minus;22</td><td><span class="tag yes">PE</span></td></tr>
+<tr><td>09-09</td><td>SENSEX</td><td class="num">0.14 / 0.16%</td><td class="num">&minus;0.2 / &minus;9.9</td><td class="num">+11.4 / &minus;0.5</td><td class="num">+3 / &minus;111</td><td class="num">&minus;51</td><td><span class="tag yes">PE</span></td></tr>
+<tr><td>09-10</td><td>NIFTY</td><td class="num">0.24 / 0.23%</td><td class="num">&minus;5.1 / &minus;6.1</td><td class="num">+6.8 / +5.0</td><td class="num">0 / &minus;17</td><td class="num">&minus;10</td><td><span class="tag yes">PE</span></td></tr>
+<tr><td>09-10</td><td>SENSEX</td><td class="num">0.35 / 0.03%</td><td class="num">&minus;21.0 / &minus;24.2</td><td class="num">+14.4 / +12.5</td><td class="num">0 / &minus;67</td><td class="num">&minus;44</td><td><span class="tag yes">PE</span></td></tr>
+<tr><td>09-11</td><td>NIFTY</td><td class="num">0.20 / 0.17%</td><td class="num">+0.3 / &minus;3.6</td><td class="num">+3.2 / &minus;0.2</td><td class="num">+18 / &minus;27</td><td class="num">+18</td><td><span class="tag yes">PE</span> (then reversed)</td></tr>
+<tr><td>09-11</td><td>SENSEX</td><td class="num">0.27 / 0.21%</td><td class="num">&minus;0.9 / &minus;4.0</td><td class="num">+3.2 / +0.6</td><td class="num">+99 / &minus;92</td><td class="num">+99</td><td><span class="tag yes">PE</span> (then reversed)</td></tr>
+<tr><td>09-15</td><td>NIFTY</td><td class="num">0.23 / 0.30%</td><td class="num">+1.6 / &minus;4.3</td><td class="num">+0.9 / &minus;5.4</td><td class="num">+13 / &minus;5</td><td class="num">&minus;1</td><td><span class="tag no">none</span></td></tr>
+<tr><td>09-15</td><td>SENSEX</td><td class="num">0.26 / 0.25%</td><td class="num">+3.1 / &minus;1.5</td><td class="num">+0.4 / &minus;3.0</td><td class="num">+29 / &minus;17</td><td class="num">+13</td><td><span class="tag part">CE, marginal</span></td></tr>
+<tr><td>09-16</td><td>NIFTY</td><td class="num">0.24 / 0.24%</td><td class="num">+6.0 / +4.4</td><td class="num">&minus;4.1 / &minus;6.1</td><td class="num">+9 / &minus;3</td><td class="num">&minus;1</td><td><span class="tag yes">CE</span></td></tr>
+<tr><td>09-16</td><td>SENSEX</td><td class="num">0.30 / 0.29%</td><td class="num">+5.2 / +2.6</td><td class="num">&minus;2.6 / &minus;5.2</td><td class="num">0 / &minus;36</td><td class="num">&minus;20</td><td><span class="tag yes">CE</span></td></tr>
+<tr style="color:#777"><td>09-17</td><td>NIFTY</td><td class="num">0.27 / 0.28%</td><td class="num">+4.8 / +3.2</td><td class="num">&minus;4.4 / &minus;6.8</td><td class="num">+14 / 0</td><td class="num">+14</td><td><span class="tag yes">CE</span></td></tr>
+<tr style="color:#777"><td>09-17</td><td>SENSEX</td><td class="num">0.27 / 0.32%</td><td class="num">+9.6 / +1.4</td><td class="num">&minus;13.4 / &minus;20.6</td><td class="num">+34 / &minus;6</td><td class="num">+28</td><td><span class="tag yes">CE</span></td></tr>
+<tr style="color:#777"><td>09-18</td><td>NIFTY</td><td class="num">0.29 / 0.32%</td><td class="num">&minus;0.4 / &minus;3.0</td><td class="num">+2.7 / &minus;0.7</td><td class="num">0 / &minus;34</td><td class="num">&minus;33</td><td><span class="tag no">none in 3m</span></td></tr>
+<tr style="color:#777"><td>09-18</td><td>SENSEX</td><td class="num">0.26 / 0.23%</td><td class="num">+0.3 / &minus;2.7</td><td class="num">+1.8 / &minus;0.3</td><td class="num">0 / &minus;134</td><td class="num">&minus;134</td><td><span class="tag no">none in 3m</span> (slow grind)</td></tr>
+</table>
+<p style="font-size:0.85em">*Hindsight label: a leg with 3-minute best move &ge;+3% and worst dip &ge;&minus;2%. With hindsight one of two legs usually looks good, so this measures whether an opportunity <i>existed</i>, not whether it was <i>knowable at 15:00</i>.</p>
+
+<div class="finding"><b>What this table does and does not show.</b>
+<ul style="margin:6px 0 0 0">
+<li><b>Liquidity was never the blocker.</b> ATM spreads at 15:00 were 0.03&ndash;0.35% on every contract. <code>SPREAD_TOO_WIDE</code> would not have fired at 15:00 on any day.</li>
+<li><b>The trend label at 14:59 was a coin flip for a 3-minute scalp.</b> Following it gave a clean leg on 09-09, 09-10, 09-16 NIFTY and 09-17 SENSEX, but was wrong or flat on 09-11, 09-15 and 09-18. A scalp strategy cannot take its direction from the day's structure.</li>
+<li><b>09-18 SENSEX fell 134 points in 15 minutes, but only as a slow grind.</b> Nothing large happened in any 3-minute or 30-second window. A 30-second displacement detector misses this type of move completely (see &sect;3).</li>
+</ul></div>
+
+<h2>3. Event-level evidence (5-second data, 09-15 to 09-18)</h2>
+<p><b>Detector used for this diagnosis (not a proposed 12A rule):</b> the 30-second futures move exceeds the 95th percentile of the same symbol's 30-second moves on the <i>other</i> HR days (leave-one-day-out, so there is no same-day leakage). Consecutive triggers within 60 seconds count as one event, so the 5-second observations are not treated as independent. Entry is the direction-matched ATM leg at the <b>ask</b> on the next 5-second bar; exits are measured on the <b>bid</b>. That gives 36 events, compared with 320 random entries (random time, random CE/PE) in the same windows.</p>
+<table>
+<tr><th>Group</th><th>n</th><th>30 s: best / worst / exit</th><th>60 s</th><th>120 s</th><th>180 s</th></tr>
+<tr><td>Events, Mode A (15:00&ndash;15:15)</td><td class="num">15</td><td class="num">+0.69 / &minus;0.29 / +0.11</td><td class="num">+1.04 / &minus;1.12 / &minus;0.27</td><td class="num">+2.27 / &minus;1.80 / +0.04</td><td class="num">+3.16 / &minus;3.33 / &minus;0.79</td></tr>
+<tr><td>Random, Mode A</td><td class="num">160</td><td class="num">+0.68 / &minus;0.97 / &minus;0.16</td><td class="num">+1.21 / &minus;1.57 / &minus;0.10</td><td class="num">+1.73 / &minus;2.40 / &minus;0.31</td><td class="num">+2.19 / &minus;3.11 / &minus;0.26</td></tr>
+<tr><td>Events, Mode A, option responded &ge;+3%</td><td class="num">6</td><td class="num">+1.04 / &minus;0.63 / +0.09</td><td class="num">+1.66 / &minus;1.58 / &minus;0.90</td><td class="num">+2.59 / &minus;1.68 / &minus;0.04</td><td class="num">+2.59 / &minus;4.93 / &minus;0.83</td></tr>
+<tr><td>Events, Mode B (15:15&ndash;15:30)</td><td class="num">17</td><td class="num">+0.51 / &minus;0.54 / &minus;0.25</td><td class="num">+1.42 / &minus;1.65 / 0.00</td><td class="num">+1.42 / &minus;2.35 / &minus;0.60</td><td class="num">+1.64 / &minus;3.92 / &minus;1.61</td></tr>
+<tr><td>Random, Mode B</td><td class="num">160</td><td class="num">+0.54 / &minus;0.84 / &minus;0.06</td><td class="num">+1.01 / &minus;1.47 / &minus;0.27</td><td class="num">+1.64 / &minus;2.26 / &minus;0.26</td><td class="num">+2.07 / &minus;2.60 / &minus;0.61</td></tr>
+</table>
+<p style="font-size:0.85em">Medians, in % of entry premium. "Exit" = sell at the bid at the end of the horizon with no other exit rule.</p>
+
+<div class="risk"><b>Finding: displacement alone is not tradeable.</b> Event entries are statistically indistinguishable from random entries: a similar median best move, a similar median dip, and a negative median fixed-time exit at most horizons. Across all 36 events the median time to the best move (180-second horizon) was <b>60 s</b> and to the worst dip <b>95 s</b>. So without an active exit, the typical scalp gives back its gain before the horizon ends. This supports two parts of your spec directly: <b>confirmation is mandatory</b>, and <b>momentum-failure exits are first-class</b>, not optional.</div>
+
+<div class="callout"><b>A weak hint, not evidence:</b> events where the chosen option's mid had already moved &ge;+3% during the triggering 30 seconds had a somewhat better best move and a shallower 120-second dip in Mode A, but the sample is n = 6. That is enough to state a hypothesis to test, and nowhere near enough to set a threshold.</div>
+
+<h3>Individual Mode A events worth noting</h3>
+<table>
+<tr><th>Event</th><th>Option response</th><th>60 s best / worst</th><th>180 s best / worst</th><th>Reading</th></tr>
+<tr><td>09-15 NIFTY 15:03:30 UP (CE)</td><td class="num">+5.9%</td><td class="num">+14.0 / 0.0</td><td class="num">+15.6 / &minus;6.5</td><td>A genuine, detectable, controlled scalp. Needed a take-profit inside ~85 s.</td></tr>
+<tr><td>09-18 NIFTY 15:00:15 DOWN (PE)</td><td class="num">+5.6%</td><td class="num">+3.2 / &minus;1.1</td><td class="num">+3.2 / &minus;1.1</td><td>Small, clean, controlled.</td></tr>
+<tr><td>09-16 SENSEX 15:00:25 DOWN (PE)</td><td class="num">+5.9%</td><td class="num">&minus;1.5 / &minus;6.4</td><td class="num">&minus;1.5 / &minus;9.6</td><td>Confirmed on paper, but failed at once: never went positive after entry. This is the case the momentum-failure exit exists for.</td></tr>
+<tr><td>09-15 NIFTY 15:14:15 UP (CE), expiry day</td><td class="num">+3.9%</td><td class="num">+1.3 / &minus;24.3</td><td class="num">+3.8 / &minus;28.9</td><td>Right at the 15:15 boundary on an expiry day. Shows the danger of the expiry-day close.</td></tr>
+</table>
+
+<h3>Mode B: the index is frozen and expiry days are dangerous</h3>
+<table>
+<tr><th>Check</th><th>Result</th></tr>
+<tr><td>Index 5-second bars unchanged, 15:15&ndash;15:28</td><td><b>155&ndash;156 of 156 bars flat</b> on all 8 symbol-days. The index is not a price source in Mode B, confirming the spec.</td></tr>
+<tr><td>Futures range, 15:15&ndash;15:28</td><td>NIFTY 15&ndash;31 points, SENSEX 54&ndash;76 points. The futures keep moving and are the usable price reference.</td></tr>
+<tr><td>Five worst 180-second dips, all 36 events</td><td>&minus;92.8% (09-17 SENSEX 15:24), &minus;88.9% (09-15 NIFTY 15:24), &minus;31.0%, &minus;28.9%, &minus;27.1%. <b>All five are expiry-day contracts</b> (NIFTY expired 09-15, SENSEX 09-17). Four were in Mode B and one fired at 15:14:15. At 15:24 the option moved <i>against</i> the futures (&minus;22.5% and &minus;15.3%), and on 09-15 the spread had widened to 1.49%.</td></tr>
+</table>
+
+<h2>4. Gap analysis</h2>
+<p>Columns follow the brief: (1) gate &middot; (2) market condition &middot; (3) what happened afterward &middot; (4) whether a controlled scalp existed &middot; (5) what 11D lacked &middot; (6) what HR data could detect &middot; (7) proposed 12A rule &middot; (8) risk implication &middot; (9) whether it can be validated.</p>
+<table>
+<tr><th>#</th><th>(1) Gate</th><th>(2) Condition at rejection</th><th>(3) Afterward</th><th>(4) Scalp existed?</th><th>(5) Missing in 11D</th><th>(6) HR could detect</th><th>(7) Proposed 12A rule</th><th>(8) Risk implication</th><th>(9) Validatable?</th></tr>
+<tr><td>G1</td><td><b>Single 14:59 decision</b> (architectural, affects all 14)</td><td>Any</td><td>Events occurred at 15:00:15, 15:03:30, 15:09, 15:13, &hellip;</td><td><span class="tag yes">Yes</span> 11/14 in hindsight</td><td>Any observation after 14:59</td><td>Every 5 s, 14:55&ndash;15:30</td><td>Evaluate continuously in Mode A; every candidate has an expiry (<code>EVENT_EXPIRED</code>)</td><td>More decisions means more exposure; needs daily loss and trade caps</td><td><span class="tag part">Partly</span>: 1-min on 34 days; 5-s on 4 days</td></tr>
+<tr><td>G2</td><td><code>CONFLICTING_SIGNALS</code> (5 of 10)</td><td>Trend label and 15:00 forecast opposed (09-11, 09-15), or evidence split</td><td>09-10: PE clean both symbols; 09-11: PE for 3 min, then +99 up</td><td><span class="tag yes">Yes</span> 4 of 5</td><td>Short-horizon direction independent of the day's structure</td><td>Futures 30 s return plus the CE/PE response</td><td>Structure is context only. Direction comes from the event (futures displacement plus a matching option response)</td><td>Loses 11D's "don't fight the day" protection; offset by short holds and small risk</td><td><span class="tag part">Partly</span></td></tr>
+<tr><td>G3</td><td><code>EXPECTED_MOVE_TOO_SMALL</code> (2 of 10, plus 09-18)</td><td>15-min analog expected move below threshold</td><td>09-09 SENSEX PE +11.4% in 3 min; 09-18 SENSEX grind &minus;134</td><td><span class="tag yes">Yes</span> 09-09; <span class="tag no">No</span> 09-18 within 3 m</td><td>Option-premium opportunity sizing (it sized an index move instead)</td><td>Option bid/ask path: MFE, MAE, time to each</td><td>Size the opportunity on the option premium distribution, not the 15-min index move</td><td>Premium targets must cover the round-trip spread (~0.2&ndash;0.35% each side)</td><td><span class="tag yes">Yes</span> at 1-min; refine with 5-s</td></tr>
+<tr><td>G4</td><td><code>PRICE_AT_MAJOR_SUPPORT</code> (1) and the always-true S/R-inside-0.5&times;ATR factor (14/14)</td><td>09-15 NIFTY 177 below VWAP, near support</td><td>Flat (&minus;1 at 15:15); expiry-day whipsaw</td><td><span class="tag no">No</span></td><td>A distance measure that discriminates</td><td>Recent extension of the futures from the event origin</td><td><code>MOVE_ALREADY_EXTENDED</code>: measured on the futures' recent path, not daily-ATR S/R</td><td>Low: context only</td><td><span class="tag yes">Yes</span></td></tr>
+<tr><td>G5</td><td><code>LOW_CONFIDENCE</code> / <code>NO_CLEAR_DIRECTION</code> (2)</td><td>09-16: neutral or weak bullish structure</td><td>CE +6.0% (NIFTY), +5.2% (SENSEX) in 3 min, dips stayed positive</td><td><span class="tag yes">Yes</span> both</td><td>Event direction when structure is neutral</td><td>09-16 SENSEX had events at 15:00:25 (failed) and 15:02:05 (small)</td><td>Neutral structure does not block an event, and does not supply one either</td><td>Neutral days may give mostly noise events; requires the confirmation layer</td><td><span class="tag part">Partly</span></td></tr>
+<tr><td>G6</td><td>(12A-internal) <b>Raw displacement is not an edge</b></td><td>36 events, 4 days</td><td>Event entries &asymp; random entries</td><td>&mdash;</td><td>&mdash;</td><td>Option response, persistence, bid/ask, depth imbalance</td><td>Displacement <i>and</i> option response <i>and</i> persistence <i>and</i> liquidity; otherwise <code>NO_CONFIRMATION</code> or <code>OPTION_NOT_RESPONDING</code></td><td>Without it, 12A would trade noise at a small negative expectancy</td><td><span class="tag bad">Not yet</span>: n = 36; need &ge;~20 HR days</td></tr>
+<tr><td>G7</td><td>(12A-internal) <b>Gives back gains</b></td><td>Median time to best 60 s, to worst 95 s</td><td>Fixed-time exits negative at most horizons</td><td>&mdash;</td><td>&mdash;</td><td>5-s bid path, spread</td><td>Momentum-failure exit, tighten-only stop, max hold (candidate 60&ndash;180 s, not yet fixed)</td><td>This is the main risk control</td><td><span class="tag part">Partly</span>: shape visible, thresholds not</td></tr>
+<tr><td>G8</td><td>(12A-internal) <b>Expiry-day close</b></td><td>09-15 NIFTY, 09-17 SENSEX, 15:14&ndash;15:30</td><td>&minus;27% to &minus;93% dips in 1&ndash;3 min</td><td><span class="tag bad">Dangerous</span></td><td>&mdash;</td><td>Spread blow-out, option moving against the futures</td><td><b>Hard veto</b>: no 12A entries in Mode B on expiry day (and review the last minutes of Mode A)</td><td>Tail loss of the whole premium. This is the spec's "demonstrably dangerous condition"</td><td><span class="tag yes">Yes</span>: tail evidence is unambiguous; count will grow</td></tr>
+<tr><td>G9</td><td>(12A-internal) <b>Slow grinds</b></td><td>09-18 SENSEX &minus;134 in 15 min</td><td>No 30-s event, no 3-min clean leg</td><td><span class="tag part">Maybe</span> as continuation</td><td>&mdash;</td><td>Multi-scale persistence (2&ndash;5 min futures slope)</td><td><code>CONTINUATION_EVENT</code> at a longer scale, separate from the 30-s momentum event</td><td>Longer holds mean more premium decay exposure</td><td><span class="tag part">Partly</span></td></tr>
+<tr><td>G10</td><td>(12A-internal) <b>Frozen index in Mode B</b></td><td>155&ndash;156 of 156 bars flat</td><td>Futures moved 15&ndash;76 points</td><td>&mdash;</td><td>&mdash;</td><td>Futures and options live</td><td>Mode B price source: futures first, options second; the index only as the last reliable price (<code>STALE_DATA</code> otherwise)</td><td>None if respected</td><td><span class="tag yes">Yes</span></td></tr>
+</table>
+
+<h2>5. What the data supports right now</h2>
+<table>
+<tr><th>Research question</th><th>Data available</th><th>What can be done now</th></tr>
+<tr><td>Premium MFE/MAE, holding window, spread cost at 1-minute resolution</td><td><code>option_chain_raw</code>, 34 CAS-era days, ~1 snapshot/min with bid/ask and greeks</td><td>Chronological split (e.g. first 22 days to set candidate ranges, last 12 to test); group by day, not by minute</td></tr>
+<tr><td>Event definition, option response, persistence, momentum-failure exits (15 s &ndash; 300 s)</td><td>HR 5-second data: <b>4 days</b>, 8 symbol-days, 36 events</td><td>Descriptive only. <b>Too few days for any threshold or chronological split.</b> Every day of HR capture adds about 5&ndash;10 events</td></tr>
+<tr><td>Mode B behaviour</td><td>Same 4 days</td><td>Research and paper only, as the spec says. The expiry veto is supported now; everything else waits</td></tr>
+<tr><td>"Better than random?"</td><td>Random baseline built in this analysis</td><td>Must be repeated with every candidate rule. So far naive displacement is <b>not</b> better</td></tr>
+</table>
+
+<div class="ok"><b>Suggested sequence for 12A.</b> This is a proposal only and nothing is built yet.
+<ol style="margin:6px 0 0 0">
+<li>Build the 12A modules (detector, confirmation, selector, risk, exits, counterfactual recorder, taxonomy) as <b>research code</b> in a new package, with the 11D hash-pinning tests extended to prove 11D is untouched.</li>
+<li>Run the 1-minute research on 34 days with a chronological split for premium MFE/MAE, holding windows and spread cost.</li>
+<li>Run the 5-second research on the HR days as they accumulate, always against the random baseline; publish thresholds only once &ge;~20 HR days allow a real chronological split.</li>
+<li>Start <b>shadow mode</b> early: the counterfactual recorder logs 12A candidates and would-have-been outcomes live, with no paper positions. This builds the validation set faster and costs no risk.</li>
+<li>Paper-trade integration only after the validation report shows the confirmed events beat the random baseline out-of-sample.</li>
+</ol></div>
+
+<h2>6. Method and limitations</h2>
+<ul>
+<li>Read-only SELECT queries against <code>paper_decisions</code>, <code>option_chain_raw</code>, <code>hr_ohlc_5s</code>, <code>hr_option_5s</code>, <code>hr_instruments</code> and <code>hr_capture_sessions</code>. Nothing was written.</li>
+<li>Entry is always at the <b>ask</b> on the bar <i>after</i> the trigger, and exit is valued at the <b>bid</b>. LTP is never used as an execution price.</li>
+<li>The 1-minute snapshots land ~0&ndash;30 s into the minute, and the 3-minute best/worst values do not show which came first.</li>
+<li>The event threshold is leave-one-day-out over only 3 other days, so it is itself noisy. It diagnoses; it does not propose.</li>
+<li>Hindsight labels in &sect;2 measure whether an opportunity existed, not whether it was detectable.</li>
+<li>No slippage beyond the quoted spread is modelled; the ATM strike is fixed at the 15:00 (1-min) or 14:54 (HR) reference.</li>
+</ul>
+
+<footer>11D &rarr; 12A Gap Analysis &middot; read-only &middot; <code>11d-paper-v1</code> unchanged &middot; branch <code>market-transition-cas-analysis</code> &middot; research script kept outside the repo</footer>
+</body>
+</html>

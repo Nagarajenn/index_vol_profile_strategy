@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Option-Implied Spot Research</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1200px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.28em;color:#1a3a5c;margin-top:2.2em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.03em;color:#2c3e50;margin-top:1.5em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.83em}
+ th,td{border:1px solid #ccc;padding:4px 7px;text-align:left;vertical-align:top}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.8em;line-height:1.45}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.72em;font-weight:bold;color:#fff}
+ .obs{background:#2e7d32}.inf{background:#f9a825;color:#222}.unk{background:#c62828}
+ .strong{background:#2e7d32}.mod{background:#1a5c8a}.weak{background:#8d6e63}.noisy{background:#c62828}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .ok{background:#e8f5e9;border-left:4px solid #2e7d32;padding:10px 14px;margin:14px 0}
+ .toc a{display:block;margin:3px 0;color:#1a3a5c;text-decoration:none}
+ .num{text-align:right;font-family:Consolas,monospace}
+ .auction{background:#fff3cd !important}
+ .hot{background:#ffe0b2 !important;font-weight:bold}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+ .nochange{background:#2c3e50;color:#fff;padding:14px 18px;border-radius:6px;font-size:1.15em;font-weight:bold;text-align:center;letter-spacing:1px;margin:26px 0}
+</style>
+</head>
+<body>
+
+<h1>Milestone 12 Research Extension<br><span style="font-size:0.62em;font-weight:normal;color:#555">Option-implied spot as a leading market signal &mdash; read-only</span></h1>
+<p><b>Focus:</b> SENSEX 2026-09-10 &middot; <b>Comparison set:</b> every SENSEX and NIFTY day with option data (2026-07-15 &rarr; 2026-09-11) &middot; <b>Frozen experiment:</b> <code>11d-paper-v1</code> / <code>9c7c362d7e0c6a14</code>, untouched.</p>
+
+<h2 id="s1">1. Executive summary</h2>
+
+<div class="warn"><b>First, a correction to the previous forensic report, because it changes the answer.</b> <code>milestone12_input_research_sensex_20260910.html</code> described the flat index from 15:15 to 15:28 as a <b>stale or frozen feed</b> and called the option lead a "data-plumbing" artefact. <b>That mechanism was wrong.</b> Tested across every day in the database, the flat stretch appears on <b>60 of 60 symbol-days from 2026-08-03 onward and 0 of 26 before it</b>. 2026-08-03 is exactly the project's <code>CAS_EFFECTIVE_DATE</code>. Before that date the index prints 12&ndash;13 different closes between 15:15 and 15:27; from that date, exactly one. <b>The flat index is the Closing Auction Session, not a feed failure.</b> No index is published from continuous trading while constituents are in auction, and the 15:28/15:29 step is the auction-determined close.</div>
+
+<div class="ok"><b>The option repricing is real and robust.</b> An independent recalculation reproduces the original numbers to within &plusmn;1.6 points. The 15:20&ndash;15:28 spike <b>survives every alternative method</b>: median, mean, inverse-spread-weighted mean and last-traded price all agree within ~2 points. It is <b>broad-based</b>: at every key minute all 10 strikes in the band (ITM, ATM and OTM) imply the same level to within about &plusmn;6 points, on spreads of 0.2&ndash;1%.</div>
+
+<div class="finding"><b>The headline result is conditional, not general.</b>
+<br>&bull; <b>On expiry days</b>, the option-implied level during the auction anticipated the closing step with real skill. On SENSEX (n = 6), the 15:27 reading called the direction <b>6/6</b>, correlated <b>+0.97</b> with the actual step, and cut absolute error by <b>70%</b> against a predict-no-change baseline. On NIFTY (n = 5): <b>4/5</b>, correlation +0.90, error &minus;71%.
+<br>&bull; <b>On non-expiry days it has no useful skill.</b> The raw gap is dominated by futures-style carry and performs <i>worse</i> than predicting no change. De-biased, it improves error by only 2&ndash;9%.
+<br>&bull; <b>In continuous trading, options never lead the index.</b> At every horizon from 1 to 5 minutes, the options&rarr;index correlation is &asymp;0 and direction agreement is ~50%, on pooled samples of over 1,000 minutes.</div>
+
+<div class="callout"><b>What this means.</b> "Option-implied spot leads the index" is the wrong framing. The better-supported reading is narrower: <b>on expiry day, during the closing auction, the option chain is a live market estimate of the auction close</b> &mdash; because on that day those options literally settle to it. That estimate becomes reliable late (typically by 15:25&ndash;15:27, 1&ndash;4 minutes before the print). Earlier readings, around 15:20, were wrong-signed on 2 of 6 SENSEX expiry days, and gave a sustained false signal on NIFTY 2026-09-08. <b>With n = 11 expiry days in total, this is a promising research lead, not a validated feature.</b></div>
+
+<div class="toc"><b>Contents</b>
+<a href="#s2">2. Existing implied-spot methodology</a> <a href="#s3">3. Independent validation</a> <a href="#s4">4. Strike-by-strike analysis</a>
+<a href="#s5">5. IQR analysis</a> <a href="#s6">6. Lead/lag analysis</a> <a href="#s7">7. 15:20&ndash;15:29 forensic analysis</a> <a href="#s8">8. CE/PE decomposition</a>
+<a href="#s9">9. Expiry-day comparison</a> <a href="#s10">10. Non-expiry comparison</a> <a href="#s11">11. NIFTY comparison</a> <a href="#s12">12. Signal-quality analysis</a>
+<a href="#s13">13. Today's reconstructed timeline</a> <a href="#s14">14. Direct answers</a> <a href="#s15">15. Milestone 12 implications</a>
+<a href="#s16">16. Data limitations</a> <a href="#s17">17. Final recommendation</a></div>
+
+<h2 id="s2">2. Existing implied-spot methodology</h2>
+<div class="warn"><b>There is no existing implementation.</b> A search of all Python, TypeScript and SQL for <code>implied_spot</code>, "implied spot", "put-call parity" and "parity" returns <b>zero files</b>. No derived table stores it. The table quoted in the brief came from an <b>ad-hoc query</b> run inline while writing the previous forensic report. Nothing in production computes it, so there was no existing derived table to trust or distrust.</div>
+<p>What that ad-hoc query actually did, reconstructed exactly &mdash; including two flaws:</p>
+<table>
+<tr><th>Aspect</th><th>Ad-hoc method used</th></tr>
+<tr><td>Formula</td><td>Put-call parity: <code>S &asymp; K + CE &minus; PE</code>. At DTE 0 the carry term <code>e<sup>&minus;rT</sup></code> is effectively 1.</td></tr>
+<tr><td>Quote used</td><td>Two-sided <b>mid</b> for both legs, <code>(bid + ask) / 2</code>. Not LTP.</td></tr>
+<tr><td>Strikes used</td><td>Every strike with <code>|K &minus; 74,800| &le; 500</code> &mdash; <b>a fixed centre of 74,800, not ATM-relative</b>, giving 74,300&ndash;75,300.</td></tr>
+<tr><td>CE/PE relationship</td><td>Same strike, same expiry, paired.</td></tr>
+<tr><td>Weighting</td><td>None &mdash; unweighted median across strikes.</td></tr>
+<tr><td>Missing strikes / quotes</td><td>Strike skipped if any of the four quotes (CE bid/ask, PE bid/ask) was missing or zero.</td></tr>
+<tr><td>Stale quotes</td><td>Not detected.</td></tr>
+<tr><td>Wide spreads</td><td>Not filtered.</td></tr>
+<tr><td>IV / time value / intrinsic</td><td>Not used &mdash; parity is model-free and IV-invariant (&sect;8).</td></tr>
+<tr><td>Expiry</td><td>The single captured expiry (2026-09-10, same day).</td></tr>
+<tr><td>IQR</td><td>Crude index-based quartiles <code>est[3n/4] &minus; est[n/4]</code>, not true percentiles.</td></tr>
+</table>
+<div class="callout"><b>Two flaws, disclosed.</b> (1) The printed header said <code>|K&minus;S| &le; 400</code> while the code used <code>|K &minus; 74,800| &le; 500</code>, and the earlier report described the band as "within 500 points of the money" when it was a fixed centre. (2) The IQR was index-based, not a true percentile. <b>Neither changes any conclusion</b> &mdash; &sect;3 recomputes with a different, pre-registered band and true percentiles and reproduces the numbers to &plusmn;1.6 points.</div>
+
+<h2 id="s3">3. Independent validation</h2>
+<p><b>Method fixed before any result was examined</b> (written into the extraction script's docstring): two-sided mids for both legs; strike dropped if any quote is missing, zero or crossed; band = strikes within <b>&plusmn;0.7% of that day's 15:14 index close</b> (the last continuous-trading print, so not a stale anchor); aggregates are median, mean, inverse-spread-weighted mean and true IQR (p75 &minus; p25). LTP median is a sensitivity check only. Catch-up rows stamped with wall-clock seconds are excluded. For 2026-09-10 the band is <b>74,200&ndash;75,100, 10 strikes</b>.</p>
+<table>
+<tr><th>Time</th><th>Index</th><th>n</th><th>Median</th><th>Mean</th><th>Weighted</th><th>LTP median</th><th>IQR</th><th>Spread %</th><th>Gap</th><th>Original</th><th>&Delta; orig</th></tr>
+<tr><td>14:30</td><td class="num">74731.80</td><td>10</td><td class="num">74717.14</td><td class="num">74716.94</td><td class="num">74716.88</td><td class="num">74716.90</td><td class="num">0.88</td><td class="num">0.25</td><td class="num">-14.66</td><td></td><td></td></tr>
+<tr><td>14:45</td><td class="num">74712.95</td><td>10</td><td class="num">74696.99</td><td class="num">74697.36</td><td class="num">74697.04</td><td class="num">74697.00</td><td class="num">0.66</td><td class="num">0.23</td><td class="num">-15.96</td><td></td><td></td></tr>
+<tr><td>14:59</td><td class="num">74694.27</td><td>10</td><td class="num">74665.04</td><td class="num">74665.34</td><td class="num">74665.13</td><td class="num">74664.53</td><td class="num">1.34</td><td class="num">0.29</td><td class="num">-29.23</td><td></td><td></td></tr>
+<tr><td>15:00</td><td class="num">74629.11</td><td>10</td><td class="num">74640.09</td><td class="num">74639.35</td><td class="num">74638.92</td><td class="num">74639.70</td><td class="num">2.64</td><td class="num">0.31</td><td class="num">+10.98</td><td></td><td></td></tr>
+<tr><td>15:05</td><td class="num">74642.35</td><td>10</td><td class="num">74597.00</td><td class="num">74596.63</td><td class="num">74596.45</td><td class="num">74597.00</td><td class="num">1.13</td><td class="num">0.27</td><td class="num">-45.35</td><td></td><td></td></tr>
+<tr><td>15:10</td><td class="num">74636.09</td><td>10</td><td class="num">74559.94</td><td class="num">74561.24</td><td class="num">74561.04</td><td class="num">74559.67</td><td class="num">3.99</td><td class="num">0.27</td><td class="num">-76.15</td><td></td><td></td></tr>
+<tr><td>15:13</td><td class="num">74637.89</td><td>10</td><td class="num">74556.50</td><td class="num">74556.51</td><td class="num">74556.52</td><td class="num">74556.70</td><td class="num">0.98</td><td class="num">0.27</td><td class="num">-81.39</td><td class="num">74556.65</td><td class="num">-0.15</td></tr>
+<tr><td>15:14</td><td class="num">74640.99</td><td>10</td><td class="num">74554.50</td><td class="num">74554.15</td><td class="num">74554.11</td><td class="num">74554.12</td><td class="num">1.99</td><td class="num">0.28</td><td class="num">-86.49</td><td class="num">74553.45</td><td class="num">+1.05</td></tr>
+<tr class="auction"><td>15:15</td><td class="num">74629.50</td><td>10</td><td class="num">74514.98</td><td class="num">74515.33</td><td class="num">74515.27</td><td class="num">74514.45</td><td class="num">2.37</td><td class="num">0.34</td><td class="num">-114.52</td><td class="num">74515.07</td><td class="num">-0.10</td></tr>
+<tr class="auction"><td>15:16</td><td class="num">74629.50</td><td>10</td><td class="num">74531.84</td><td class="num">74531.80</td><td class="num">74531.63</td><td class="num">74532.43</td><td class="num">3.54</td><td class="num">0.28</td><td class="num">-97.66</td><td class="num">74532.20</td><td class="num">-0.36</td></tr>
+<tr class="auction"><td>15:17</td><td class="num">74629.50</td><td>10</td><td class="num">74608.96</td><td class="num">74608.32</td><td class="num">74608.41</td><td class="num">74608.62</td><td class="num">2.81</td><td class="num">0.43</td><td class="num">-20.54</td><td class="num">74608.98</td><td class="num">-0.02</td></tr>
+<tr class="auction"><td>15:18</td><td class="num">74629.50</td><td>10</td><td class="num">74536.65</td><td class="num">74538.06</td><td class="num">74537.53</td><td class="num">74537.20</td><td class="num">3.54</td><td class="num">0.54</td><td class="num">-92.85</td><td class="num">74536.85</td><td class="num">-0.20</td></tr>
+<tr class="auction"><td>15:19</td><td class="num">74629.50</td><td>10</td><td class="num">74555.45</td><td class="num">74555.23</td><td class="num">74555.23</td><td class="num">74555.58</td><td class="num">1.61</td><td class="num">0.40</td><td class="num">-74.05</td><td class="num">74555.75</td><td class="num">-0.30</td></tr>
+<tr class="hot"><td>15:20</td><td class="num">74629.50</td><td>10</td><td class="num">74787.74</td><td class="num">74786.92</td><td class="num">74787.24</td><td class="num">74787.35</td><td class="num">4.30</td><td class="num">0.65</td><td class="num">+158.24</td><td class="num">74788.67</td><td class="num">-0.93</td></tr>
+<tr class="hot"><td>15:21</td><td class="num">74629.50</td><td>10</td><td class="num">74989.35</td><td class="num">74989.61</td><td class="num">74989.56</td><td class="num">74990.02</td><td class="num">5.14</td><td class="num">0.59</td><td class="num">+359.85</td><td class="num">74989.83</td><td class="num">-0.48</td></tr>
+<tr class="hot"><td>15:22</td><td class="num">74629.50</td><td>10</td><td class="num">74654.96</td><td class="num">74655.18</td><td class="num">74655.04</td><td class="num">74655.40</td><td class="num">4.23</td><td class="num">0.80</td><td class="num">+25.46</td><td class="num">74655.30</td><td class="num">-0.34</td></tr>
+<tr class="hot"><td>15:23</td><td class="num">74629.50</td><td>10</td><td class="num">74956.46</td><td class="num">74957.87</td><td class="num">74957.69</td><td class="num">74957.08</td><td class="num">3.87</td><td class="num">0.57</td><td class="num">+326.96</td><td class="num">74957.30</td><td class="num">-0.84</td></tr>
+<tr class="auction"><td>15:24</td><td class="num">74629.50</td><td>10</td><td class="num">74927.69</td><td class="num">74927.60</td><td class="num">74928.35</td><td class="num">74927.52</td><td class="num">2.31</td><td class="num">0.43</td><td class="num">+298.19</td><td class="num">74927.18</td><td class="num">+0.51</td></tr>
+<tr class="auction"><td>15:25</td><td class="num">74629.50</td><td>10</td><td class="num">74946.23</td><td class="num">74946.17</td><td class="num">74945.96</td><td class="num">74945.90</td><td class="num">1.27</td><td class="num">0.38</td><td class="num">+316.73</td><td class="num">74946.57</td><td class="num">-0.35</td></tr>
+<tr class="auction"><td>15:26</td><td class="num">74629.50</td><td>10</td><td class="num">74882.05</td><td class="num">74882.44</td><td class="num">74882.52</td><td class="num">74882.52</td><td class="num">4.09</td><td class="num">0.66</td><td class="num">+252.55</td><td class="num">74883.65</td><td class="num">-1.60</td></tr>
+<tr class="auction"><td>15:27</td><td class="num">74629.50</td><td>10</td><td class="num">74984.45</td><td class="num">74983.44</td><td class="num">74985.10</td><td class="num">74984.57</td><td class="num">3.88</td><td class="num">0.73</td><td class="num">+354.95</td><td class="num">74984.30</td><td class="num">+0.15</td></tr>
+<tr class="hot"><td>15:28</td><td class="num">74629.50</td><td>10</td><td class="num">75041.16</td><td class="num">75039.78</td><td class="num">75041.30</td><td class="num">75042.62</td><td class="num">2.29</td><td class="num">0.86</td><td class="num">+411.66</td><td class="num">75041.55</td><td class="num">-0.39</td></tr>
+<tr><td>15:29</td><td class="num">74902.59</td><td>10</td><td class="num">74906.10</td><td class="num">74905.42</td><td class="num">74905.18</td><td class="num">74906.25</td><td class="num">1.98</td><td class="num">0.62</td><td class="num">+3.51</td><td class="num">74906.30</td><td class="num">-0.20</td></tr>
+<tr><td>15:30</td><td class="num">74902.59</td><td>10</td><td class="num">74902.84</td><td class="num">74903.04</td><td class="num">74903.37</td><td class="num">74903.27</td><td class="num">1.03</td><td class="num">0.48</td><td class="num">+0.25</td><td class="num">74903.18</td><td class="num">-0.34</td></tr>
+<tr><td>15:32</td><td class="num">74902.59</td><td>7</td><td class="num">74902.68</td><td class="num">74902.61</td><td class="num">74902.72</td><td class="num">74902.77</td><td class="num">0.31</td><td class="num">0.66</td><td class="num">+0.09</td><td></td><td></td></tr>
+</table>
+<p style="font-size:0.85em;color:#666">Selected minutes shown for 14:30&ndash;15:12; the full minute series (63 minutes) was computed and feeds &sect;5&ndash;&sect;6. Amber rows = auction window; orange = largest moves.</p>
+<div class="ok"><b>The spike survives every method.</b> Across 15:20&ndash;15:28 the four estimators never differ by more than 2.9 points, against moves of 200&ndash;400 points. The recalculation uses a <i>different</i> strike band (74,200&ndash;75,100, anchored to 15:14 rather than a fixed 74,800) and still matches the original to within &plusmn;1.6 points at every minute. Last-traded prices instead of mids change nothing material. <b>This is not an artefact of estimator choice.</b></div>
+<div class="callout"><b>Note the pre-auction drift in the gap.</b> From 14:30 to 14:59 the gap sits near &minus;15 to &minus;30. From 15:00 to 15:14 &mdash; still continuous trading &mdash; it widens steadily to &minus;86. So during the 15:00&ndash;15:14 window the chain was pricing a close <b>below</b> the index, and the eventual close was 273 points <b>above</b> it. The option estimate only turned right once the auction began. That matters for any claim that options "saw it coming".</div>
+
+<h2 id="s4">4. Strike-by-strike analysis</h2>
+<p>Every valid strike in the band, at the minutes the brief singled out. <b>Dev</b> = that strike's implied spot minus the cross-strike median. Moneyness is stated relative to the <i>implied</i> level, not the frozen index.</p>
+
+<h3>15:19 &rarr; 15:20 &rarr; 15:21 (the jump)</h3>
+<table>
+<tr><th rowspan="2">Strike</th><th colspan="4">15:19 &mdash; median 74,555.45</th><th colspan="4">15:20 &mdash; median 74,787.74</th><th colspan="4">15:21 &mdash; median 74,989.35</th></tr>
+<tr><th>CE mid</th><th>PE mid</th><th>Implied</th><th>Dev</th><th>CE mid</th><th>PE mid</th><th>Implied</th><th>Dev</th><th>CE mid</th><th>PE mid</th><th>Implied</th><th>Dev</th></tr>
+<tr><td>74200</td><td class="num">394.90</td><td class="num">41.00</td><td class="num">74553.90</td><td class="num">-1.6</td><td class="num">602.55</td><td class="num">18.15</td><td class="num">74784.40</td><td class="num">-3.3</td><td class="num">796.05</td><td class="num">9.05</td><td class="num">74987.00</td><td class="num">-2.4</td></tr>
+<tr><td>74300</td><td class="num">314.65</td><td class="num">59.10</td><td class="num">74555.55</td><td class="num">+0.1</td><td class="num">509.60</td><td class="num">25.58</td><td class="num">74784.03</td><td class="num">-3.7</td><td class="num">698.75</td><td class="num">9.88</td><td class="num">74988.88</td><td class="num">-0.5</td></tr>
+<tr><td>74400</td><td class="num">236.90</td><td class="num">86.45</td><td class="num">74550.45</td><td class="num">-5.0</td><td class="num">424.80</td><td class="num">34.92</td><td class="num">74789.88</td><td class="num">+2.1</td><td class="num">595.60</td><td class="num">10.65</td><td class="num">74984.95</td><td class="num">-4.4</td></tr>
+<tr><td>74500</td><td class="num">175.22</td><td class="num">120.22</td><td class="num">74555.00</td><td class="num">-0.5</td><td class="num">334.30</td><td class="num">45.40</td><td class="num">74788.90</td><td class="num">+1.2</td><td class="num">505.90</td><td class="num">12.68</td><td class="num">74993.22</td><td class="num">+3.9</td></tr>
+<tr><td>74600</td><td class="num">120.88</td><td class="num">163.57</td><td class="num">74557.30</td><td class="num">+1.9</td><td class="num">244.30</td><td class="num">57.50</td><td class="num">74786.80</td><td class="num">-0.9</td><td class="num">406.08</td><td class="num">14.18</td><td class="num">74991.90</td><td class="num">+2.6</td></tr>
+<tr><td>74700</td><td class="num">80.00</td><td class="num">224.65</td><td class="num">74555.35</td><td class="num">-0.1</td><td class="num">165.12</td><td class="num">80.15</td><td class="num">74784.98</td><td class="num">-2.8</td><td class="num">307.70</td><td class="num">15.47</td><td class="num">74992.22</td><td class="num">+2.9</td></tr>
+<tr><td>74800</td><td class="num">52.65</td><td class="num">297.67</td><td class="num">74554.97</td><td class="num">-0.5</td><td class="num">103.88</td><td class="num">120.40</td><td class="num">74783.48</td><td class="num">-4.3</td><td class="num">205.50</td><td class="num">19.23</td><td class="num">74986.27</td><td class="num">-3.1</td></tr>
+<tr><td>74900</td><td class="num">35.75</td><td class="num">378.60</td><td class="num">74557.15</td><td class="num">+1.7</td><td class="num">67.28</td><td class="num">178.60</td><td class="num">74788.67</td><td class="num">+0.9</td><td class="num">124.53</td><td class="num">37.50</td><td class="num">74987.02</td><td class="num">-2.3</td></tr>
+<tr><td>75000</td><td class="num">24.68</td><td class="num">468.93</td><td class="num">74555.75</td><td class="num">+0.3</td><td class="num">47.58</td><td class="num">258.90</td><td class="num">74788.68</td><td class="num">+0.9</td><td class="num">77.72</td><td class="num">87.90</td><td class="num">74989.83</td><td class="num">+0.5</td></tr>
+<tr><td>75100</td><td class="num">17.62</td><td class="num">560.75</td><td class="num">74556.88</td><td class="num">+1.4</td><td class="num">30.77</td><td class="num">341.43</td><td class="num">74789.35</td><td class="num">+1.6</td><td class="num">49.55</td><td class="num">154.80</td><td class="num">74994.75</td><td class="num">+5.4</td></tr>
+</table>
+
+<h3>15:22, 15:23, 15:28, 15:29 &mdash; max deviation from median</h3>
+<table>
+<tr><th>Minute</th><th>Median implied</th><th>Per-strike range</th><th>Largest single-strike deviation</th><th>Combined spread range</th></tr>
+<tr><td>15:15</td><td class="num">74,514.98</td><td class="num">74,513.45 &ndash; 74,517.23</td><td class="num">+2.25 (74600)</td><td class="num">0.26 &ndash; 0.41%</td></tr>
+<tr><td>15:22</td><td class="num">74,654.96</td><td class="num">74,651.32 &ndash; 74,662.25</td><td class="num">+7.29 (74200)</td><td class="num">0.39 &ndash; 1.62%</td></tr>
+<tr><td>15:23</td><td class="num">74,956.46</td><td class="num">74,954.08 &ndash; 74,965.62</td><td class="num">+9.16 (74300)</td><td class="num">0.35 &ndash; 0.73%</td></tr>
+<tr><td>15:28</td><td class="num">75,041.16</td><td class="num">75,026.60 &ndash; 75,043.65</td><td class="num">&minus;14.56 (74500)</td><td class="num">0.18 &ndash; 2.29%</td></tr>
+<tr><td>15:29</td><td class="num">74,906.10</td><td class="num">74,901.25 &ndash; 74,908.00</td><td class="num">&minus;4.85 (74300)</td><td class="num">0.33 &ndash; 1.85%</td></tr>
+</table>
+<div class="finding"><b>Classification against the brief's options: A &mdash; broad-based across strikes.</b> Not B (no single or few strikes drive it: all 10 move together), not C, D or E (ITM, ATM and OTM strikes all imply the same level). The <b>largest single-strike deviation anywhere in 15:15&ndash;15:29 is 14.6 points</b>, against minute-to-minute moves of 200&ndash;400. <b>F (unstable/noisy) applies to the path, not to any single minute:</b> each minute is internally coherent, but the <i>level</i> swings violently &mdash; +202 at 15:21, &minus;334 at 15:22, +302 at 15:23.</div>
+
+<h2 id="s5">5. IQR analysis</h2>
+<p>The hypothesis to test: <i>large move + low cross-strike IQR = the whole chain is repricing, not a bad quote.</i></p>
+<table>
+<tr><th>Window (2026-09-10, SENSEX)</th><th>Typical IQR</th><th>Typical &#124;gap&#124;</th><th>&#124;gap&#124; / IQR</th></tr>
+<tr><td>14:30&ndash;14:59 (normal continuous trading)</td><td class="num">0.35 &ndash; 1.46</td><td class="num">1 &ndash; 39</td><td class="num">often 10 &ndash; 90 (e.g. 14:53: &minus;38.6 / 0.43 = &minus;90)</td></tr>
+<tr><td>15:00&ndash;15:14 (continuous, post-transition)</td><td class="num">0.74 &ndash; 3.99</td><td class="num">11 &ndash; 102</td><td class="num">4 &ndash; 60</td></tr>
+<tr><td>15:20&ndash;15:28 (auction repricing)</td><td class="num">1.27 &ndash; 5.14</td><td class="num">25 &ndash; 412</td><td class="num">6 &ndash; 250</td></tr>
+</table>
+<div class="warn"><b>The hypothesis is only half right, and the half that fails matters.</b>
+<br><br><b>What holds:</b> a low IQR does rule out a single bad quote. If one strike were mispriced, the per-strike estimates would disagree and the IQR would blow out. At 15:21 the IQR was 5.14 on a 360-point gap, so this was not one bad print.
+<br><br><b>What fails:</b> low IQR is <b>not</b> evidence of a strong signal, for a structural reason. Put-call parity is enforced by <b>arbitrage</b>: any internally consistent quoted chain will imply nearly the same underlying at every strike, whether or not that underlying is correct. Market makers quote every strike off one reference, so all strikes move together <i>by construction</i>. That is exactly why IQR is already under 1.5 in ordinary trading at 14:30. During the repricing, IQR actually <b>rose</b> (to 1.3&ndash;5.1), not fell. And <code>gap/IQR</code> is huge in ordinary minutes too (&minus;90 at 14:53), so it cannot separate signal from normal conditions.
+<br><br><b>Conclusion:</b> IQR is a <b>validity check</b> (is this estimate internally coherent?), not a <b>strength measure</b> (is this repricing meaningful?). Milestone 12 should use it only as a gate. The same pattern holds across days: auction-window IQR is higher than continuous-window IQR on most days in &sect;9, with a single-minute peak of 17.1 on SENSEX 2026-08-27.</div>
+
+<h2 id="s6">6. Lead/lag analysis</h2>
+<p>Pooled 1-minute changes across every day with option data. <b>opt&rarr;idx</b> = correlation of the implied-spot change at <i>t</i> with the index change at <i>t+h</i>; <b>idx&rarr;opt</b> is the reverse. <b>Dir</b> = how often the implied-spot change and the later index change share a sign. <b>These windows deliberately exclude the auction</b> (the index is not published then, so there is nothing to lag against); this is continuous trading only.</p>
+<table>
+<tr><th>Symbol / window</th><th>h</th><th>opt &rarr; idx</th><th>idx &rarr; opt</th><th>Dir agreement (opt leads)</th><th>n</th></tr>
+<tr><td rowspan="5">SENSEX, pre-CAS days<br>14:30&ndash;15:30</td><td>0</td><td class="num">+0.38</td><td class="num">+0.38</td><td class="num">64%</td><td class="num">332</td></tr>
+<tr><td>1</td><td class="num">&minus;0.08</td><td class="num"><b>+0.49</b></td><td class="num">50%</td><td class="num">325</td></tr>
+<tr><td>2</td><td class="num">&minus;0.08</td><td class="num">&minus;0.05</td><td class="num">44%</td><td class="num">318</td></tr>
+<tr><td>3</td><td class="num">+0.11</td><td class="num">+0.09</td><td class="num">53%</td><td class="num">311</td></tr>
+<tr><td>5</td><td class="num">&minus;0.01</td><td class="num">&minus;0.02</td><td class="num">48%</td><td class="num">297</td></tr>
+<tr><td rowspan="5">SENSEX, post-CAS days<br>14:30&ndash;15:14</td><td>0</td><td class="num">+0.42</td><td class="num">+0.42</td><td class="num">64%</td><td class="num">1,230</td></tr>
+<tr><td>1</td><td class="num">+0.01</td><td class="num"><b>+0.34</b></td><td class="num">52%</td><td class="num">1,201</td></tr>
+<tr><td>2</td><td class="num">&minus;0.03</td><td class="num">&minus;0.03</td><td class="num">51%</td><td class="num">1,172</td></tr>
+<tr><td>3</td><td class="num">+0.04</td><td class="num">&minus;0.08</td><td class="num">50%</td><td class="num">1,144</td></tr>
+<tr><td>5</td><td class="num">&minus;0.05</td><td class="num">&minus;0.00</td><td class="num">49%</td><td class="num">1,088</td></tr>
+<tr><td rowspan="5">NIFTY, pre-CAS days<br>14:30&ndash;15:30</td><td>0</td><td class="num">+0.36</td><td class="num">+0.36</td><td class="num">63%</td><td class="num">330</td></tr>
+<tr><td>1</td><td class="num">&minus;0.07</td><td class="num"><b>+0.48</b></td><td class="num">52%</td><td class="num">323</td></tr>
+<tr><td>2</td><td class="num">+0.01</td><td class="num">+0.00</td><td class="num">48%</td><td class="num">316</td></tr>
+<tr><td>3</td><td class="num">+0.03</td><td class="num">+0.03</td><td class="num">48%</td><td class="num">309</td></tr>
+<tr><td>5</td><td class="num">+0.03</td><td class="num">&minus;0.04</td><td class="num">51%</td><td class="num">295</td></tr>
+<tr><td rowspan="5">NIFTY, post-CAS days<br>14:30&ndash;15:14</td><td>0</td><td class="num">+0.48</td><td class="num">+0.48</td><td class="num">69%</td><td class="num">1,232</td></tr>
+<tr><td>1</td><td class="num">&minus;0.01</td><td class="num"><b>+0.41</b></td><td class="num">51%</td><td class="num">1,204</td></tr>
+<tr><td>2</td><td class="num">&minus;0.05</td><td class="num">&minus;0.02</td><td class="num">51%</td><td class="num">1,176</td></tr>
+<tr><td>3</td><td class="num">&minus;0.01</td><td class="num">&minus;0.04</td><td class="num">51%</td><td class="num">1,148</td></tr>
+<tr><td>5</td><td class="num">&minus;0.02</td><td class="num">&minus;0.04</td><td class="num">50%</td><td class="num">1,092</td></tr>
+</table>
+<div class="finding"><b>In continuous trading, option-implied spot does not lead the index &mdash; at any horizon, on either symbol, before or after CAS.</b> opt&rarr;idx is between &minus;0.08 and +0.11 everywhere, and direction agreement is 44&ndash;53%: a coin flip. The consistent non-zero relationship runs the other way, <b>index &rarr; options at 1 minute</b> (+0.34 to +0.49).</div>
+<div class="callout"><b>Do not read that 1-minute index lead as causal either.</b> It is at least partly a sampling artefact. The live loop fetches the option chain about 18&ndash;24 seconds into the minute (visible in the log timestamps, e.g. <code>09:26:18 ... as_of=09:26:00</code>) and stamps it with that minute's label. The candle for the same label keeps being refreshed until it closes at the end of the minute. So the "t" option snapshot is taken <b>~40 seconds before</b> the "t" candle close, and naturally resembles the "t+1" candle more. <b>Sub-minute lead/lag cannot be resolved with this sampling.</b> What can be said: there is <b>no evidence of options leading the index in continuous trading.</b> The only place options appear to lead is the auction &mdash; where the index is not being published at all.</div>
+
+<h2 id="s7">7. 15:20&ndash;15:29 forensic analysis</h2>
+<table>
+<tr><th>What changed 15:19 &rarr; 15:20</th><th>Observation</th></tr>
+<tr><td>Implied spot</td><td>74,555.45 &rarr; 74,787.74 (<b>+232.3</b>); every strike +228.5 to +239.4</td></tr>
+<tr><td>74700 CE (reference strike)</td><td>80.00 &rarr; 165.12 (+85.12)</td></tr>
+<tr><td>74700 PE</td><td>224.65 &rarr; 80.15 (&minus;144.50)</td></tr>
+<tr><td>Option volume, ATM&plusmn;0.7% band</td><td>+20.9 M in the prior minute &rarr; <b>+43.3 M</b>; then +92.9 M at 15:21 and +106.2 M at 15:22</td></tr>
+<tr><td>Open interest</td><td><b>Unchanged at every strike</b> (&Delta;OI = 0) &mdash; Dhan did not refresh OI that minute. OI cannot have driven the move.</td></tr>
+<tr><td>Vendor IV</td><td>CE IV +3.4 to +45.0; PE IV &minus;5.4 to &minus;35.2 &mdash; <b>opposite directions at the same strike</b> (see below)</td></tr>
+<tr><td>Bid/ask</td><td>Combined spread rose from 0.40% to 0.65% &mdash; wider, but still tight; no liquidity collapse</td></tr>
+<tr><td>ATM</td><td>By the frozen index, ATM stays 74,600. By implied spot, ATM moved from 74,600 to <b>74,800</b></td></tr>
+</table>
+<div class="warn"><b>The vendor IV and Greeks are wrong during the auction, and this proves it.</b> At strike 74,200 between 15:19 and 15:20, Dhan's CE IV rose +45 while PE IV fell &minus;5. At the same strike and expiry, put-call parity forces CE and PE to share one implied volatility; they cannot move in opposite directions in a coherent market. By 15:21 the 74,700 PE shows IV = 0.0 while trading at 15.47. The explanation is that <b>Dhan computes IV against the frozen index (74,629.50)</b>. A call worth 307.70 against a "spot" of 74,629.50 needs absurd volatility, and a put priced below its apparent intrinsic value has no solution, so it reads 0. <b>Every vendor IV and Greek value from 15:15 to 15:28 on post-CAS days should be treated as invalid.</b></div>
+<div class="callout"><b>A related observation about the frozen 11D agent &mdash; flagged, not changed.</b> The agent's delta floor is applied only at option selection at 14:59, before the auction, so it uses valid Greeks. But <code>paper_trading/position_manager.py</code> feeds the <b>index price</b> into <code>classify_momentum</code> and the ATR-based "underlying reversed against entry" exit. A 14:59 entry with the 19-minute maximum hold runs to 15:18, so for its last ~3 minutes those two checks read a flat auction index and cannot fire. Its bid-based stop, target and time exit are unaffected, because option quotes keep updating. Per the experiment freeze, this is recorded for Milestone 12 only.</div>
+<div class="callout"><b>Could 15:20 have been an early warning?</b> Looking at this one day, it is tempting to say yes: the first +232 move arrived 9 minutes before the print. Across all expiry days, <b>no</b>. At 15:20 the gap had the wrong sign on SENSEX 2026-08-13 (&minus;35 before a +219 step) and 2026-08-27 (+22 before a &minus;249 step). On NIFTY 2026-09-08 it showed &minus;49 before a &minus;5 step, then stayed at &minus;37 to &minus;78 for six minutes before collapsing to +4. And on 2026-09-10 itself the 15:20 reading fully reversed a minute later (+360 &rarr; +25). <b>15:20 was right today in hindsight; it would not have been a reliable warning.</b> See &sect;9 for when the reading becomes reliable.</div>
+
+<h2 id="s8">8. CE/PE decomposition</h2>
+<p>For each strike, <code>&Delta;implied = &Delta;CE &minus; &Delta;PE</code>. The CE share is the fraction of that strike's move contributed by the call leg.</p>
+<table>
+<tr><th>Strike</th><th>&Delta;CE</th><th>&minus;&Delta;PE</th><th>&Delta;implied</th><th>CE share</th><th>&Delta;CE vol</th><th>&Delta;PE vol</th><th>&Delta;OI</th></tr>
+<tr><td colspan="8" style="background:#e8f0fe"><b>15:19 &rarr; 15:20 (+232.3)</b></td></tr>
+<tr><td>74200 (deep ITM call)</td><td class="num">+207.65</td><td class="num">+22.85</td><td class="num">+230.50</td><td class="num">90%</td><td class="num">+0.09 M</td><td class="num">+3.24 M</td><td>0</td></tr>
+<tr><td>74400</td><td class="num">+187.90</td><td class="num">+51.52</td><td class="num">+239.43</td><td class="num">78%</td><td class="num">+0.31 M</td><td class="num">+2.92 M</td><td>0</td></tr>
+<tr><td>74600</td><td class="num">+123.43</td><td class="num">+106.07</td><td class="num">+229.50</td><td class="num">54%</td><td class="num">+2.90 M</td><td class="num">+3.55 M</td><td>0</td></tr>
+<tr><td>74800</td><td class="num">+51.23</td><td class="num">+177.27</td><td class="num">+228.50</td><td class="num">22%</td><td class="num">+3.95 M</td><td class="num">+1.14 M</td><td>0</td></tr>
+<tr><td>75000</td><td class="num">+22.90</td><td class="num">+210.03</td><td class="num">+232.93</td><td class="num">10%</td><td class="num">+4.29 M</td><td class="num">+0.40 M</td><td>0</td></tr>
+<tr><td>75100 (deep ITM put)</td><td class="num">+13.15</td><td class="num">+219.32</td><td class="num">+232.47</td><td class="num">6%</td><td class="num">+2.27 M</td><td class="num">+0.12 M</td><td>0</td></tr>
+<tr><td colspan="8" style="background:#e8f0fe"><b>Aggregate across all 10 strikes, by interval</b></td></tr>
+<tr><td>15:19&rarr;15:20 (+232)</td><td colspan="3">CE 46% / PE 54%</td><td colspan="4">per-strike range +228.5 to +239.4</td></tr>
+<tr><td>15:20&rarr;15:21 (+202)</td><td colspan="3">CE 61% / PE 39%</td><td colspan="4">+195.1 to +207.2; first OI refresh: CE OI falls at every strike</td></tr>
+<tr><td>15:21&rarr;15:22 (&minus;334)</td><td colspan="3">CE 65% / PE 35%</td><td colspan="4">&minus;343.4 to &minus;324.7 &mdash; the whole chain reverses together</td></tr>
+<tr><td>15:22&rarr;15:23 (+302)</td><td colspan="3">CE 63% / PE 37%</td><td colspan="4">+291.8 to +311.0</td></tr>
+<tr><td>15:27&rarr;15:28 (+57)</td><td colspan="3">CE 85% / PE 15%</td><td colspan="4">+46.9 to +64.0 (puts already near zero)</td></tr>
+<tr><td>15:28&rarr;15:29 (&minus;135)</td><td colspan="3">CE 86% / PE 14%</td><td colspan="4">&minus;139.5 to &minus;120.0 &mdash; overshoot unwinds into the print</td></tr>
+</table>
+<div class="finding"><b>The decomposition is exactly what a repricing of the underlying reference looks like.</b> The CE share falls smoothly from 90% at the deepest ITM call to 6% at the deepest ITM put &mdash; the delta profile. Each leg moves by roughly its own delta times the underlying shift, and the two legs together always sum to the same underlying move. Quantifying the brief's candidate factors for 15:20&ndash;15:28:</div>
+<table>
+<tr><th>Candidate contributor</th><th>Contribution to implied spot</th><th>Basis</th></tr>
+<tr><td>CE price change</td><td>~46&ndash;86% by interval; rises as puts approach zero</td><td>Measured</td></tr>
+<tr><td>PE price change</td><td>~14&ndash;54% by interval</td><td>Measured</td></tr>
+<tr><td>ITM / ATM / OTM split</td><td>All three imply the same shift; no moneyness bucket drives it</td><td>Measured</td></tr>
+<tr><td>IV change</td><td><b>Zero by construction.</b> Parity is IV-invariant: a vol change raises CE and PE by the same vega and cancels in CE &minus; PE</td><td>Theory, and confirmed by cross-strike agreement</td></tr>
+<tr><td>Bid/ask movement</td><td>&le;1&ndash;3 points (mid vs LTP difference; spreads 0.4&ndash;0.9%)</td><td>Measured</td></tr>
+<tr><td>OI / positioning</td><td>None &mdash; OI did not even refresh on the 15:19&rarr;15:20 minute</td><td>Measured</td></tr>
+<tr><td>Strike migration</td><td>None &mdash; the same 10 strikes throughout</td><td>Measured</td></tr>
+<tr><td>Liquidity</td><td>Spreads widened modestly; volume <i>rose</i> 2&ndash;5x &mdash; no liquidity withdrawal</td><td>Measured</td></tr>
+<tr><td>Stale quotes</td><td>Ruled out &mdash; quotes change every minute at every strike</td><td>Measured</td></tr>
+<tr><td>Expiry / gamma effects</td><td>Make the premiums very sensitive, but cannot create a coherent parity shift on their own</td><td>Inferred</td></tr>
+<tr><td><b>Actual repricing of the underlying reference</b></td><td><b>The only factor consistent with all of the above</b></td><td><span class="tag inf">INFERRED</span> &mdash; the auction indicative price was not captured, so this cannot be confirmed directly</td></tr>
+</table>
+
+<h2 id="s9">9. Expiry-day comparison</h2>
+<p><b>First, the auction is universal, not an expiry effect.</b> The flat-index stretch occurs on every post-CAS day, expiry or not:</p>
+<table>
+<tr><th>Period</th><th>Symbol-days</th><th>Distinct index closes, 15:15&ndash;15:27</th><th>Step time</th></tr>
+<tr><td>Pre-CAS, 2026-07-15 &rarr; 07-31</td><td>26 (13 per symbol)</td><td><b>12&ndash;13</b> on every day &mdash; normal continuous trading</td><td>none (prices move each minute)</td></tr>
+<tr><td>Post-CAS, 2026-08-03 &rarr; 09-11</td><td>60 (30 per symbol)</td><td><b>exactly 1</b> on every day</td><td>15:28 or 15:29 on every day</td></tr>
+</table>
+<div class="warn"><b>This contradicts the project's own CAS documentation.</b> The docstring in <code>market_transition/cas_transition.py</code> (written 2026-08-21) says that during the auction only <i>volume</i> freezes, and that price "keeps moving genuinely through 15:39". The data shows the <b>price</b> is also flat from 15:15 to 15:27 on every post-CAS day. The CAS engine's post-window move (to 15:39) is therefore largely <b>continuous 15:00&ndash;15:14 trading plus one auction step</b>. Recorded here; not changed.</div>
+
+<h3>Gap trajectories through the auction, every expiry day</h3>
+<p>Raw gap = option-implied spot &minus; the flat auction-period index. <b>Step</b> = the actual 15:28/15:29 closing move. <b>Reliable from</b> = first auction minute at which the gap reached at least half the final step with the correct sign. No thresholds were tuned; half-step is used only as a descriptive marker.</p>
+<table>
+<tr><th>Date</th><th>15:15</th><th>15:17</th><th>15:19</th><th>15:20</th><th>15:21</th><th>15:22</th><th>15:23</th><th>15:24</th><th>15:25</th><th>15:26</th><th>15:27</th><th>15:28</th><th>STEP</th><th>max IQR</th><th>Reliable from</th></tr>
+<tr><td colspan="16" style="background:#e8f0fe"><b>SENSEX</b></td></tr>
+<tr><td>08-06</td><td class="num">+107</td><td class="num">+174</td><td class="num">+218</td><td class="num">+169</td><td class="num">+128</td><td class="num">+230</td><td class="num">+350</td><td class="num">+449</td><td class="num">+262</td><td class="num">+270</td><td class="num">+263</td><td class="num">+186</td><td class="num"><b>+169.1</b></td><td class="num">10.15</td><td>15:17</td></tr>
+<tr><td>08-13</td><td class="num">-6</td><td class="num">-5</td><td class="num">-10</td><td class="num">-35</td><td class="num">-11</td><td class="num">+1</td><td class="num">-19</td><td class="num">-3</td><td class="num">+78</td><td class="num">+137</td><td class="num">+116</td><td class="num">+139</td><td class="num"><b>+218.5</b></td><td class="num">7.05</td><td>15:26</td></tr>
+<tr><td>08-20</td><td class="num">+24</td><td class="num">+46</td><td class="num">+19</td><td class="num">+23</td><td class="num">-1</td><td class="num">-3</td><td class="num">-17</td><td class="num">-34</td><td class="num">+8</td><td class="num">+8</td><td class="num">+52</td><td class="num">+53</td><td class="num"><b>+52.4</b></td><td class="num">5.19</td><td>15:17</td></tr>
+<tr><td>08-27</td><td class="num">+109</td><td class="num">+80</td><td class="num">+94</td><td class="num">+22</td><td class="num">-16</td><td class="num">+3</td><td class="num">-10</td><td class="num">-15</td><td class="num">-51</td><td class="num">-70</td><td class="num">-375</td><td class="num">-344</td><td class="num"><b>-249.3</b></td><td class="num">17.09</td><td>15:27</td></tr>
+<tr><td>09-03</td><td class="num">+80</td><td class="num">+66</td><td class="num">+82</td><td class="num">-71</td><td class="num">-177</td><td class="num">-199</td><td class="num">-239</td><td class="num">-219</td><td class="num">-275</td><td class="num">-347</td><td class="num">-402</td><td class="num">-327</td><td class="num"><b>-401.3</b></td><td class="num">4.24</td><td>15:23</td></tr>
+<tr class="hot"><td>09-10</td><td class="num">-115</td><td class="num">-21</td><td class="num">-74</td><td class="num">+158</td><td class="num">+360</td><td class="num">+25</td><td class="num">+327</td><td class="num">+298</td><td class="num">+317</td><td class="num">+253</td><td class="num">+355</td><td class="num">+412</td><td class="num"><b>+273.1</b></td><td class="num">5.14</td><td>15:20</td></tr>
+<tr><td colspan="16" style="background:#e8f0fe"><b>NIFTY</b></td></tr>
+<tr><td>08-04</td><td class="num">+36</td><td class="num">+29</td><td class="num">+20</td><td class="num">+43</td><td class="num">+51</td><td class="num">+46</td><td class="num">+65</td><td class="num">+58</td><td class="num">+64</td><td class="num">+98</td><td class="num">+86</td><td class="num">+109</td><td class="num"><b>+151.5</b></td><td class="num">1.56</td><td>15:26</td></tr>
+<tr><td>08-11</td><td class="num">+35</td><td class="num">+14</td><td class="num">+10</td><td class="num">+2</td><td class="num">-3</td><td class="num">+14</td><td class="num">+22</td><td class="num">+27</td><td class="num">+14</td><td class="num">+13</td><td class="num">+21</td><td class="num">+17</td><td class="num"><b>+21.5</b></td><td class="num">1.36</td><td>15:17</td></tr>
+<tr><td>08-25</td><td class="num">-2</td><td class="num">+3</td><td class="num">+8</td><td class="num">+21</td><td class="num">+57</td><td class="num">+58</td><td class="num">+51</td><td class="num">+51</td><td class="num">+53</td><td class="num">+56</td><td class="num">+62</td><td class="num">+75</td><td class="num"><b>+74.5</b></td><td class="num">1.60</td><td>15:21</td></tr>
+<tr><td>09-01</td><td class="num">+6</td><td class="num">+4</td><td class="num">+15</td><td class="num">+56</td><td class="num">+61</td><td class="num">+84</td><td class="num">+75</td><td class="num">+94</td><td class="num">+91</td><td class="num">+79</td><td class="num">+84</td><td class="num">+76</td><td class="num"><b>+75.2</b></td><td class="num">3.16</td><td>15:20</td></tr>
+<tr><td>09-08</td><td class="num">-6</td><td class="num">+30</td><td class="num">+14</td><td class="num">-49</td><td class="num">-78</td><td class="num">-70</td><td class="num">-61</td><td class="num">-61</td><td class="num">-42</td><td class="num">-37</td><td class="num">+4</td><td class="num">-4</td><td class="num"><b>-5.0</b></td><td class="num">2.93</td><td>15:20*</td></tr>
+</table>
+<p style="font-size:0.85em;color:#666">* NIFTY 2026-09-08 technically met the half-step marker at 15:20 because the step was tiny (&minus;5.0), but the gap sat at &minus;37 to &minus;78 for six minutes and then collapsed to +4. That is a <b>false signal</b>, not a correct early call. NIFTY 2026-08-18 (expiry) has no option data in the window and is excluded; see &sect;16.</p>
+
+<h3>Predictive skill by group, against baselines</h3>
+<p><b>MAE zero</b> = error of predicting "no change" (the flat index persists). <b>MAE momentum</b> = predicting the sign of the 15:00&rarr;15:14 move with the group's average step size. <b>vs zero</b> = error reduction of the implied-spot estimate relative to MAE zero. <b>raw</b> = unadjusted gap; <b>deb</b> = gap minus that day's 15:05&ndash;15:14 median gap (removes carry and any fixed offset).</p>
+<table>
+<tr><th>Group</th><th>Estimate</th><th>n</th><th>Direction hit</th><th>Corr</th><th>MAE est.</th><th>MAE zero</th><th>MAE momentum</th><th>vs zero</th></tr>
+<tr><td rowspan="5"><b>SENSEX expiry</b></td><td>raw 15:20</td><td>6</td><td>4/6</td><td class="num">+0.63</td><td class="num">166.7</td><td class="num">227.3</td><td class="num">230.2</td><td class="num">+27%</td></tr>
+<tr><td>raw 15:25</td><td>6</td><td><b>6/6</b></td><td class="num">+0.90</td><td class="num">107.5</td><td class="num">227.3</td><td class="num">230.2</td><td class="num">+53%</td></tr>
+<tr class="hot"><td>raw 15:27</td><td>6</td><td><b>6/6</b></td><td class="num"><b>+0.97</b></td><td class="num"><b>67.4</b></td><td class="num">227.3</td><td class="num">230.2</td><td class="num"><b>+70%</b></td></tr>
+<tr><td>deb 15:20</td><td>6</td><td>5/6</td><td class="num">+0.68</td><td class="num">155.2</td><td class="num">227.3</td><td class="num">230.2</td><td class="num">+32%</td></tr>
+<tr><td>deb 15:27</td><td>6</td><td>6/6</td><td class="num">+0.96</td><td class="num">99.4</td><td class="num">227.3</td><td class="num">230.2</td><td class="num">+56%</td></tr>
+<tr><td rowspan="5"><b>NIFTY expiry</b></td><td>raw 15:20</td><td>5</td><td>5/5</td><td class="num">+0.80</td><td class="num">49.0</td><td class="num">65.5</td><td class="num">76.6</td><td class="num">+25%</td></tr>
+<tr><td>raw 15:25</td><td>5</td><td>5/5</td><td class="num">+0.77</td><td class="num">33.9</td><td class="num">65.5</td><td class="num">76.6</td><td class="num">+48%</td></tr>
+<tr class="hot"><td>raw 15:27</td><td>5</td><td>4/5</td><td class="num"><b>+0.90</b></td><td class="num"><b>19.2</b></td><td class="num">65.5</td><td class="num">76.6</td><td class="num"><b>+71%</b></td></tr>
+<tr><td>deb 15:20</td><td>5</td><td>4/5</td><td class="num">+0.77</td><td class="num">68.3</td><td class="num">65.5</td><td class="num">76.6</td><td class="num">&minus;4%</td></tr>
+<tr><td>deb 15:27</td><td>5</td><td>4/5</td><td class="num">+0.85</td><td class="num">31.3</td><td class="num">65.5</td><td class="num">76.6</td><td class="num">+52%</td></tr>
+</table>
+<div class="finding"><b>On expiry days the signal is real, but it arrives late.</b> The 15:27 reading beats both baselines by a wide margin on both symbols, and on SENSEX 2026-09-03 it was almost exact (&minus;401.6 predicted vs &minus;401.3 actual). Momentum does no better than predicting no change, so this is not simply the 15:00&ndash;15:14 trend continuing. <b>But the useful lead is short</b>: skill climbs from 15:20 (SENSEX 4/6, corr +0.63) to 15:25 (6/6, +0.90) to 15:27 (6/6, +0.97), leaving roughly 1&ndash;2 minutes before the print. The raw estimate beats the de-biased one on expiry days, as theory predicts: at DTE 0 there is no carry to remove, and de-biasing throws away real information.</div>
+<div class="warn"><b>How often does it fail? On these 11 expiry days, at 15:27:</b> SENSEX 0 of 6 wrong direction. NIFTY 1 of 5 &mdash; 2026-09-08, predicted +3.9 against an actual &minus;5.0. Both are within noise of zero, so this is a near-flat day rather than a confident wrong call. (The de-biased estimate instead misses 2026-08-11, &minus;3.0 against +21.5.) <b>But at 15:20, 3 of 11 readings were wrong-signed or a sustained false signal</b> (SENSEX 08-13, SENSEX 08-27, NIFTY 09-08). And magnitude errors at 15:27 are large on some days: SENSEX 08-27 predicted &minus;375 vs &minus;249 actual; 08-13 +116 vs +219. <b>With n = 6 and n = 5, none of these rates is statistically established.</b> A 6/6 hit rate has a 95% confidence interval of roughly 54&ndash;100%.</div>
+
+<h2 id="s10">10. Non-expiry comparison</h2>
+<table>
+<tr><th>Group</th><th>Estimate</th><th>n</th><th>Direction hit</th><th>Corr</th><th>MAE est.</th><th>MAE zero</th><th>MAE momentum</th><th>vs zero</th></tr>
+<tr><td rowspan="5"><b>SENSEX non-expiry</b></td><td>raw 15:20</td><td>21</td><td>15/21</td><td class="num">+0.27</td><td class="num">149.7</td><td class="num">77.6</td><td class="num">84.9</td><td class="num">&minus;93%</td></tr>
+<tr><td>raw 15:25</td><td>21</td><td>17/21</td><td class="num">+0.34</td><td class="num">143.0</td><td class="num">77.6</td><td class="num">84.9</td><td class="num">&minus;84%</td></tr>
+<tr><td>raw 15:27</td><td>21</td><td>15/21</td><td class="num">+0.28</td><td class="num">142.8</td><td class="num">77.6</td><td class="num">84.9</td><td class="num">&minus;84%</td></tr>
+<tr><td>deb 15:20</td><td>21</td><td>13/21</td><td class="num">+0.34</td><td class="num">75.8</td><td class="num">77.6</td><td class="num">84.9</td><td class="num">+2%</td></tr>
+<tr><td>deb 15:27</td><td>21</td><td>14/21</td><td class="num">+0.38</td><td class="num">73.3</td><td class="num">77.6</td><td class="num">84.9</td><td class="num">+6%</td></tr>
+<tr><td rowspan="5"><b>NIFTY non-expiry</b></td><td>raw 15:20</td><td>22</td><td>16/22</td><td class="num">&minus;0.05</td><td class="num">57.9</td><td class="num">42.3</td><td class="num">54.0</td><td class="num">&minus;37%</td></tr>
+<tr><td>raw 15:25</td><td>22</td><td>16/22</td><td class="num">&minus;0.03</td><td class="num">53.7</td><td class="num">42.3</td><td class="num">54.0</td><td class="num">&minus;27%</td></tr>
+<tr><td>raw 15:27</td><td>22</td><td>15/22</td><td class="num">&minus;0.01</td><td class="num">51.2</td><td class="num">42.3</td><td class="num">54.0</td><td class="num">&minus;21%</td></tr>
+<tr><td>deb 15:20</td><td>22</td><td>18/22</td><td class="num">+0.28</td><td class="num">38.5</td><td class="num">42.3</td><td class="num">54.0</td><td class="num">+9%</td></tr>
+<tr><td>deb 15:27</td><td>22</td><td>12/22</td><td class="num">+0.36</td><td class="num">39.0</td><td class="num">42.3</td><td class="num">54.0</td><td class="num">+8%</td></tr>
+</table>
+<div class="warn"><b>Beware the direction hit rates in this table &mdash; they are mostly base rate.</b> Up-steps were <b>15 of 21</b> SENSEX non-expiry days and <b>16 of 22</b> NIFTY non-expiry days. The raw gap is almost always positive on non-expiry days (see below), so it "predicts up" nearly every day and inherits a ~71&ndash;73% hit rate for free. That is why a 15/21 hit rate coexists with an error <i>worse</i> than predicting no change.</div>
+<div class="finding"><b>Why non-expiry days differ, mechanically.</b> On a non-expiry day the options settle days later, not today, so parity gives the <b>forward</b> price, which sits above spot by the carry. The measured 15:05&ndash;15:14 baseline gap on SENSEX non-expiry days runs <b>+25 to +272 points</b> (its relationship to days-to-expiry was not tested here and is not claimed). The raw gap therefore mostly measures carry. After de-biasing, what remains correlates only ~+0.3 with the step and improves error by 2&ndash;9% &mdash; negligible. There is also a plausible economic reason: those options have no direct claim on <i>today's</i> auction close, so there is little incentive to price it precisely.
+<br><br><b>Classification against the brief's options:</b> the gap is <b>B &mdash; mostly expiry-specific</b> as a signal. On non-expiry days it is <b>A &mdash; normal carry and noise</b>. It is <b>not C</b> (feed-specific): the flat index is the auction, which is identical on expiry and non-expiry days, yet the signal only works on expiry days. <b>D (useful transition signal)</b> is plausible for expiry days only, and <b>E (insufficient sample)</b> applies to that conclusion.</div>
+
+<h2 id="s11">11. NIFTY comparison</h2>
+<table>
+<tr><th>Property</th><th>SENSEX</th><th>NIFTY</th></tr>
+<tr><td>Option coverage</td><td>Comparable; 10 strikes in band (100-pt steps)</td><td>Comparable; 7 strikes in band (50-pt steps, &plusmn;0.7%)</td></tr>
+<tr><td>Auction flat index</td><td>30/30 post-CAS days</td><td>30/30 post-CAS days</td></tr>
+<tr><td>Expiry days tested</td><td>6 (Thursdays)</td><td>5 (Tuesdays; 08-18 lacks window data)</td></tr>
+<tr><td>Typical auction step</td><td>MAE zero 227 (expiry), 78 (non-expiry)</td><td>MAE zero 66 (expiry), 42 (non-expiry)</td></tr>
+<tr><td>Continuous-window IQR</td><td>~0.5&ndash;1.4</td><td>~0.25&ndash;0.55</td></tr>
+<tr><td>Auction max IQR (expiry)</td><td>4.2 &ndash; 17.1</td><td>1.4 &ndash; 3.2</td></tr>
+<tr><td>Expiry skill at 15:27 (raw)</td><td>6/6, corr +0.97, &minus;70% error</td><td>4/5, corr +0.90, &minus;71% error</td></tr>
+<tr><td>Expiry skill at 15:20 (raw)</td><td>4/6, corr +0.63</td><td>5/5, corr +0.80 &mdash; but includes a sustained false signal on 09-08</td></tr>
+<tr><td>Signal path</td><td>Violent: swings of &plusmn;300/min (e.g. 09-10)</td><td>Smoother: mostly monotone drift toward the close</td></tr>
+<tr><td>Continuous-trading lead/lag</td><td>No option lead; idx&rarr;opt +0.34 to +0.49 at 1 min</td><td>No option lead; idx&rarr;opt +0.41 to +0.48 at 1 min</td></tr>
+<tr><td>Non-expiry skill</td><td>None useful</td><td>None useful</td></tr>
+</table>
+<div class="finding"><b>The two symbols agree in shape and differ in texture.</b> Both show the same auction, the same absence of an option lead in continuous trading, and the same expiry-only skill of similar strength. NIFTY's implied path is steadier and settles earlier; SENSEX's swings far more minute to minute, so single SENSEX readings are riskier to act on. Given n = 5 and n = 6, <b>the similarity is encouraging but not proof that the effect generalises</b>.</div>
+
+<h2 id="s12">12. Signal-quality analysis</h2>
+<p><b>Descriptive classification, not a tuned rule.</b> Criteria stated before assigning: cross-strike agreement (max IQR), bid/ask quality, liquidity (option volume), persistence (sign stable over 15:23&ndash;15:27), CE/PE agreement (always satisfied, by parity &mdash; so non-discriminating), and the subsequent index response. Nothing here is used to choose any threshold.</p>
+<table>
+<tr><th>Day</th><th>Persistence 15:23&ndash;15:27</th><th>max IQR</th><th>15:27 gap vs step</th><th>Class</th><th>Reason</th></tr>
+<tr><td>SENSEX 08-06</td><td>Positive throughout</td><td class="num">10.2</td><td class="num">+263 / +169</td><td><span class="tag strong">STRONG</span></td><td>Correct sign from 15:15, stable, overshoots magnitude</td></tr>
+<tr><td>SENSEX 08-13</td><td>Flips to positive only at 15:25</td><td class="num">7.1</td><td class="num">+116 / +219</td><td><span class="tag mod">MODERATE</span></td><td>Late; underestimates by half</td></tr>
+<tr><td>SENSEX 08-20</td><td>Sign flips repeatedly</td><td class="num">5.2</td><td class="num">+52 / +52</td><td><span class="tag weak">WEAK</span></td><td>Final value exact, but unstable and small &mdash; right by luck as much as signal</td></tr>
+<tr><td>SENSEX 08-27</td><td>Negative from 15:25, jumps at 15:27</td><td class="num">17.1</td><td class="num">&minus;375 / &minus;249</td><td><span class="tag mod">MODERATE</span></td><td>Wrong-signed until 15:22; highest IQR; overshoots</td></tr>
+<tr><td>SENSEX 09-03</td><td>Negative from 15:20, widening</td><td class="num">4.2</td><td class="num">&minus;402 / &minus;401</td><td><span class="tag strong">STRONG</span></td><td>Persistent, low IQR, near-exact</td></tr>
+<tr class="hot"><td>SENSEX 09-10</td><td>Positive 15:23&ndash;15:27 (after a one-minute collapse at 15:22)</td><td class="num">5.1</td><td class="num">+355 / +273</td><td><span class="tag mod">MODERATE</span></td><td>Right direction and late persistence, but a &minus;334 one-minute reversal at 15:22 and a +412 overshoot at 15:28</td></tr>
+<tr><td>NIFTY 08-04</td><td>Positive, rising</td><td class="num">1.6</td><td class="num">+86 / +152</td><td><span class="tag mod">MODERATE</span></td><td>Stable, correct, underestimates</td></tr>
+<tr><td>NIFTY 08-11</td><td>Small positive</td><td class="num">1.4</td><td class="num">+21 / +22</td><td><span class="tag weak">WEAK</span></td><td>Tiny move; indistinguishable from noise</td></tr>
+<tr><td>NIFTY 08-25</td><td>Positive from 15:21</td><td class="num">1.6</td><td class="num">+62 / +75</td><td><span class="tag strong">STRONG</span></td><td>Early, stable, close</td></tr>
+<tr><td>NIFTY 09-01</td><td>Positive from 15:20</td><td class="num">3.2</td><td class="num">+84 / +75</td><td><span class="tag strong">STRONG</span></td><td>Early, stable, close</td></tr>
+<tr><td>NIFTY 09-08</td><td>Negative &minus;37 to &minus;78, collapses at 15:27</td><td class="num">2.9</td><td class="num">+4 / &minus;5</td><td><span class="tag noisy">NOISY</span></td><td>Six-minute false signal before a flat close</td></tr>
+<tr><td>All non-expiry days</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td><span class="tag noisy">INVALID</span> as raw gap</td><td>Carry-dominated; de-biased residual has no useful skill</td></tr>
+</table>
+<p><b>Tally, expiry days only:</b> STRONG 4, MODERATE 4, WEAK 2, NOISY 1. Today's event is <b>MODERATE</b>, not STRONG: its direction was right, but its path was the least stable of the SENSEX strong-looking days.</p>
+
+<h2 id="s13">13. Today's reconstructed timeline &mdash; SENSEX 2026-09-10</h2>
+<p><b>Gap velocity</b> = change in gap versus the prior minute. <b>CE/PE pressure</b> uses the fixed 74,700 strike's mid and its one-minute change. <b>Volume</b> = option volume added in the &plusmn;0.7% band that minute. <b>IV</b> = Dhan's vendor value for 74,700 CE / PE, shown to document that it breaks during the auction.</p>
+<table>
+<tr><th>Time</th><th>Index</th><th>Implied</th><th>Gap</th><th>Gap vel.</th><th>IQR</th><th>74700 CE (&Delta;)</th><th>74700 PE (&Delta;)</th><th>Vol (M)</th><th>Vendor IV CE/PE</th><th>Interpretation</th><th>Status</th></tr>
+<tr><td>14:59</td><td class="num">74694.27</td><td class="num">74665.04</td><td class="num">-29.2</td><td>&mdash;</td><td class="num">1.34</td><td class="num">122.97 (-8.65)</td><td class="num">158.20 (+8.45)</td><td class="num">+12.6</td><td class="num">14.7 / 21.0</td><td>Normal parity offset; decision freeze</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:00</td><td class="num">74629.11</td><td class="num">74640.09</td><td class="num">+11.0</td><td class="num">+40.2</td><td class="num">2.64</td><td class="num">113.30 (-9.67)</td><td class="num">175.43 (+17.23)</td><td class="num">+19.5</td><td class="num">15.9 / 20.8</td><td>Index displacement down; options follow</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:05</td><td class="num">74642.35</td><td class="num">74597.00</td><td class="num">-45.4</td><td class="num">-56.3</td><td class="num">1.13</td><td class="num">90.25 (-0.28)</td><td class="num">195.35 (+3.70)</td><td class="num">+11.8</td><td class="num">15.6 / 20.1</td><td>Chain prices a close below the index</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:10</td><td class="num">74636.09</td><td class="num">74559.94</td><td class="num">-76.2</td><td class="num">-30.8</td><td class="num">3.99</td><td class="num">75.53 (-6.25)</td><td class="num">215.72 (+3.32)</td><td class="num">+13.2</td><td class="num">13.6 / 23.1</td><td>Negative gap widening in continuous trade</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr class="auction"><td>15:15</td><td class="num">74629.50</td><td class="num">74514.98</td><td class="num">-114.5</td><td class="num">-38.4</td><td class="num">2.37</td><td class="num">70.70 (-15.68)</td><td class="num">256.07 (+23.97)</td><td class="num">+24.7</td><td class="num">12.9 / 28.7</td><td><b>Auction begins</b>; index publication stops</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr class="auction"><td>15:19</td><td class="num">74629.50</td><td class="num">74555.45</td><td class="num">-74.1</td><td class="num">+40.5</td><td class="num">1.61</td><td class="num">80.00 (+13.05)</td><td class="num">224.65 (-13.22)</td><td class="num">+20.9</td><td class="num">14.3 / 24.6</td><td>Gap still negative; nothing distinctive</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr class="hot"><td>15:20</td><td class="num">74629.50</td><td class="num">74787.74</td><td class="num">+158.2</td><td class="num">+232.3</td><td class="num">4.30</td><td class="num">165.12 (+85.12)</td><td class="num">80.15 (-144.50)</td><td class="num">+43.3</td><td class="num">25.7 / 5.0</td><td>Whole chain reprices up; volume doubles; vendor IV starts to break</td><td>Chain <span class="tag obs">OBSERVED</span>; cause <span class="tag unk">UNKNOWN</span></td></tr>
+<tr class="hot"><td>15:21</td><td class="num">74629.50</td><td class="num">74989.35</td><td class="num">+359.9</td><td class="num">+201.6</td><td class="num">5.14</td><td class="num">307.70 (+142.57)</td><td class="num">15.47 (-64.68)</td><td class="num">+92.9</td><td class="num">44.1 / 0.0</td><td>Implied ~74,990; PE IV reads 0 &mdash; vendor IV invalid</td><td>Chain <span class="tag obs">OBSERVED</span></td></tr>
+<tr class="hot"><td>15:22</td><td class="num">74629.50</td><td class="num">74654.96</td><td class="num">+25.5</td><td class="num">-334.4</td><td class="num">4.23</td><td class="num">59.23 (-248.47)</td><td class="num">100.30 (+84.83)</td><td class="num">+106.2</td><td class="num">11.5 / 8.2</td><td>Whole chain reverses; peak volume</td><td>Chain <span class="tag obs">OBSERVED</span>; why <span class="tag unk">UNKNOWN</span></td></tr>
+<tr class="hot"><td>15:23</td><td class="num">74629.50</td><td class="num">74956.46</td><td class="num">+327.0</td><td class="num">+301.5</td><td class="num">3.87</td><td class="num">271.43 (+212.20)</td><td class="num">15.95 (-84.35)</td><td class="num">+95.1</td><td class="num">39.8 / 0.0</td><td>Back up; the 15:22 dip was a round trip</td><td>Chain <span class="tag obs">OBSERVED</span></td></tr>
+<tr class="auction"><td>15:24</td><td class="num">74629.50</td><td class="num">74927.69</td><td class="num">+298.2</td><td class="num">-28.8</td><td class="num">2.31</td><td class="num">244.53 (-26.90)</td><td class="num">17.85 (+1.90)</td><td class="num">+67.3</td><td class="num">36.3 / 0.0</td><td>Level stabilising near 74,930</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr class="auction"><td>15:25</td><td class="num">74629.50</td><td class="num">74946.23</td><td class="num">+316.7</td><td class="num">+18.5</td><td class="num">1.27</td><td class="num">259.45 (+14.93)</td><td class="num">14.68 (-3.18)</td><td class="num">+47.8</td><td class="num">38.2 / 0.0</td><td>Stable; this is where cross-day skill becomes strong</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr class="auction"><td>15:26</td><td class="num">74629.50</td><td class="num">74882.05</td><td class="num">+252.6</td><td class="num">-64.2</td><td class="num">4.09</td><td class="num">187.53 (-71.93)</td><td class="num">7.50 (-7.18)</td><td class="num">+51.1</td><td class="num">28.7 / 0.0</td><td>Dips back toward 74,880</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr class="auction"><td>15:27</td><td class="num">74629.50</td><td class="num">74984.45</td><td class="num">+355.0</td><td class="num">+102.4</td><td class="num">3.88</td><td class="num">290.62 (+103.10)</td><td class="num">2.80 (-4.70)</td><td class="num">+71.0</td><td class="num">42.5 / 0.0</td><td>Reads ~74,984; close will be 74,902.59 (+82 overestimate)</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr class="hot"><td>15:28</td><td class="num">74629.50</td><td class="num">75041.16</td><td class="num">+411.7</td><td class="num">+56.7</td><td class="num">2.29</td><td class="num">345.60 (+54.98)</td><td class="num">2.90 (+0.10)</td><td class="num">+84.1</td><td class="num">49.8 / 0.0</td><td>Final overshoot to ~75,041 (+139 vs close)</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:29</td><td class="num">74902.59</td><td class="num">74906.10</td><td class="num">+3.5</td><td class="num">-408.2</td><td class="num">1.98</td><td class="num">209.38 (-136.23)</td><td class="num">1.38 (-1.53)</td><td class="num">+77.4</td><td class="num">31.7 / 0.0</td><td><b>Auction close prints</b>; chain converges within 3.5 pts</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:30</td><td class="num">74902.59</td><td class="num">74902.84</td><td class="num">+0.2</td><td class="num">-3.3</td><td class="num">1.03</td><td class="num">202.72 (-6.65)</td><td class="num">0.08 (-1.30)</td><td class="num">+65.6</td><td class="num">0.0 / 4.1</td><td>Full convergence to intrinsic</td><td><span class="tag obs">OBSERVED</span></td></tr>
+</table>
+<div class="callout"><b>What is inferred and what is unknown.</b> Everything in the table is a measured value (<span class="tag obs">OBSERVED</span>). Two readings of it are <span class="tag inf">INFERRED</span>: that the chain was pricing the <i>auction close</i> rather than a live spot, and that the repricing reflects a genuine shift in that expectation rather than coordinated quoting. What remains <span class="tag unk">UNKNOWN</span>: the auction's indicative equilibrium price at each minute (not captured, so the chain cannot be checked against it), why the chain reversed at 15:22, and what order flow drove any of it.</div>
+<p><b>Conceptual signal metrics on this event</b> (Part 11 of the brief, computed descriptively, not optimised):</p>
+<table>
+<tr><th>Metric</th><th>Value on 09-10</th><th>Usefulness</th></tr>
+<tr><td>gap_points at 15:27</td><td class="num">+355</td><td>Direction right; magnitude +82 too high</td></tr>
+<tr><td>gap_percent at 15:27</td><td class="num">+0.48%</td><td>Same as points; scale-free for cross-symbol use</td></tr>
+<tr><td>gap_velocity, 15:20&ndash;15:28</td><td class="num">&minus;334 to +302 per minute</td><td><b>Noise-dominated</b> &mdash; flips sign 6 times in 9 minutes</td></tr>
+<tr><td>gap_acceleration</td><td class="num">up to &plusmn;636 per minute&sup2;</td><td>Unusable &mdash; differences of an already-noisy series</td></tr>
+<tr><td>IQR during the event</td><td class="num">1.27 &ndash; 5.14</td><td>Validity gate only (&sect;5)</td></tr>
+<tr><td>gap / IQR</td><td class="num">+6 to +250</td><td>Not discriminating &mdash; ordinary minutes reach &minus;90 (&sect;5)</td></tr>
+<tr><td>duration of same-sign large gap</td><td class="num">15:23&ndash;15:28 (6 min) after one reversal</td><td><b>The most promising single feature</b>, consistent with the 15:25&ndash;15:27 skill in &sect;9</td></tr>
+<tr><td>option volume confirmation</td><td class="num">+43 &rarr; +106 M/min</td><td>Rose with the repricing, but also rises on every day in the auction; untested as a discriminator</td></tr>
+</table>
+
+<h2 id="s14">14. Direct answers</h2>
+<table>
+<tr><th>Question</th><th>Answer</th><th>Why</th></tr>
+<tr><td>Did the option market appear to reprice toward approximately 75,000 before the index feed caught up?</td><td><span class="tag strong">YES</span></td><td>From 15:20 the whole chain implied 74,788&ndash;75,041, reproduced by four independent estimators and matching the original to &plusmn;1.6 points, while the index sat at the auction-period 74,629.50. It converged to 74,902.59 within 3.5 points once the close printed.</td></tr>
+<tr><td>Was that repricing broad-based across strikes?</td><td><span class="tag strong">YES</span></td><td>All 10 strikes, ITM through OTM, within &plusmn;14.6 points of each other at every minute. The decomposition matches a delta profile exactly. But breadth is partly guaranteed by arbitrage (&sect;5), so it proves coherence, not correctness.</td></tr>
+<tr><td>Did it provide a meaningful lead over the index?</td><td><span class="tag mod">POSSIBLY</span> &mdash; and only on expiry days, only during the auction</td><td>Over the <i>auction close</i> on expiry days: yes, with a reliable read by ~15:25&ndash;15:27, leaving 1&ndash;4 minutes. Over the index in continuous trading: <b>no</b> &mdash; zero lead at every horizon on n &gt; 1,000 (&sect;6). The apparent 9-minute lead today exists because the index was not being published, not because options were faster.</td></tr>
+<tr><td>Could this have been detected before the index caught up?</td><td><span class="tag mod">POSSIBLY</span></td><td>In hindsight, yes, by 15:23&ndash;15:25. In real time, the 15:20 reading was right today but wrong-signed or a false signal on 3 of 11 expiry days, and today itself reversed &minus;334 at 15:22. A detector would need persistence, which costs most of the lead.</td></tr>
+<tr><td>Is this reliable enough to become a Milestone 12 feature?</td><td><span class="tag weak">INSUFFICIENT DATA</span></td><td>11 expiry days in total (6 SENSEX, 5 NIFTY). A 6/6 hit rate has a 95% confidence interval of about 54&ndash;100%. Strong enough to <b>research and log</b>, far too thin to <b>trade on</b> or to present as validated.</td></tr>
+</table>
+
+<h2 id="s15">15. Milestone 12 implications</h2>
+
+<h3>Two separate concepts &mdash; kept separate, as the brief required</h3>
+<table>
+<tr><th>Possible cause of a large implied-minus-index gap</th><th>Distinguishable with current data?</th><th>How</th></tr>
+<tr><td><b>Closing auction</b> (index not published)</td><td><b>YES &mdash; deterministically</b></td><td>Clock plus CAS date: 15:15&ndash;15:27 on every post-CAS day, 60/60. This is a <b>known market state</b>, not a feed fault.</td></tr>
+<tr><td><b>Genuine feed outage</b></td><td><b>YES</b></td><td>Rows are <i>missing</i> and the log shows errors (e.g. the 2026-09-11 09:20&ndash;09:23 DNS failure). The auction instead produces rows that are <i>present but identical</i>.</td></tr>
+<tr><td><b>Stuck candles outside the auction</b></td><td><b>YES</b></td><td>Identical OHLC+volume runs at other times of day &mdash; already detected by <code>STUCK_CANDLE_MIN_RUN</code> in the CAS code.</td></tr>
+<tr><td><b>Bad single option quote</b></td><td><b>YES</b></td><td>Per-strike deviation and IQR &mdash; a lone bad quote breaks cross-strike agreement.</td></tr>
+<tr><td><b>IV repricing</b></td><td><b>YES &mdash; ruled out by construction</b></td><td>Parity is IV-invariant; an IV change cannot create a parity gap.</td></tr>
+<tr><td><b>Liquidity problem</b></td><td><b>PARTIALLY</b></td><td>Spread quality and volume show it; today spreads stayed 0.2&ndash;1% and volume rose.</td></tr>
+<tr><td><b>Expiry effect</b></td><td><b>YES</b></td><td>Expiry flag; the signal behaves completely differently by expiry status.</td></tr>
+<tr><td><b>Carry (forward vs spot)</b></td><td><b>YES</b></td><td>Present on non-expiry days; removable by de-biasing against the 15:05&ndash;15:14 gap.</td></tr>
+<tr><td><b>Genuine repricing vs coordinated quoting off a common reference</b></td><td><b>NO</b></td><td>Requires the auction indicative price or order-flow data, neither of which is captured.</td></tr>
+</table>
+
+<h3>Feature classification</h3>
+<table>
+<tr><th>Feature</th><th>Class</th><th>Reason</th></tr>
+<tr><td><b>FEED-HEALTH / MARKET-STATE</b> (continuous / auction / outage / stuck)</td><td><b>REQUIRED</b></td><td>The auction must be labelled as a market state, never as flat trading and never as a feed fault. Without it every post-15:15 statistic is misread &mdash; as this project's own CAS docstring shows.</td></tr>
+<tr><td><b>EXPIRY CONTEXT</b></td><td><b>REQUIRED</b></td><td>The signal's meaning flips with expiry status; without the flag it is actively misleading.</td></tr>
+<tr><td><b>OPTION-IMPLIED SPOT</b> (parity, mids, &plusmn;0.7% band)</td><td><b>HIGH VALUE</b></td><td>Robust, cheap, already captured, IV-free. The best available estimate of the auction close on expiry days.</td></tr>
+<tr><td><b>CROSS-STRIKE IQR</b></td><td><b>REQUIRED as a validity gate only</b></td><td>Rejects bad quotes; does not measure signal strength.</td></tr>
+<tr><td><b>BID/ASK QUALITY</b></td><td><b>REQUIRED as a validity gate</b></td><td>Needed to reject quotes before parity is applied.</td></tr>
+<tr><td><b>OPTION-INDEX GAP</b></td><td><b>EXPERIMENTAL</b></td><td>Meaningful on expiry days during the auction only; carry-dominated otherwise.</td></tr>
+<tr><td><b>GAP PERSISTENCE</b></td><td><b>EXPERIMENTAL</b></td><td>The most promising discriminator of real versus transient repricing, but untested beyond 11 days.</td></tr>
+<tr><td><b>OPTION VOLUME CONFIRMATION</b></td><td><b>EXPERIMENTAL</b></td><td>Rose with today's repricing, but also rises in every auction; its discriminating power is untested.</td></tr>
+<tr><td><b>CE/PE AGREEMENT</b></td><td><b>NOT RELIABLE</b> as a signal</td><td>Always satisfied, because parity forces it. Non-discriminating by construction.</td></tr>
+<tr><td><b>GAP VELOCITY</b></td><td><b>NOT RELIABLE</b></td><td>Noise-dominated: 6 sign flips in 9 minutes on the showcase day.</td></tr>
+<tr><td><b>GAP ACCELERATION</b></td><td><b>NOT RELIABLE</b></td><td>A second difference of a noisy series.</td></tr>
+<tr><td><b>IV REGIME</b> (vendor IV) during 15:15&ndash;15:28</td><td><b>NOT RELIABLE</b></td><td>Vendor IV is computed against the flat auction index and is invalid in that window (&sect;7).</td></tr>
+<tr><td><b>OPTION LEAD over index in continuous trading</b></td><td><b>NOT RELIABLE</b></td><td>No evidence of any lead, at any horizon (&sect;6).</td></tr>
+</table>
+
+<h2 id="s16">16. Data limitations</h2>
+<table>
+<tr><th>#</th><th>Limitation</th><th>Impact</th></tr>
+<tr><td>1</td><td><b>11 expiry days in total</b> (6 SENSEX, 5 NIFTY)</td><td>Every expiry-day conclusion is provisional. Confidence intervals are very wide.</td></tr>
+<tr><td>2</td><td><b>Auction indicative price not captured</b></td><td>Cannot check the option estimate against the auction's own running equilibrium, so "genuine repricing" cannot be separated from "coordinated quoting".</td></tr>
+<tr><td>3</td><td><b>1-minute snapshots, taken ~18&ndash;24 s into the minute</b></td><td>Sub-minute lead/lag is unresolvable; the 1-minute index&rarr;options link is partly a timestamp artefact.</td></tr>
+<tr><td>4</td><td><b>No order-flow data</b></td><td>No causal statement is possible about why the chain repriced, or why it reversed at 15:22.</td></tr>
+<tr><td>5</td><td><b>Vendor IV/Greeks invalid during the auction</b></td><td>Excluded from all analysis; parity does not need them.</td></tr>
+<tr><td>6</td><td><b>Irregular OI refresh</b></td><td>OI is unusable at 1-minute resolution (it did not refresh on the key 15:19&rarr;15:20 minute).</td></tr>
+<tr><td>7</td><td><b>Missing windows</b>: 2026-08-18, 08-24 and 08-26, both symbols (no usable option data across the auction)</td><td>Excluded, including one NIFTY expiry day (08-18), which shrinks an already small sample.</td></tr>
+<tr><td>8</td><td><b>Carry and settlement conventions not modelled</b></td><td>De-biasing is empirical, not a carry model. The exact exchange settlement formula was not verified against exchange documentation.</td></tr>
+<tr><td>9</td><td><b>The estimator and analysis were chosen after seeing 2026-09-10</b></td><td>The extraction method was fixed before any cross-day results were examined, but the <i>question</i> was prompted by one striking day. This is hypothesis-generating research; a genuine out-of-sample test needs future expiry days.</td></tr>
+</table>
+
+<h2 id="s17">17. Final recommendation</h2>
+<div class="finding"><b>Recommendation: keep this as a Milestone 12 research track, reframed &mdash; do not build it as a trading signal.</b>
+<ol>
+<li><b>Reframe the hypothesis.</b> Not "option-implied spot leads the index". The supported claim is narrower: <i>on expiry days, during the closing auction, the option chain is a live estimate of the auction close.</i> Outside that window, there is no lead to exploit.</li>
+<li><b>Build market-state labelling first.</b> Continuous / auction / outage / stuck is REQUIRED regardless of whether the option signal survives. It fixes a real misreading already present in the CAS documentation.</li>
+<li><b>Log, don't act.</b> Compute and store the option-implied spot, gap, IQR and persistence for every future expiry day as a research series, then test it prospectively with thresholds fixed in advance. Roughly 20&ndash;30 more expiry days per symbol would turn a suggestive pattern into an assessable one.</li>
+<li><b>Prefer the 15:25&ndash;15:27 reading, with persistence, over the first large gap.</b> The early reading is where the false signals live.</li>
+<li><b>Treat vendor IV/Greeks from 15:15 to 15:28 as invalid</b> in any future analysis, and note the frozen 11D agent's index-based exit checks during that window for Milestone 12.</li>
+</ol>
+</div>
+<div class="warn"><b>What this report does not recommend.</b> No change to <code>11d-paper-v1</code>, its configuration, its option selector, stop/target logic or exits. No threshold was tuned against 2026-09-10 or any other day. The signal was not added to paper trading. The correction to the earlier report and the contradiction with the CAS docstring are <b>recorded, not fixed</b>.</div>
+
+<h3>Confirmation &mdash; nothing was modified</h3>
+<table>
+<tr><th>Item</th><th>State</th></tr>
+<tr><td><code>strategy_version</code> / <code>configuration_hash</code></td><td><b>11d-paper-v1</b> / <b>9c7c362d7e0c6a14</b> &mdash; unchanged</td></tr>
+<tr><td>Production code, paper trading, strategy parameters, CAS logic, UI</td><td>Not modified</td></tr>
+<tr><td>Database schema and data; Dhan capture</td><td>Not modified &mdash; <code>SELECT</code>-only queries</td></tr>
+<tr><td>Research scripts</td><td>Written only to the session scratchpad, outside the repository</td></tr>
+<tr><td>Commits</td><td>None</td></tr>
+</table>
+
+<div class="nochange">NO CHANGES MADE.</div>
+
+<footer>
+Milestone 12 research extension &mdash; option-implied spot as a leading market signal. Read-only analysis against the live database, covering every SENSEX and NIFTY day with option data from 2026-07-15 to 2026-09-11 (4,190 minute-records).
+Option-implied values are derived from put-call parity on captured two-sided mid-quotes; the estimation method was fixed in the extraction script before cross-day results were examined. No causality is claimed where the data shows only association.
+</footer>
+
+</body>
+</html>

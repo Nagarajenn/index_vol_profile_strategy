@@ -1,0 +1,156 @@
+<!DOCTYPE html><html lang='en'><head><meta charset='UTF-8'><title>12A Research Report</title><style>body{font-family:Georgia,'Times New Roman',serif;max-width:1180px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}h2{font-size:1.25em;color:#1a3a5c;margin-top:2em;border-left:5px solid #2c3e50;padding-left:10px}
+h3{font-size:1.02em;color:#2c3e50}table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.84em}th,td{border:1px solid #ccc;padding:5px 8px;text-align:left;vertical-align:top}
+th{background:#2c3e50;color:#fff}tr:nth-child(even){background:#f2f0ea}code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+.num{text-align:right;font-family:Consolas,monospace}.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.74em;font-weight:bold;color:#fff}
+.MET{background:#2e7d32}.NOT_MET{background:#c62828}.INSUFFICIENT{background:#8d8d8d}.PENDING{background:#f9a825;color:#222}.DESIGN{background:#1a5c8a}
+.callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}.finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+.risk{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}footer{margin-top:50px;border-top:1px solid #ccc;padding-top:12px;font-size:0.85em;color:#666}</style></head><body>
+<h1>12A-scalp-v1 &mdash; Research &amp; Chronological Validation Report<br><span style='font-size:0.6em;font-weight:normal;color:#555'>Experiment beside the frozen <code>11d-paper-v1</code> control &middot; updated 2026-09-18 16:32 IST</span></h1>
+<p><b>Strategy:</b> <code>12A-scalp-v1</code> &middot; <b>engine</b> <code>engine-v1</code> &middot; <b>config</b> <code>config-v1</code> &middot; <b>hash</b> <code>994667c6d552111e</code> &middot; <b>paper trading:</b> NOT CONNECTED &middot; <b>orders:</b> none (no order code exists in 12A)</p>
+<div class='risk'><b>Status: RESEARCH / SHADOW ONLY.</b> The paper-trading gate (10 criteria) is not passed. 5-second history: <b>2</b> evaluable HR day(s) of the ~20 needed for a chronological validation split (4 HR days captured; the first two only seed thresholds). The 1-minute research found <b>no positive configuration</b>: at 1-minute latency, entering after a large move is worse than random.</div>
+<h2>1. Paper-trading gate &mdash; the 10 criteria</h2><table><tr><th>Criterion</th><th>Status</th><th>Evidence</th></tr>
+<tr><td>1. Out-of-sample better than random</td><td><span class="tag NOT_MET">NOT MET</span></td><td>1-min: best train cell -4.17% vs random -0.97% (train); test -2.31% vs -0.38%. 5-s: 2 evaluable HR day(s) of 20 needed.</td></tr>
+<tr><td>2. Controlled MAE / drawdown</td><td><span class="tag INSUFFICIENT">INSUFFICIENT DATA</span></td><td>5-s confirmed Mode A median MAE -1.42% vs random -3.78% (n=6 / 76).</td></tr>
+<tr><td>3. Favourable movement quick enough</td><td><span class="tag INSUFFICIENT">INSUFFICIENT DATA</span></td><td>5-s confirmed median time-to-MFE 95 s; 1-min events median 2.0 min.</td></tr>
+<tr><td>4. Momentum-failure exit limits give-back</td><td><span class="tag INSUFFICIENT">INSUFFICIENT DATA</span></td><td>Median give-back (peak &minus; realised) confirmed +0.79%, random +0.97%; share of momentum-failure exits 1.00.</td></tr>
+<tr><td>5. Not driven by one symbol/day</td><td><span class="tag INSUFFICIENT">INSUFFICIENT DATA</span></td><td>1-min leave-one-day-out max shift +0.91%; 5-s by day: {'2026-09-17': 4, '2026-09-18': 2}.</td></tr>
+<tr><td>6. Expiry-day tail risk controlled</td><td><span class="tag DESIGN">MET BY DESIGN + TEST</span></td><td>Hard veto >= 15:15 on expiry days; no entries and forced flat from 15:10 (zone widened on 1-min evidence). Tested.</td></tr>
+<tr><td>7. No look-ahead leakage</td><td><span class="tag DESIGN">MET BY DESIGN + TEST</span></td><td>Thresholds from prior HR days only; decisions read bars 0..i; truncation-invariance test; 1-min fits on train days only.</td></tr>
+<tr><td>8. ASK entry / BID exit</td><td><span class="tag DESIGN">MET BY DESIGN + TEST</span></td><td>Entry = ASK of bar i+2 (live-realistic delay); every exit on the BID. Tested.</td></tr>
+<tr><td>9. Acceptable after spread costs</td><td><span class="tag NOT_MET">NOT MET</span></td><td>All figures are already net of spread (ASK in, BID out). No configuration is positive yet.</td></tr>
+<tr><td>10. Real-time detectability (shadow)</td><td><span class="tag PENDING">PENDING</span></td><td>0 live shadow session(s) recorded; detection latency tracked per candidate.</td></tr>
+</table>
+<h2>2. 1-minute research (32 complete days, chronological split)</h2>
+<p>Complete CAS-era days: <b>32</b>. TRAIN 2026-08-03 &rarr; 2026-09-02 (21 days); TEST 2026-09-03 &rarr; 2026-09-18 (11 days). Trigger: ATM synthetic (CE&minus;PE mid) 1-minute move above the TRAIN p90 (NIFTY 0.079, SENSEX 0.070 of straddle). Entry = ASK of the next snapshot, exits on BID; 3-snapshot cooldown; day-grouped statistics. ATM events 190, random 762.</p>
+<div class='callout'><b>Scope:</b> these are candidate RANGES at 1-minute resolution. They do not validate any 5-second threshold, 15&ndash;60 s behaviour or the momentum-failure exit.</div>
+<h3>Holding duration: day-mean exit on BID after k minutes (median across day groups)</h3><table><tr><th>Split | group | mode</th><th>1 min exit</th><th>1 min MAE</th><th>2 min exit</th><th>2 min MAE</th><th>3 min exit</th><th>3 min MAE</th><th>5 min exit</th><th>5 min MAE</th></tr>
+<tr><td>train|EVENT|PRE</td><td class='num'>-4.13%</td><td class='num'>-4.13%</td><td class='num'>-2.58%</td><td class='num'>-5.56%</td><td class='num'>-5.91%</td><td class='num'>-7.31%</td><td class='num'>-5.52%</td><td class='num'>-9.23%</td></tr>
+<tr><td>train|EVENT|MODE_A</td><td class='num'>-2.92%</td><td class='num'>-2.92%</td><td class='num'>-2.65%</td><td class='num'>-5.94%</td><td class='num'>-0.09%</td><td class='num'>-8.70%</td><td class='num'>-2.28%</td><td class='num'>-9.00%</td></tr>
+<tr><td>train|EVENT|MODE_B</td><td class='num'>-2.38%</td><td class='num'>-2.38%</td><td class='num'>-4.73%</td><td class='num'>-6.21%</td><td class='num'>-6.07%</td><td class='num'>-7.25%</td><td class='num'>-6.18%</td><td class='num'>-7.25%</td></tr>
+<tr><td>train|RANDOM|PRE</td><td class='num'>-0.60%</td><td class='num'>-0.60%</td><td class='num'>-0.57%</td><td class='num'>-1.67%</td><td class='num'>-0.45%</td><td class='num'>-2.55%</td><td class='num'>-1.20%</td><td class='num'>-3.12%</td></tr>
+<tr><td>train|RANDOM|MODE_A</td><td class='num'>+0.04%</td><td class='num'>+0.04%</td><td class='num'>+0.07%</td><td class='num'>-0.78%</td><td class='num'>-0.37%</td><td class='num'>-1.95%</td><td class='num'>-0.53%</td><td class='num'>-3.45%</td></tr>
+<tr><td>train|RANDOM|MODE_B</td><td class='num'>-0.44%</td><td class='num'>-0.44%</td><td class='num'>-0.74%</td><td class='num'>-1.55%</td><td class='num'>-1.11%</td><td class='num'>-2.61%</td><td class='num'>-1.13%</td><td class='num'>-2.90%</td></tr>
+<tr><td>test|EVENT|PRE</td><td class='num'>+0.62%</td><td class='num'>+0.62%</td><td class='num'>-1.40%</td><td class='num'>-1.40%</td><td class='num'>+1.03%</td><td class='num'>-2.11%</td><td class='num'>-2.80%</td><td class='num'>-3.64%</td></tr>
+<tr><td>test|EVENT|MODE_A</td><td class='num'>+1.21%</td><td class='num'>+1.21%</td><td class='num'>-1.57%</td><td class='num'>-3.31%</td><td class='num'>-2.41%</td><td class='num'>-4.57%</td><td class='num'>-6.52%</td><td class='num'>-7.86%</td></tr>
+<tr><td>test|EVENT|MODE_B</td><td class='num'>-0.51%</td><td class='num'>-0.51%</td><td class='num'>-1.25%</td><td class='num'>-3.90%</td><td class='num'>-1.40%</td><td class='num'>-3.90%</td><td class='num'>+7.36%</td><td class='num'>-5.39%</td></tr>
+<tr><td>test|RANDOM|PRE</td><td class='num'>+0.10%</td><td class='num'>+0.10%</td><td class='num'>-0.11%</td><td class='num'>-0.77%</td><td class='num'>+0.20%</td><td class='num'>-1.39%</td><td class='num'>-0.12%</td><td class='num'>-2.54%</td></tr>
+<tr><td>test|RANDOM|MODE_A</td><td class='num'>-0.07%</td><td class='num'>-0.07%</td><td class='num'>+0.40%</td><td class='num'>-1.15%</td><td class='num'>+0.68%</td><td class='num'>-2.19%</td><td class='num'>+0.67%</td><td class='num'>-2.31%</td></tr>
+<tr><td>test|RANDOM|MODE_B</td><td class='num'>-0.34%</td><td class='num'>-0.34%</td><td class='num'>-3.28%</td><td class='num'>-3.28%</td><td class='num'>-2.03%</td><td class='num'>-4.74%</td><td class='num'>-3.15%</td><td class='num'>-5.04%</td></tr>
+</table>
+<h3>Target / stop / max-hold grid (fitted on TRAIN, read on TEST; ATM, PRE + Mode A)</h3>
+<div class='finding'>Best TRAIN cell: target 12.0%, stop 5.0%, hold 2 min &rarr; TRAIN event -4.17% vs random -0.97%; TEST event -2.31% (95% CI [-5.482, 1.081]) vs random -0.38% (CI [-0.964, 0.165]), 9 test day-groups. <b>No cell is positive on TRAIN.</b> The 12A stop/target/hold values are therefore risk ranges, not a tuned edge.</div>
+<h3>Option selection by moneyness (events; + = OTM, &minus; = ITM)</h3><table><tr><th>Split</th><th>Moneyness</th><th>3-min exit</th><th>3-min MFE</th><th>3-min MAE</th><th>Spread</th><th>Premium</th><th>|Delta|</th></tr>
+<tr><td>train</td><td>-2</td><td class='num'>-2.36%</td><td class='num'>+0.99%</td><td class='num'>-4.31%</td><td class='num'>0.27%</td><td class='num'>185.0</td><td class='num'>0.66</td></tr>
+<tr><td>train</td><td>-1</td><td class='num'>-3.04%</td><td class='num'>+1.04%</td><td class='num'>-5.56%</td><td class='num'>0.27%</td><td class='num'>123.5</td><td class='num'>0.62</td></tr>
+<tr><td>train</td><td>0</td><td class='num'>-4.46%</td><td class='num'>+0.81%</td><td class='num'>-8.13%</td><td class='num'>0.30%</td><td class='num'>66.2</td><td class='num'>0.51</td></tr>
+<tr><td>train</td><td>1</td><td class='num'>-7.13%</td><td class='num'>-0.14%</td><td class='num'>-10.63%</td><td class='num'>0.35%</td><td class='num'>31.6</td><td class='num'>0.33</td></tr>
+<tr><td>train</td><td>2</td><td class='num'>-8.04%</td><td class='num'>-0.83%</td><td class='num'>-13.13%</td><td class='num'>0.51%</td><td class='num'>14.2</td><td class='num'>0.17</td></tr>
+<tr><td>test</td><td>-2</td><td class='num'>-0.95%</td><td class='num'>+2.05%</td><td class='num'>-2.61%</td><td class='num'>0.27%</td><td class='num'>210.8</td><td class='num'>0.65</td></tr>
+<tr><td>test</td><td>-1</td><td class='num'>-1.56%</td><td class='num'>+2.94%</td><td class='num'>-2.80%</td><td class='num'>0.28%</td><td class='num'>141.6</td><td class='num'>0.58</td></tr>
+<tr><td>test</td><td>0</td><td class='num'>-2.30%</td><td class='num'>+1.88%</td><td class='num'>-3.05%</td><td class='num'>0.30%</td><td class='num'>102.2</td><td class='num'>0.48</td></tr>
+<tr><td>test</td><td>1</td><td class='num'>-2.45%</td><td class='num'>+0.82%</td><td class='num'>-4.44%</td><td class='num'>0.32%</td><td class='num'>71.5</td><td class='num'>0.37</td></tr>
+<tr><td>test</td><td>2</td><td class='num'>-2.90%</td><td class='num'>+0.32%</td><td class='num'>-6.10%</td><td class='num'>0.40%</td><td class='num'>47.5</td><td class='num'>0.27</td></tr>
+</table>
+<h3>Premium response in the trigger minute vs the next 2 minutes (tercile cut-offs from TRAIN)</h3><table><tr><th>Split</th><th>Response tercile</th><th>n</th><th>2-min exit</th><th>2-min MAE</th></tr>
+<tr><td>train</td><td>low</td><td class='num'>43</td><td class='num'>-2.66%</td><td class='num'>-2.66%</td></tr>
+<tr><td>train</td><td>mid</td><td class='num'>42</td><td class='num'>-2.07%</td><td class='num'>-5.11%</td></tr>
+<tr><td>train</td><td>high</td><td class='num'>43</td><td class='num'>-5.78%</td><td class='num'>-8.74%</td></tr>
+<tr><td>test</td><td>low</td><td class='num'>23</td><td class='num'>-0.88%</td><td class='num'>-2.29%</td></tr>
+<tr><td>test</td><td>mid</td><td class='num'>17</td><td class='num'>+0.00%</td><td class='num'>-0.11%</td></tr>
+<tr><td>test</td><td>high</td><td class='num'>22</td><td class='num'>-0.98%</td><td class='num'>-2.12%</td></tr>
+</table><p>At 1-minute latency a strong premium response does <b>not</b> predict continuation (the premium is already inflated when the snapshot shows it).</p>
+<h3>Spread cost (entry spread %, ATM &plusmn; 2)</h3><table><tr><th>Mode</th><th>median</th><th>p90</th><th>mean</th></tr>
+<tr><td>PRE</td><td class='num'>0.26</td><td class='num'>0.46</td><td class='num'>0.30</td></tr>
+<tr><td>MODE_A</td><td class='num'>0.27</td><td class='num'>0.47</td><td class='num'>0.32</td></tr>
+<tr><td>MODE_B</td><td class='num'>0.34</td><td class='num'>1.46</td><td class='num'>1.04</td></tr>
+</table>
+<h3>Expiry-day behaviour (ATM, 3-minute MAE on BID)</h3><table><tr><th>Day type | window</th><th>symbol-days</th><th>MAE median</th><th>MAE p10</th><th>3-min exit</th></tr>
+<tr><td>expiry|14:30-15:00</td><td class='num'>13</td><td class='num'>-4.95%</td><td class='num'>-19.94%</td><td class='num'>-1.91%</td></tr>
+<tr><td>expiry|15:00-15:10</td><td class='num'>13</td><td class='num'>-4.71%</td><td class='num'>-18.70%</td><td class='num'>-0.28%</td></tr>
+<tr><td>expiry|15:10-15:15</td><td class='num'>13</td><td class='num'>-9.67%</td><td class='num'>-32.47%</td><td class='num'>-1.27%</td></tr>
+<tr><td>expiry|15:15-15:30</td><td class='num'>13</td><td class='num'>-21.81%</td><td class='num'>-82.38%</td><td class='num'>-16.05%</td></tr>
+<tr><td>non_expiry|14:30-15:00</td><td class='num'>48</td><td class='num'>-1.48%</td><td class='num'>-8.05%</td><td class='num'>+0.00%</td></tr>
+<tr><td>non_expiry|15:00-15:10</td><td class='num'>40</td><td class='num'>-1.81%</td><td class='num'>-9.34%</td><td class='num'>-0.38%</td></tr>
+<tr><td>non_expiry|15:10-15:15</td><td class='num'>26</td><td class='num'>-2.52%</td><td class='num'>-6.56%</td><td class='num'>-1.16%</td></tr>
+<tr><td>non_expiry|15:15-15:30</td><td class='num'>41</td><td class='num'>-2.36%</td><td class='num'>-10.41%</td><td class='num'>-1.61%</td></tr>
+</table><div class='risk'>Expiry days are riskier throughout, and the tail widens from <b>15:10</b>, not 15:14. 12A-v1 therefore keeps the hard veto at 15:15 and starts the no-entry / forced-flat zone at 15:10.</div>
+<h2>3. 5-second HR research vs random (descriptive)</h2>
+<table><tr><th>Day</th><th>Prior HR days</th><th>Thresholds available</th><th>Candidates</th><th>Would-trade (hypothetical)</th></tr>
+<tr><td>2026-09-15</td><td class='num'>0</td><td>{'NIFTY': False, 'SENSEX': False}</td><td class='num'>0</td><td class='num'>0</td></tr>
+<tr><td>2026-09-16</td><td class='num'>1</td><td>{'NIFTY': False, 'SENSEX': False}</td><td class='num'>0</td><td class='num'>0</td></tr>
+<tr><td>2026-09-17</td><td class='num'>2</td><td>{'NIFTY': True, 'SENSEX': True}</td><td class='num'>30</td><td class='num'>4</td></tr>
+<tr><td>2026-09-18</td><td class='num'>3</td><td>{'NIFTY': True, 'SENSEX': True}</td><td class='num'>30</td><td class='num'>2</td></tr>
+</table><table><tr><th>Group | mode</th><th>n</th><th>day groups</th><th>active-exit day-mean</th><th>active-exit median</th><th>MFE med</th><th>MAE med</th><th>t-MFE med (s)</th><th>give-back med</th><th>momentum-failure exits</th><th>60 s fixed</th><th>120 s fixed</th></tr>
+<tr><td>CONFIRMED|MODE_A</td><td class='num'>6</td><td class='num'>2</td><td class='num'>-0.47%</td><td class='num'>-0.59%</td><td class='num'>+2.41%</td><td class='num'>-1.42%</td><td class='num'>95</td><td class='num'>+0.79%</td><td class='num'>1.00</td><td class='num'>-0.08%</td><td class='num'>+0.46%</td></tr>
+<tr><td>ALL_STRONG|MODE_A</td><td class='num'>11</td><td class='num'>3</td><td class='num'>-0.38%</td><td class='num'>-0.48%</td><td class='num'>+2.17%</td><td class='num'>-1.93%</td><td class='num'>125</td><td class='num'>+0.72%</td><td class='num'>0.73</td><td class='num'>-0.24%</td><td class='num'>-0.13%</td></tr>
+<tr><td>RANDOM|MODE_A</td><td class='num'>76</td><td class='num'>4</td><td class='num'>+0.03%</td><td class='num'>-0.13%</td><td class='num'>+2.84%</td><td class='num'>-3.78%</td><td class='num'>155</td><td class='num'>+0.97%</td><td class='num'>0.59</td><td class='num'>-0.17%</td><td class='num'>-0.50%</td></tr>
+<tr><td>CONFIRMED|MODE_B</td><td class='num'>3</td><td class='num'>2</td><td class='num'>-1.63%</td><td class='num'>-1.63%</td><td class='num'>+0.51%</td><td class='num'>-4.30%</td><td class='num'>25</td><td class='num'>+2.28%</td><td class='num'>0.33</td><td class='num'>-1.69%</td><td class='num'>-1.92%</td></tr>
+<tr><td>ALL_STRONG|MODE_B</td><td class='num'>8</td><td class='num'>4</td><td class='num'>+0.43%</td><td class='num'>-0.63%</td><td class='num'>+0.58%</td><td class='num'>-4.57%</td><td class='num'>42</td><td class='num'>+0.63%</td><td class='num'>0.50</td><td class='num'>-1.28%</td><td class='num'>-2.04%</td></tr>
+<tr><td>RANDOM|MODE_B</td><td class='num'>84</td><td class='num'>4</td><td class='num'>-1.15%</td><td class='num'>-0.43%</td><td class='num'>+1.99%</td><td class='num'>-2.98%</td><td class='num'>60</td><td class='num'>+0.77%</td><td class='num'>0.62</td><td class='num'>-0.09%</td><td class='num'>-0.35%</td></tr>
+</table><p>Mode B rows ignore the Mode B / expiry vetoes on purpose so research keeps accumulating; they are never tradeable in v1.</p>
+<h2>4. Opportunity remaining at detection</h2>
+<p>For every candidate: event start (futures origin), detection (end of the event bar; live rows also record the wall-clock detection time and latency), detection price, realistic entry (ASK two bars later), and what was still available afterwards. <b>DETECTED_EARLY</b> = at the realistic entry &ge;50% of the event's total favourable futures move was still ahead; <b>DETECTED_LATE</b> = most of it had already happened; <b>NO_FOLLOW_THROUGH</b> = nothing favourable was left after the entry. These are descriptive research labels, not trading rules.</p>
+<table><tr><th>Group</th><th>n</th><th>EARLY</th><th>LATE</th><th>NO FOLLOW-THROUGH</th><th>UNKNOWN</th><th>remaining at detection (median share)</th><th>remaining at entry (median share)</th><th>realised before detection (pts)</th><th>MFE after detection (pts)</th><th>MAE after detection (pts)</th></tr>
+<tr><td>CONFIRMED</td><td class='num'>10</td><td class='num'>5</td><td class='num'>3</td><td class='num'>2</td><td class='num'>0</td><td class='num'>0.25</td><td class='num'>0.46</td><td class='num'>16.0</td><td class='num'>5.0</td><td class='num'>-11.1</td></tr>
+<tr><td>REJECTED</td><td class='num'>12</td><td class='num'>3</td><td class='num'>4</td><td class='num'>5</td><td class='num'>0</td><td class='num'>0.10</td><td class='num'>0.10</td><td class='num'>32.9</td><td class='num'>3.6</td><td class='num'>-18.5</td></tr>
+<tr><td>ALL_STRONG</td><td class='num'>22</td><td class='num'>8</td><td class='num'>7</td><td class='num'>7</td><td class='num'>0</td><td class='num'>0.13</td><td class='num'>0.24</td><td class='num'>18.1</td><td class='num'>5.0</td><td class='num'>-16.4</td></tr>
+</table>
+<p><b>Missed opportunities</b> (rejected by a non-veto gate, yet detected early and positive after the active exit): 0 of 12 rejected; by reason {}. <b>False positives</b> (confirmed, but the active exit lost): 9 of 10; of the confirmed, 5 were detected late or had no follow-through.</p>
+<h2>5. Live shadow recorder</h2>
+<p>No live shadow sessions yet. The recorder runs daily 14:55&ndash;15:36 (task <code>SensexNifty-Scalp12AShadow</code>).</p>
+<h2>6. Configuration (<code>994667c6d552111e</code>)</h2><table><tr><th>Parameter</th><th>Value</th></tr>
+<tr><td><code>mode_a_start</code></td><td>15:00:00</td></tr>
+<tr><td><code>mode_b_start</code></td><td>15:15:00</td></tr>
+<tr><td><code>mode_b_end</code></td><td>15:30:00</td></tr>
+<tr><td><code>session_exit_by</code></td><td>15:29:55</td></tr>
+<tr><td><code>mode_b_tradeable</code></td><td>False</td></tr>
+<tr><td><code>expiry_close_veto_start</code></td><td>15:15:00</td></tr>
+<tr><td><code>expiry_transition_zone_start</code></td><td>15:10:00</td></tr>
+<tr><td><code>expiry_forced_exit</code></td><td>15:10:00</td></tr>
+<tr><td><code>bar_seconds</code></td><td>5</td></tr>
+<tr><td><code>event_percentile</code></td><td>95.0</td></tr>
+<tr><td><code>weak_percentile</code></td><td>85.0</td></tr>
+<tr><td><code>continuation_percentile</code></td><td>95.0</td></tr>
+<tr><td><code>continuation_consistency</code></td><td>0.6</td></tr>
+<tr><td><code>reversal_prior_min_multiple</code></td><td>1.0</td></tr>
+<tr><td><code>min_history_days</code></td><td>2</td></tr>
+<tr><td><code>cooldown_seconds</code></td><td>60</td></tr>
+<tr><td><code>entry_delay_bars</code></td><td>2</td></tr>
+<tr><td><code>futures_stale_seconds</code></td><td>30</td></tr>
+<tr><td><code>min_option_response_pct</code></td><td>1.0</td></tr>
+<tr><td><code>persistence_window_bars</code></td><td>3</td></tr>
+<tr><td><code>persistence_min_bars</code></td><td>2</td></tr>
+<tr><td><code>extension_multiple</code></td><td>3.0</td></tr>
+<tr><td><code>atm_window_strikes</code></td><td>5</td></tr>
+<tr><td><code>max_itm_steps</code></td><td>2</td></tr>
+<tr><td><code>max_otm_steps</code></td><td>1</td></tr>
+<tr><td><code>max_spread_pct</code></td><td>1.0</td></tr>
+<tr><td><code>max_quote_age_s</code></td><td>10.0</td></tr>
+<tr><td><code>min_premium</code></td><td>20.0</td></tr>
+<tr><td><code>max_premium</code></td><td>600.0</td></tr>
+<tr><td><code>starting_capital</code></td><td>15000.0</td></tr>
+<tr><td><code>max_rupee_loss_per_trade</code></td><td>300.0</td></tr>
+<tr><td><code>max_capital_per_trade</code></td><td>6000.0</td></tr>
+<tr><td><code>max_daily_loss</code></td><td>900.0</td></tr>
+<tr><td><code>max_trades_per_day</code></td><td>6</td></tr>
+<tr><td><code>max_concurrent_positions</code></td><td>1</td></tr>
+<tr><td><code>lot_size_units</code></td><td>1</td></tr>
+<tr><td><code>stop_pct</code></td><td>5.0</td></tr>
+<tr><td><code>target_pct</code></td><td>5.0</td></tr>
+<tr><td><code>max_hold_seconds</code></td><td>120</td></tr>
+<tr><td><code>stop_spread_multiple</code></td><td>3.0</td></tr>
+<tr><td><code>no_progress_seconds</code></td><td>30</td></tr>
+<tr><td><code>fade_activation_pct</code></td><td>2.0</td></tr>
+<tr><td><code>fade_giveback_frac</code></td><td>0.5</td></tr>
+<tr><td><code>trail_activation_pct</code></td><td>3.0</td></tr>
+<tr><td><code>trail_lock_frac</code></td><td>0.4</td></tr>
+<tr><td><code>event_retrace_frac</code></td><td>0.6</td></tr>
+<tr><td><code>divergence_frac</code></td><td>0.5</td></tr>
+<tr><td><code>exit_spread_multiple</code></td><td>2.5</td></tr>
+<tr><td><code>exit_spread_floor_pct</code></td><td>1.5</td></tr>
+<tr><td><code>stale_quote_bars</code></td><td>3</td></tr>
+<tr><td><code>horizons_seconds</code></td><td>(15, 30, 60, 120, 180, 300)</td></tr>
+<tr><td><code>symbols</code></td><td>(&#x27;NIFTY&#x27;, &#x27;SENSEX&#x27;)</td></tr>
+</table><p>Evidence labels for each parameter (RESEARCH_1MIN / PROVISIONAL_5S / POLICY / EVIDENCE_VETO) are documented in <code>scalp_12a/config.py</code>.</p>
+<footer>12A-scalp-v1 research report &middot; hash 994667c6d552111e &middot; regenerated by scripts/run_scalp12a_research.py &middot; 11d-paper-v1 unchanged (pinned by tests/test_scalp12a_isolation.py)</footer></body></html>

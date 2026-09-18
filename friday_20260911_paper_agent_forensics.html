@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Friday Paper Agent Forensics</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1180px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.25em;color:#1a3a5c;margin-top:2.1em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.02em;color:#2c3e50;margin-top:1.4em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.84em}
+ th,td{border:1px solid #ccc;padding:5px 8px;text-align:left;vertical-align:top}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.8em;line-height:1.45}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.74em;font-weight:bold;color:#fff}
+ .pass{background:#2e7d32}.warnt{background:#f9a825;color:#222}.fail{background:#c62828}.info{background:#1a5c8a}.na{background:#8d8d8d}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .ok{background:#e8f5e9;border-left:4px solid #2e7d32;padding:10px 14px;margin:14px 0}
+ .num{text-align:right;font-family:Consolas,monospace}
+ .key{background:#fff3cd !important;font-weight:bold}
+ .verdict{background:#1b5e20;color:#fff;padding:16px 20px;border-radius:6px;margin:22px 0;font-size:1.05em}
+ .verdict b{color:#fff}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+</style>
+</head>
+<body>
+
+<h1>Operational Forensic Diagnosis<br><span style="font-size:0.62em;font-weight:normal;color:#555">11D paper-trading agent &mdash; Friday 2026-09-11 &mdash; read-only</span></h1>
+<p><b>Strategy:</b> <code>11d-paper-v1</code> &middot; <b>Config hash:</b> <code>9c7c362d7e0c6a14</code> &middot; <b>Symbols:</b> SENSEX, NIFTY &middot; <b>Timezone:</b> Asia/Kolkata &middot; <b>Method:</b> source inspection, <code>SELECT</code>-only queries, read-only sequence inspection, and the live-loop log. Nothing was modified, restarted or re-executed.</p>
+
+<h2 id="s1">1. Executive conclusion</h2>
+<div class="verdict"><b>The agent worked correctly on Friday. Friday was a NO-TRADE day, not a failure.</b><br><br>
+The live loop ran for the whole session (09:10:25 &rarr; clean exit at 15:40:15). The paper agent ran on every one of the 385 minute-ticks for both symbols. It reached the 14:59 freeze at <b>14:59:19 (SENSEX)</b> and <b>14:59:25 (NIFTY)</b>, using 14:59 data written less than half a second earlier. It saved one decision per symbol: <b>NO_TRADE &mdash; CONFLICTING_SIGNALS</b>, strategy <code>11d-paper-v1</code>, config <code>9c7c362d7e0c6a14</code>, data quality GOOD.<br><br>
+There were <b>zero</b> paper-agent exceptions, <b>zero</b> positions (correctly, since nothing was traded), and <b>zero</b> real orders. Both symbols failed at the same early rule, the directional-conflict check, before option selection. That is a strategy outcome, not an operational fault.</div>
+<div class="callout"><b>Why it probably <i>looked</i> like nothing happened.</b> The Command Center only shows <b>the current calendar day</b>. Viewed on Saturday or Sunday, <code>/paper-trading/today</code> returns that day, with no decisions and the message <i>"No 14:59 decision has been frozen yet today"</i>. Friday's two decisions are stored and served by the API, but no panel shows them once the day has passed. That is a presentation gap, not an execution failure (&sect;15&ndash;16).</div>
+
+<h2 id="s2">2. Friday session classification</h2>
+<table>
+<tr><th>Symbol</th><th>Classification</th><th>Decisive evidence</th></tr>
+<tr class="key"><td>SENSEX</td><td><span class="tag pass">B. VALID PAPER SESSION &mdash; NO TRADE</span></td><td><code>paper_decisions.id = 18</code>, frozen 14:59:19.093, <code>NO_TRADE / CONFLICTING_SIGNALS</code>, data quality GOOD, option snapshot age 0 s</td></tr>
+<tr class="key"><td>NIFTY</td><td><span class="tag pass">B. VALID PAPER SESSION &mdash; NO TRADE</span></td><td><code>paper_decisions.id = 19</code>, frozen 14:59:25.111, <code>NO_TRADE / CONFLICTING_SIGNALS</code>, data quality GOOD, option snapshot age 0 s</td></tr>
+</table>
+<p>Categories A and C&ndash;H were each tested and ruled out: see the evidence in &sect;5&ndash;&sect;13 and the summary table.</p>
+
+<h2 id="s3">3. Expected execution path (from the source)</h2>
+<pre>
+Windows Task Scheduler  \SensexNifty-LiveLoop  (09:10 trading days)
+  └─ scripts/run_live_loop.py SENSEX NIFTY --single-session
+       └─ pipeline/live_loop.py :: run_live_loop()
+            ├─ is_trading_day()?  no → exit          (market-hours guard)
+            ├─ before 09:15?  sleep ; after 15:40?  exit (run_single_session)
+            └─ every minute boundary + 15 s, for symbol in [SENSEX, NIFTY]:
+                 ├─ try: run_snapshot(symbol, "live")        except → log ERROR, reset_client()
+                 │     └─ fetch candles + option chain (Dhan data API) → insert_raw_candles,
+                 │        insert_option_chain, insert_levels_snapshot
+                 ├─ try: cas_live.maybe_update(symbol, now)   except → log ERROR
+                 └─ try: run_paper_tick(symbol, now)          except → log ERROR   ← return value NOT logged
+                       └─ paper_trading/tick.py :: run_tick()
+                            ├─ assert_paper_mode()
+                            ├─ load_account() ; kill switch ; load_open_position_row()
+                            ├─ open position?  → _manage(): evaluate_minute → save_events / close_position_row
+                            ├─ journal.set_agent_state(state, heartbeat=now)   ← paper_sessions UPSERT, every tick
+                            ├─ now &lt; 14:59:00 → return "monitoring"
+                            ├─ decision already exists → return "DAILY_REVIEW"
+                            └─ agent.make_decision()
+                                 ├─ build_market_state(cutoff = 14:59:00)   (reads DB, clamped at-or-before)
+                                 ├─ get_option_chain_raw_near(at_or_before 14:59:00)
+                                 └─ decision.decide(): gate 0 ops → gate 1 data → gate 2 direction
+                                                      → gate 3 expected move → gate 4 option → gate 5 risk plan
+                            ├─ journal.save_decision()          ← paper_decisions INSERT-ONCE
+                            ├─ NO_TRADE → set_agent_state("NO_TRADE") + save_account_snapshot → return
+                            └─ TRADE    → PaperBroker.buy (ASK) → save_position → PAPER_ENTRY
+</pre>
+<table>
+<tr><th>Element</th><th>Where</th></tr>
+<tr><td>Entry point / scheduler</td><td><code>scripts/run_live_loop.py</code>, started by Task Scheduler <code>\SensexNifty-LiveLoop</code></td></tr>
+<tr><td>Market-hours guard</td><td><code>pipeline/live_loop.py</code> &mdash; <code>is_trading_day</code>, <code>SESSION_OPEN 09:15</code>, <code>SESSION_CLOSE 15:40</code></td></tr>
+<tr><td>Paper-agent invocation</td><td><code>live_loop.py</code> &mdash; its own <code>try/except</code>, independent of the snapshot's success</td></tr>
+<tr><td>Decision time</td><td><code>PaperConfig.decision_time = "14:59:00"</code></td></tr>
+<tr><td>Persistence</td><td><code>paper_trading/journal.py</code>: <code>set_agent_state</code> (upsert), <code>save_decision</code> (insert-once), <code>save_account_snapshot</code>, <code>save_position</code>, <code>save_events</code></td></tr>
+<tr><td>Exception handling</td><td>Three broad <code>except Exception</code> blocks in <code>live_loop.py</code>, each logging with a traceback. <b>No broad <code>except</code> inside <code>paper_trading/</code></b> (grep-verified).</td></tr>
+<tr><td>Shutdown</td><td>Loop exits once the time passes 15:40 in single-session mode</td></tr>
+</table>
+
+<h2 id="s4">4. Actual execution path</h2>
+<p>What the evidence shows actually happened, step by step:</p>
+<table>
+<tr><th>Step</th><th>Observed</th><th>Evidence</th></tr>
+<tr><td>Process start</td><td>09:10:25</td><td>Log: <code>Starting live loop for ['SENSEX', 'NIFTY']</code></td></tr>
+<tr><td>Pre-market sleep</td><td>until 09:15:00</td><td>Log: <code>Before market open - sleeping until ... 09:15:00</code></td></tr>
+<tr><td>First snapshot</td><td>SENSEX 09:15:10.967, NIFTY 09:15:15.589</td><td>Log snapshot lines</td></tr>
+<tr><td>First paper tick</td><td>09:15:10.97</td><td><code>paper_sessions.created_at = 09:15:10.970828</code>, 3 ms after SENSEX's first snapshot line</td></tr>
+<tr><td>Minute ticks, both symbols</td><td>385 &times; 2</td><td>Session ID-sequence count (&sect;7)</td></tr>
+<tr><td>Snapshot failures</td><td>09:20&ndash;09:23 (DNS)</td><td>16 ERROR lines; paper ticks unaffected</td></tr>
+<tr class="key"><td>SENSEX 14:59 decision</td><td>14:59:19.093</td><td>Snapshot 14:59:18.729 &rarr; CAS 14:59:19.092 &rarr; decision 14:59:19.093 &rarr; row 14:59:19.998</td></tr>
+<tr class="key"><td>NIFTY 14:59 decision</td><td>14:59:25.111</td><td>Snapshot 14:59:24.738 &rarr; CAS 14:59:25.110 &rarr; decision 14:59:25.111 &rarr; row 14:59:25.226</td></tr>
+<tr><td>Post-decision ticks</td><td>15:00 &rarr; 15:39</td><td>Return early ("decision already frozen"); state <code>DAILY_REVIEW</code></td></tr>
+<tr><td>Last paper tick</td><td>15:39:24.873</td><td><code>paper_sessions.last_heartbeat</code>, 1 ms after NIFTY's last snapshot log line (15:39:24.872)</td></tr>
+<tr><td>Process stop</td><td>15:40:15</td><td>Log: <code>After market close - today's session is done, exiting</code> &mdash; a clean exit, not a crash</td></tr>
+</table>
+<div class="ok"><b>The actual path matches the expected path at every step.</b> The ordering inside each 14:59 tick (snapshot, then CAS hook, then paper tick) is visible to the millisecond, exactly as <code>live_loop.py</code> sequences it.</div>
+
+<h2 id="s5">5. Runtime/process evidence</h2>
+<table>
+<tr><th>Question</th><th>Finding</th><th>Evidence</th></tr>
+<tr><td>Process start</td><td>09:10:25.085</td><td>log</td></tr>
+<tr><td>Process stop</td><td>15:40:15.000, clean exit</td><td>log</td></tr>
+<tr><td>Alive through 14:59?</td><td><b>Yes</b> &mdash; continuous snapshot lines every minute through 15:39</td><td>log</td></tr>
+<tr><td>Restarts</td><td>None &mdash; exactly one "Starting live loop" line on Friday</td><td>log</td></tr>
+<tr><td>Crashes / uncaught exceptions</td><td>None</td><td>log</td></tr>
+<tr><td>Handled exceptions</td><td>16 ERROR lines (8 tracebacks), all 09:20:34&ndash;09:23:15</td><td>log</td></tr>
+<tr><td>Connection / DNS errors</td><td>1 &times; <code>ConnectionResetError 10054</code>, then 7 &times; <code>NameResolutionError ... Failed to resolve 'api.dhan.co'</code></td><td>log</td></tr>
+<tr><td>Dhan API errors</td><td>1 &times; <code>/optionchain</code> failure at 09:35:18 (SENSEX), empty error body, handled as WARNING</td><td>log</td></tr>
+<tr><td>Authentication errors</td><td>None</td><td>log</td></tr>
+<tr><td>Database errors</td><td>None</td><td>log; no ID-sequence gaps in <code>paper_decisions</code></td></tr>
+<tr><td>Timeouts</td><td>None beyond the DNS failures</td><td>log</td></tr>
+<tr><td>Other warnings</td><td>26 &times; matplotlib <code>findfont</code> (chart rendering, harmless)</td><td>log</td></tr>
+</table>
+<h3>Heartbeat</h3>
+<table>
+<tr><th>Measure</th><th>Value</th><th>Note</th></tr>
+<tr><td>First heartbeat</td><td>09:15:10.97</td><td>Session row creation time</td></tr>
+<tr><td>Last heartbeat</td><td>15:39:24.873</td><td>Stored value</td></tr>
+<tr><td>Reached 14:59?</td><td><b>Yes</b></td><td>Proven directly by both decision rows</td></tr>
+<tr><td>Heartbeat count</td><td>772 state writes (&sect;7)</td><td>Derived from the ID sequence</td></tr>
+<tr><td>Longest gap</td><td><b>Not measurable</b></td><td><code>last_heartbeat</code> is a single overwritten field with no history. A gap between ticks cannot be proven or ruled out per minute from this table alone; the total count in &sect;7 is the substitute evidence.</td></tr>
+</table>
+
+<h2 id="s6">6. Market-data evidence</h2>
+<table>
+<tr><th>Symbol</th><th>Table</th><th>First</th><th>Last</th><th>Expected</th><th>Actual</th><th>Missing minutes</th><th>Dupes</th><th>Stuck runs (&ge;5 identical close+volume)</th><th>14:59 present</th><th>14:59 quality</th></tr>
+<tr><td rowspan="3"><b>SENSEX</b></td><td>raw_candles</td><td>09:15</td><td>15:39</td><td class="num">385</td><td class="num">385</td><td>none</td><td>0</td><td>15:14&ndash;15:27 (14), 15:28&ndash;15:33 (6), 15:34&ndash;15:39 (6)</td><td>Yes</td><td>O 74843.36 H 74844.69 L 74823.06 C 74825.87 V 16,068 &mdash; ingested 14:59:18.712</td></tr>
+<tr><td>option_chain_raw</td><td>09:15</td><td>15:39</td><td class="num">385</td><td class="num">378</td><td>09:20&ndash;09:23, 09:35, 15:30, 15:31</td><td>0</td><td>n/a</td><td>Yes</td><td>183 strikes, spot 74,838.51</td></tr>
+<tr><td>levels_snapshots</td><td>09:15</td><td>15:39</td><td class="num">385</td><td class="num">379</td><td>09:20&ndash;09:23, 15:30, 15:31</td><td>0</td><td>n/a</td><td>Yes</td><td>close 74,838.05 &mdash; created 14:59:18.728</td></tr>
+<tr><td rowspan="3"><b>NIFTY</b></td><td>raw_candles</td><td>09:15</td><td>15:39</td><td class="num">385</td><td class="num">385</td><td>none</td><td>0</td><td>15:15&ndash;15:28 (14), 15:29&ndash;15:33 (5), 15:34&ndash;15:39 (6)</td><td>Yes</td><td>O 23427.35 H 23427.35 L 23419.60 C 23420.25 V 1,095,256 &mdash; ingested 14:59:24.724</td></tr>
+<tr><td>option_chain_raw</td><td>09:15</td><td>15:39</td><td class="num">385</td><td class="num">379</td><td>09:20&ndash;09:23, 15:30, 15:31</td><td>0</td><td>n/a</td><td>Yes</td><td>231 strikes, spot 23,424.20</td></tr>
+<tr><td>levels_snapshots</td><td>09:15</td><td>15:39</td><td class="num">385</td><td class="num">379</td><td>09:20&ndash;09:23, 15:30, 15:31</td><td>0</td><td>n/a</td><td>Yes</td><td>close 23,423.90 &mdash; created 14:59:24.737</td></tr>
+</table>
+<div class="finding"><b>Could the live loop actually use the 14:59 data when it decided? Yes, and this is proven by timestamps, not assumed.</b> For SENSEX, the 14:59 candle was written at 14:59:18.712 and the levels row at 14:59:18.728, both <b>before</b> the decision at 14:59:19.093. For NIFTY: 14:59:24.724 and 14:59:24.737, both before the decision at 14:59:25.111. Both decisions record <code>option_snapshot_age_sec = 0.0</code> and <code>data_quality = GOOD</code> with no missing fields.</div>
+<div class="callout"><b>Semantics worth recording.</b> The live loop fires ~18 seconds into each minute, so at decision time the "14:59 candle" held about 18 seconds of trading. The decision used spot 74,838.05; that candle later finalised at a close of 74,825.87. This is how the loop is designed to work, it uses no future information, and it is not a defect. It does mean replaying the decision from today's finalised candles would not give byte-identical inputs, which is why this report treats the stored decision row as primary evidence and does not re-run it.</div>
+<h3>Every gap explained</h3>
+<table>
+<tr><th>Gap</th><th>Cause</th><th>Affected the paper decision?</th></tr>
+<tr><td>09:20&ndash;09:23, both symbols, option chain + levels</td><td>DNS failure; <code>run_snapshot</code> raised, and was logged and skipped</td><td>No &mdash; five and a half hours before the freeze; candles self-healed on the next fetch</td></tr>
+<tr><td>09:35, SENSEX option chain only</td><td>Logged WARNING: <code>Dhan API call to /optionchain failed</code>, empty error body; snapshot continued without options</td><td>No</td></tr>
+<tr><td>15:30 and 15:31, both symbols</td><td>At the 15:30 and 15:31 ticks, Dhan already returned post-close padding candles stamped 15:38, so those snapshots were logged and written as <code>as_of=15:38:00</code> instead (log lines 15:30:19 and 15:31:18). Because <code>option_chain_raw</code> inserts use <code>ON CONFLICT DO NOTHING</code>, the row stored at 15:38 is most likely the one fetched at 15:30:19 <i>(inferred, not verified)</i>.</td><td>No &mdash; 31 minutes after the freeze, with no open position</td></tr>
+<tr><td>15:14/15:15&ndash;15:27 identical candles</td><td>The Closing Auction Session (a documented market structure since 2026-08-03)</td><td>No</td></tr>
+</table>
+
+<h2 id="s7">7. Paper-agent invocation evidence</h2>
+<div class="callout"><b>No direct per-tick log exists.</b> <code>live_loop.py</code> calls <code>run_paper_tick(symbol, datetime.now(IST))</code> and discards the <code>{state, summary}</code> it returns. Invocation therefore cannot be read from the log line by line. It is established here from database side effects.</div>
+<h3>Aggregate tick count, from the session upsert's ID sequence (read-only)</h3>
+<p><code>journal.set_agent_state</code> is an <code>INSERT ... ON CONFLICT DO UPDATE</code>, and PostgreSQL consumes one value from <code>paper_sessions_id_seq</code> on every call, even when it updates instead of inserting. Reading the sequence does not change it.</p>
+<table>
+<tr><th>Item</th><th>Value</th></tr>
+<tr><td>Friday session row id (assigned at the first tick, 09:15:10.97)</td><td class="num">795</td></tr>
+<tr><td><code>paper_sessions_id_seq.last_value</code> (inspected 2026-09-13)</td><td class="num">1,566</td></tr>
+<tr><td>State writes from Friday's first call onward (1,566 &minus; 795 + 1)</td><td class="num"><b>772</b></td></tr>
+<tr><td>Session rows after Friday / log lines after Friday's 15:40 exit</td><td class="num">0 / 0</td></tr>
+<tr><td><b>Expected if every tick ran</b>: 385 ticks &times; 2 symbols &times; 1 write, plus 1 extra <code>NO_TRADE</code> write per symbol</td><td class="num"><b>772</b></td></tr>
+</table>
+<div class="ok"><b>An exact match: 772 observed versus 772 expected.</b> Every one of the 770 paper ticks ran for both symbols, including the eight during the 09:20&ndash;09:23 outage (the paper tick has its own <code>try</code> block and reads only the local database). And both symbols took the two-write <code>NO_TRADE</code> path exactly once. <b>Caveat, stated plainly:</b> this proves the <i>total</i>, not each individual minute. A skipped tick offset by an extra one elsewhere would also sum to 772; no mechanism for such an extra call was found (no manual agent runs, no kill-switch writes, and the backend is GET-only).</div>
+<table>
+<tr><th>Per-symbol measure</th><th>SENSEX</th><th>NIFTY</th><th>Evidence</th></tr>
+<tr><td>Number of paper ticks</td><td>385</td><td>385</td><td>Sequence total above</td></tr>
+<tr><td>First tick</td><td>09:15:10.97</td><td>~09:15:15.6</td><td>Session <code>created_at</code>; NIFTY inferred from its first snapshot log line</td></tr>
+<tr><td>Ticks around 14:30 / 14:55</td><td>Ran</td><td>Ran</td><td>Snapshot and CAS-live log lines at 14:30:28 and 14:55:18 (SENSEX), 14:30:46 and 14:55:24 (NIFTY), followed by the paper tick in code order</td></tr>
+<tr><td>Tick at 14:59</td><td><b>14:59:19.093</b></td><td><b>14:59:25.111</b></td><td>Decision rows (direct proof)</td></tr>
+<tr><td>Last tick</td><td>~15:39:18.9</td><td><b>15:39:24.873</b></td><td><code>last_heartbeat</code> (direct for NIFTY); SENSEX from its snapshot log line</td></tr>
+<tr><td>Exceptions during tick</td><td>0</td><td>0</td><td>No <code>Paper agent tick failed</code> lines</td></tr>
+<tr><td>Skipped ticks</td><td>0 (by total)</td><td>0 (by total)</td><td>Sequence count</td></tr>
+<tr class="key"><td><b>Classification</b></td><td><span class="tag pass">PROVEN RUNNING</span></td><td><span class="tag pass">PROVEN RUNNING</span></td><td>Decision rows prove the 14:59 invocation directly; the sequence count proves the full-session total</td></tr>
+</table>
+
+<h2 id="s8">8. 14:59 decision evidence</h2>
+<table>
+<tr><th>Field</th><th>SENSEX</th><th>NIFTY</th></tr>
+<tr><td>Reached decision freeze?</td><td><b>Yes</b></td><td><b>Yes</b></td></tr>
+<tr><td>Decision timestamp</td><td>2026-09-11 14:59:19.093</td><td>2026-09-11 14:59:25.111</td></tr>
+<tr><td>Row created</td><td>14:59:19.998</td><td>14:59:25.226</td></tr>
+<tr><td>Snapshot used</td><td>Candles and levels at/before 14:59:00 (written 14:59:18.7); option chain fetched_at 14:59:00, age 0 s</td><td>Candles and levels at/before 14:59:00 (written 14:59:24.7); option chain fetched_at 14:59:00, age 0 s</td></tr>
+<tr><td>Strategy / decision / config version</td><td><code>11d-paper-v1</code> / <code>decision-v1</code> / <code>config-v1</code></td><td><code>11d-paper-v1</code> / <code>decision-v1</code> / <code>config-v1</code></td></tr>
+<tr><td>Configuration hash</td><td><code>9c7c362d7e0c6a14</code></td><td><code>9c7c362d7e0c6a14</code></td></tr>
+<tr><td>Spot</td><td class="num">74,838.05</td><td class="num">23,423.90</td></tr>
+<tr><td>Agent trend assessment</td><td><code>WEAK_UP</code></td><td><code>NEUTRAL</code></td></tr>
+<tr><td>Trend classifier / institutional bias</td><td>Strong Bullish / Mildly Bullish</td><td>Strong Bullish / Neutral</td></tr>
+<tr><td>Transition verdict</td><td>DOWN</td><td>DOWN</td></tr>
+<tr><td>P(UP) / P(DOWN)</td><td>0.30 / 0.70</td><td>0.30 / 0.70</td></tr>
+<tr><td>P(NO MOVE)</td><td>1.0 <i>(a known pre-existing display quirk: separate tallies, not normalised)</i></td><td>1.0 <i>(same)</i></td></tr>
+<tr><td>Expected move</td><td>&minus;200.1 to +39.0 pts</td><td>&minus;43.9 to +4.8 pts</td></tr>
+<tr><td>Transition risk tier / analogs</td><td>NORMAL / N=10</td><td>NORMAL / N=10</td></tr>
+<tr><td>Confidence</td><td>0</td><td>0</td></tr>
+<tr><td>Selected option</td><td>None</td><td>None</td></tr>
+<tr class="key"><td><b>Decision</b></td><td><b>NO_TRADE</b></td><td><b>NO_TRADE</b></td></tr>
+<tr class="key"><td><b>NO TRADE reason</b></td><td><b>CONFLICTING_SIGNALS</b></td><td><b>CONFLICTING_SIGNALS</b></td></tr>
+<tr><td>Data quality / missing fields</td><td>GOOD / none</td><td>GOOD / none</td></tr>
+<tr><td>Market-state classification</td><td><code>volume_character</code> and <code>amd_phase</code> are null in the row; no separate market-state label is persisted</td><td>Same</td></tr>
+<tr><td>Supporting factors</td><td>Trend classifier Strong Bullish; price +429 above VWAP; buy dominance 60%; PCR 1.28</td><td>VWAP sloping down; sell dominance 60%; transition forecast P(DOWN) 70%</td></tr>
+<tr><td>Conflicting factors</td><td><b>4</b>: resistance 162 pts overhead; support 38 pts below; VWAP sloping down; transition forecast P(DOWN) 70% vs P(UP) 30%</td><td><b>5</b>: resistance 17 pts overhead; support 6 pts below; trend classifier Strong Bullish; price +99 above VWAP; directional evidence split (1.8 for vs 1.6 against)</td></tr>
+<tr><td>Risk factors</td><td>Relative volume only 46%</td><td>none</td></tr>
+</table>
+<div class="finding"><b>Why both were rejected, traced to the frozen rule.</b> <code>trend_assessment._finalize</code> marks a read as conflicted when <code>len(conflicting) &gt; max_conflicting_factors</code>, and <code>PaperConfig.max_conflicting_factors = 2</code>. SENSEX had 4 conflicting factors and NIFTY had 5, so both are conflicted by the count rule alone. <code>decision.decide</code> checks this at <b>gate 2</b> and returns <code>CONFLICTING_SIGNALS</code> immediately. Substantively, on both symbols the price-based evidence read bullish while the 14:59 transition forecast read 70% DOWN, and price was pinned between nearby support and resistance. <b>This is the strategy declining a contradictory setup, which is exactly what it is designed to do.</b></div>
+
+<h2 id="s9">9. Database/persistence evidence</h2>
+<p>Table names taken from <code>db/schema.sql</code> and <code>paper_trading/journal.py</code>. All queries were <code>SELECT</code>-only.</p>
+<table>
+<tr><th>Table</th><th>Expected for a NO-TRADE day</th><th>Actual, Friday</th><th>Timestamp</th><th>Status / version / hash</th><th>Result</th></tr>
+<tr><td><code>paper_sessions</code></td><td>1 row, heartbeat to session end</td><td>1 row (id 795)</td><td>created 09:15:10.97, heartbeat 15:39:24.87</td><td><code>DAILY_REVIEW</code>, kill switch false, <code>11d-paper-v1</code>, <code>9c7c362d7e0c6a14</code></td><td><span class="tag pass">OK</span></td></tr>
+<tr><td><code>paper_decisions</code></td><td>1 row per symbol, insert-once</td><td>2 rows (ids 18, 19)</td><td>14:59:19.998 / 14:59:25.226</td><td><code>NO_TRADE</code> &times; 2, correct version and hash</td><td><span class="tag pass">OK</span></td></tr>
+<tr><td><code>paper_account_snapshots</code></td><td>Written on the decision tick</td><td>1 row (id 6)</td><td>14:59:20.071</td><td>Correct version and hash</td><td><span class="tag pass">OK</span></td></tr>
+<tr><td><code>paper_positions</code></td><td>0 (no trade)</td><td>0</td><td>&mdash;</td><td>&mdash;</td><td><span class="tag pass">OK &mdash; correctly empty</span></td></tr>
+<tr><td><code>paper_position_events</code></td><td>0 (no position)</td><td>0 (0 rows in total, all dates)</td><td>&mdash;</td><td>&mdash;</td><td><span class="tag pass">OK &mdash; correctly empty</span></td></tr>
+</table>
+<p>The schema has no separate order, trade, journal or audit table: a paper "order" is the position row written by <code>PaperBroker</code>, and the decision and event tables are the journal.</p>
+<table>
+<tr><th>Failure pattern checked</th><th>Found?</th><th>Evidence</th></tr>
+<tr><td>Session created but no decision</td><td>No</td><td>Both decisions exist</td></tr>
+<tr><td>Decision created but no order</td><td>n/a &mdash; NO_TRADE requires no order</td><td><code>decision = NO_TRADE</code></td></tr>
+<tr><td>Order created but no position / position without exit</td><td>No</td><td>0 positions</td></tr>
+<tr><td>Duplicate decisions</td><td>No</td><td><code>GROUP BY symbol, session_date, configuration_hash HAVING count(*) &gt; 1</code> returns nothing</td></tr>
+<tr><td>Failed persistence / rollback</td><td>No</td><td>Decision ids 17 &rarr; 18 &rarr; 19 are contiguous, and <code>paper_decisions_id_seq.last_value = 19</code>. A failed or rolled-back insert would have consumed a value and left a gap.</td></tr>
+<tr><td>Account-snapshot write count</td><td>Exactly as designed</td><td><code>paper_account_snapshots_id_seq.last_value = 7</code>; Friday row id 6 &rArr; exactly 2 writes, one per NO_TRADE decision</td></tr>
+<tr><td>Constraint violation / DB connection failure</td><td>No</td><td>No database errors in the log</td></tr>
+</table>
+
+<h2 id="s10">10. Option-selection evidence</h2>
+<div class="callout"><b>Not reached, for either symbol.</b> Option selection is <b>gate 4</b> in <code>decision.decide</code>. Both decisions stopped at <b>gate 2</b> (<code>CONFLICTING_SIGNALS</code>), so <code>build_paper_candidates</code> and <code>select_option</code> never ran. Per the brief, the candidate universe was therefore <b>not</b> analysed: doing so would mean evaluating a selection the agent never performed. The inputs were available had it been needed: the 14:59 chain existed with 183 (SENSEX) and 231 (NIFTY) strikes, age 0 s, and the decision row records ATM IV 11.78/13.08 (SENSEX) and 10.09/11.02 (NIFTY). No threshold was examined for loosening.</div>
+
+<h2 id="s11">11. Virtual capital/session evidence</h2>
+<table>
+<tr><th>Field</th><th>Friday value</th><th>Expected</th></tr>
+<tr><td>Starting (virtual) capital</td><td class="num">&#8377;15,000.00</td><td>&#8377;15,000 &#10003;</td></tr>
+<tr><td>Current balance</td><td class="num">&#8377;15,000.00</td><td>Unchanged with no trades &#10003;</td></tr>
+<tr><td>Available capital</td><td class="num">&#8377;15,000.00</td><td>&#10003;</td></tr>
+<tr><td>Capital in trade (reserved / open exposure)</td><td class="num">&#8377;0.00</td><td>&#10003;</td></tr>
+<tr><td>Realized / unrealized / daily / total P&amp;L</td><td class="num">0 / 0 / 0 / 0</td><td>&#10003;</td></tr>
+<tr><td>Daily drawdown / max drawdown</td><td class="num">0 / 0</td><td>&#10003;</td></tr>
+<tr><td>Trade count / wins / losses</td><td class="num">0 / 0 / 0</td><td>&#10003;</td></tr>
+<tr><td>Open positions</td><td class="num">0</td><td>&#10003;</td></tr>
+<tr><td>Strategy version / config hash</td><td><code>11d-paper-v1</code> / <code>9c7c362d7e0c6a14</code></td><td>&#10003;</td></tr>
+</table>
+<p>The session initialised normally at the first tick. Cumulative experiment state across 09-09, 09-10 and 09-11 is still &#8377;15,000 with 0 trades.</p>
+
+<h2 id="s12">12. Real-order safety check</h2>
+<table>
+<tr><th>Check</th><th>Result</th></tr>
+<tr><td><code>PAPER_MODE</code> and package source scan (<code>scan_package_for_real_order_calls</code>), run for this report</td><td><code>PAPER_MODE: True</code>, violations: <b>NONE</b></td></tr>
+<tr><td>Order-API references anywhere in project source, excluding virtualenvs and tests (<code>place_order</code>, <code>modify_order</code>, <code>cancel_order</code>, slice/super/forever orders, <code>/v2/orders</code>)</td><td><b>None found</b></td></tr>
+<tr><td>Order-related text in Friday's log (<code>order</code>, <code>order_id</code>, <code>/orders</code>, <code>placed</code>)</td><td><b>None</b></td></tr>
+<tr><td>Dhan endpoints appearing in Friday's log</td><td>Only <code>/v2/charts/intraday</code> and <code>/optionchain</code> &mdash; both market-data endpoints</td></tr>
+<tr><td>Broker order IDs / order confirmations</td><td>None: no table stores them and no code produces them</td></tr>
+<tr><td>Paper-only execution path</td><td><code>tick.run_tick</code> calls <code>assert_paper_mode()</code> first; entries go through <code>PaperBroker</code>, whose <code>__getattr__</code> raises <code>RealOrderAttemptError</code>. Not exercised on Friday, since no entry occurred.</td></tr>
+</table>
+<div class="ok" style="font-size:1.05em"><b>REAL ORDER ACTIVITY FOUND = NO</b></div>
+<p style="font-size:0.85em;color:#666">Scope note: the log names only endpoints that appeared in error messages, so the log alone cannot list every call. The stronger evidence is the code: <b>no order-placement function exists anywhere in the project</b>, so no code path could have sent one.</p>
+
+<h2 id="s13">13. Error/exception analysis</h2>
+<h3>Broad exception handlers on the execution path</h3>
+<table>
+<tr><th>Location</th><th>Pattern</th><th>Could it hide a paper-agent failure?</th></tr>
+<tr><td><code>pipeline/live_loop.py</code> around <code>run_snapshot</code></td><td><code>except Exception: logger.exception(...); reset_client()</code></td><td>No: the paper tick is a separate block and still runs. Failures are logged with a traceback.</td></tr>
+<tr><td><code>pipeline/live_loop.py</code> around <code>cas_live.maybe_update</code></td><td><code>except Exception: logger.exception(...)</code></td><td>No: logged, and independent of the paper tick.</td></tr>
+<tr><td><code>pipeline/live_loop.py</code> around <code>run_paper_tick</code></td><td><code>except Exception: logger.exception("Paper agent tick failed ...")</code></td><td><b>Not silent</b>: any exception would leave an ERROR line with a traceback. Friday has <b>zero</b>.</td></tr>
+<tr><td><code>pipeline/run_snapshot.py</code> option-chain fetch</td><td><code>except Exception as e: logger.warning(...)</code></td><td>It lets a snapshot continue without options (09:35 SENSEX). It could make a decision see a stale chain, but the 180-second staleness gate would catch that. At 14:59 the chain was fresh (age 0 s).</td></tr>
+<tr><td><code>paper_trading/</code> (all modules)</td><td>No broad <code>except</code>, no <code>pass</code>; the only <code>return None</code> instances are data-availability helpers</td><td>No.</td></tr>
+</table>
+<div class="callout"><b>A silent-failure blind spot exists, but it did not occur.</b> <code>run_paper_tick</code>'s return value is discarded. A tick that returned normally but did the wrong thing, without raising, would leave no log line. On Friday that is ruled out by outcomes rather than by logging: the sequence count matches exactly, both decisions exist, and the session ended in the correct state.</div>
+<h3>Every exception on Friday</h3>
+<table>
+<tr><th>Time</th><th>Component</th><th>Exception</th><th>Symbol</th><th>Execution continued?</th><th>Decision persisted afterward?</th></tr>
+<tr><td>09:20:34</td><td>run_snapshot &rarr; Dhan client</td><td><code>ConnectionResetError 10054</code></td><td>SENSEX</td><td>Yes</td><td>Yes (14:59)</td></tr>
+<tr><td>09:20:34</td><td>run_snapshot &rarr; Dhan client</td><td><code>NameResolutionError</code> (api.dhan.co)</td><td>NIFTY</td><td>Yes</td><td>Yes (14:59)</td></tr>
+<tr><td>09:21:15, 09:22:15, 09:23:15</td><td>run_snapshot &rarr; Dhan client</td><td><code>NameResolutionError</code> &times; 2 per minute</td><td>both</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>09:35:18</td><td>run_snapshot &rarr; option chain (WARNING, handled)</td><td>Dhan <code>/optionchain</code> failure, empty body</td><td>SENSEX</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>&mdash;</td><td>paper agent</td><td><b>none</b></td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>&mdash;</td><td>CAS live hook</td><td><b>none</b></td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+<tr><td>&mdash;</td><td>database</td><td><b>none</b></td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+</table>
+
+<h2 id="s14">14. Minute-by-minute timeline</h2>
+<p>Timestamps are taken from the log and database. "Paper tick" per minute is <b>covered by the aggregate count</b> (&sect;7) unless marked <b>direct</b>; per-minute ticks are not individually logged.</p>
+<table>
+<tr><th>Time</th><th>Market data</th><th>Live loop</th><th>Paper-agent tick</th><th>Decision state</th><th>Database state</th><th>Errors</th></tr>
+<tr><td>09:10</td><td>&mdash;</td><td>Started 09:10:25; sleeping to 09:15</td><td>NOT OBSERVED (pre-market)</td><td>&mdash;</td><td>No Friday session yet</td><td>none</td></tr>
+<tr><td>09:15</td><td>Candles + chain written</td><td>Snapshots 09:15:10.97 / 09:15:15.59</td><td><b>Direct</b>: session created 09:15:10.97</td><td>MARKET_MONITORING</td><td>Session row id 795</td><td>none</td></tr>
+<tr><td>09:20&ndash;09:23</td><td>Candles later self-healed; chain + levels missing</td><td>Snapshot failed, both symbols</td><td>Ran (covered by count)</td><td>MARKET_MONITORING</td><td>Heartbeat continued</td><td>DNS / connection reset</td></tr>
+<tr><td>09:30</td><td>Present</td><td>Snapshots 09:30:19 / 09:30:25</td><td>Covered</td><td>MARKET_MONITORING</td><td>OK</td><td>none</td></tr>
+<tr><td>09:35</td><td>SENSEX chain missing</td><td>Snapshots 09:35:18.9 / 09:35:25</td><td>Covered</td><td>MARKET_MONITORING</td><td>OK</td><td>WARNING: /optionchain (SENSEX)</td></tr>
+<tr><td>10:00</td><td>Present</td><td>Snapshots 10:00:19 / 10:00:24</td><td>Covered</td><td>MARKET_MONITORING</td><td>OK</td><td>none</td></tr>
+<tr><td>11:00</td><td>Present</td><td>Snapshots 11:00:19 / 11:00:24</td><td>Covered</td><td>MARKET_MONITORING</td><td>OK</td><td>none</td></tr>
+<tr><td>12:00</td><td>Present</td><td>Snapshots 12:00:18 / 12:00:24</td><td>Covered</td><td>MARKET_MONITORING</td><td>OK</td><td>none</td></tr>
+<tr><td>13:00</td><td>Present</td><td>Snapshots 13:00:19 / 13:00:25</td><td>Covered</td><td>MARKET_MONITORING</td><td>OK</td><td>none</td></tr>
+<tr><td>14:00</td><td>Present</td><td>Snapshots 14:00:19 / 14:00:24</td><td>Covered</td><td>MARKET_MONITORING (analysis starts 14:30)</td><td>OK</td><td>none</td></tr>
+<tr><td>14:30</td><td>Present</td><td>Snapshots 14:30:28 / 14:30:46; CAS-live: 6 windows, 1 forecast</td><td>Covered</td><td>PRE_14_59_ANALYSIS</td><td>OK</td><td>none</td></tr>
+<tr><td>14:45</td><td>Present</td><td>Snapshots 14:45:20 / 14:45:24; CAS-live OK</td><td>Covered</td><td>PRE_14_59_ANALYSIS</td><td>OK</td><td>none</td></tr>
+<tr><td>14:55</td><td>Present</td><td>Snapshots 14:55:18.9 / 14:55:24.8; CAS-live 1 forecast</td><td>Covered</td><td>PRE_14_59_ANALYSIS</td><td>OK</td><td>none</td></tr>
+<tr><td>14:56</td><td>Present</td><td>Snapshots 14:56:18.7 / 14:56:24.8</td><td>Covered</td><td>PRE_14_59_ANALYSIS</td><td>OK</td><td>none</td></tr>
+<tr><td>14:57</td><td>Present</td><td>Snapshots 14:57:18.7 / 14:57:24.8</td><td>Covered</td><td>PRE_14_59_ANALYSIS</td><td>OK</td><td>none</td></tr>
+<tr><td>14:58</td><td>Present</td><td>Snapshots 14:58:19.0 / 14:58:25.3</td><td>Covered</td><td>PRE_14_59_ANALYSIS</td><td>OK</td><td>none</td></tr>
+<tr class="key"><td>14:59</td><td>SENSEX candle 14:59:18.712, levels 14:59:18.728; NIFTY 14:59:24.724 / 14:59:24.737; chains age 0 s</td><td>Snapshots 14:59:18.729 / 14:59:24.738; CAS-live 1 forecast each</td><td><b>Direct</b>: SENSEX 14:59:19.093, NIFTY 14:59:25.111</td><td>DECISION_FREEZE &rarr; <b>NO_TRADE &mdash; CONFLICTING_SIGNALS</b> (both)</td><td>Decisions 18 (14:59:19.998) and 19 (14:59:25.226); account snapshot 14:59:20.071</td><td>none</td></tr>
+<tr><td>15:00</td><td>Present</td><td>Snapshots 15:00:20 / 15:00:24</td><td>Covered; returns "decision already frozen"</td><td>DAILY_REVIEW</td><td>No new decision (insert-once held)</td><td>none</td></tr>
+<tr><td>15:05</td><td>Present</td><td>Snapshots 15:05:19.6 / 15:05:25.8</td><td>Covered</td><td>DAILY_REVIEW</td><td>OK</td><td>none</td></tr>
+<tr><td>15:15</td><td>Auction: flat candles begin</td><td>Snapshots 15:15:19.6 / 15:15:25.3</td><td>Covered</td><td>DAILY_REVIEW</td><td>OK</td><td>none</td></tr>
+<tr><td>15:30</td><td>Written under as_of 15:38 (padding candles)</td><td>Snapshots 15:30:19.9 / 15:30:25.4, logged <code>as_of=15:38:00</code></td><td>Covered</td><td>DAILY_REVIEW</td><td>No 15:30 levels/chain row</td><td>none (a labelling anomaly, not an exception)</td></tr>
+<tr><td>15:39</td><td>Present</td><td>Snapshots 15:39:18.9 / 15:39:24.9</td><td><b>Direct</b>: last heartbeat 15:39:24.873</td><td>DAILY_REVIEW</td><td>Session final state DAILY_REVIEW</td><td>none</td></tr>
+<tr><td>15:40</td><td>&mdash;</td><td>Clean exit 15:40:15</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td><td>none</td></tr>
+</table>
+
+<h2 id="s15">15. Root cause</h2>
+<div class="verdict"><b>ROOT CAUSE: None &mdash; there was no operational failure.</b><br><br>
+Zero trades on Friday is a <b>strategy outcome</b>: both symbols returned <code>NO_TRADE / CONFLICTING_SIGNALS</code> because their conflicting factors (4 and 5) exceeded the frozen limit of 2. Price-based evidence read bullish while the 14:59 transition forecast read 70% DOWN, with price pinned between nearby support and resistance. By the brief's own rule, "Decision generated and persisted as NO TRADE" means no operational failure.</div>
+<table>
+<tr><th>Observation</th><th>Classification</th></tr>
+<tr><td>Zero paper trades on Friday</td><td><b>SYMPTOM</b> of a correct NO-TRADE decision, not of a fault</td></tr>
+<tr><td><code>NO_TRADE / CONFLICTING_SIGNALS</code> on both symbols</td><td><b>NOT A PROBLEM</b> &mdash; strategy working as designed</td></tr>
+<tr><td>Command Center shows only the current calendar day, so on the weekend Friday's decisions are not visible</td><td><b>CONTRIBUTING FACTOR</b> to the perception of failure (presentation)</td></tr>
+<tr><td>09:20&ndash;09:23 DNS outage</td><td><b>NOT A PROBLEM</b> for the paper session (no effect on ticks or the decision)</td></tr>
+<tr><td>09:35 SENSEX option-chain fetch failure</td><td><b>NOT A PROBLEM</b> for the paper session</td></tr>
+<tr><td>15:30/15:31 snapshots written as <code>as_of=15:38</code></td><td><b>CONTRIBUTING FACTOR</b> to data quality after the close; <b>NOT A PROBLEM</b> for the paper session</td></tr>
+</table>
+
+<h2 id="s16">16. Contributing factors</h2>
+<table>
+<tr><th>#</th><th>Factor</th><th>Type</th><th>Affected Friday's session?</th></tr>
+<tr><td>1</td><td><b>The Command Center only shows the current day.</b> <code>/paper-trading/today</code> on Sunday returned <code>session_date 2026-09-13</code>, 0 decisions, state <code>PRE_MARKET</code>, "Day 4 of 5". Friday's decisions are only reachable via <code>/paper-trading/decisions?session_date=2026-09-11</code> (verified to return both rows). No panel lists previous days' NO-TRADE decisions; the journal shows only closed trades.</td><td>Presentation</td><td>No &mdash; but it makes a correct session look like no session</td></tr>
+<tr><td>2</td><td><b>Paper tick results are not logged</b> &mdash; the return value is discarded in <code>live_loop.py</code></td><td>Observability</td><td>No &mdash; but per-minute invocation cannot be proven from the log</td></tr>
+<tr><td>3</td><td><b>Heartbeat has no history</b> &mdash; one overwritten <code>last_heartbeat</code> field</td><td>Observability</td><td>No &mdash; but gaps between ticks cannot be measured directly</td></tr>
+<tr><td>4</td><td><b>Post-close padding candles mislabel snapshots</b> (15:30/15:31 &rarr; <code>as_of=15:38</code>); combined with <code>ON CONFLICT DO NOTHING</code>, the stored 15:38 option chain is likely the 15:30 fetch</td><td>Data quality (post-close)</td><td>No</td></tr>
+<tr><td>5</td><td><b>Network outage 09:20&ndash;09:23</b> and a <b>single /optionchain failure at 09:35</b> &mdash; permanent 4-minute and 1-minute option-chain holes</td><td>External / data</td><td>No</td></tr>
+</table>
+
+<h2 id="s17">17. What worked correctly</h2>
+<ul>
+<li>Task Scheduler start, pre-market sleep, and clean single-session exit.</li>
+<li>Snapshot pipeline resilience: the DNS outage and option-chain failure were logged, contained, and recovered from automatically.</li>
+<li>Paper-agent isolation: agent ticks kept running during the snapshot outage (its own <code>try</code> block, DB-only reads).</li>
+<li>All 770 paper ticks executed (exact sequence-count match).</li>
+<li>The 14:59 freeze fired on time for both symbols, using fresh data written less than 0.4 s earlier (option snapshot age 0 s, quality GOOD).</li>
+<li>Gate ordering: the first disqualifier (gate 2) produced the recorded reason; option selection correctly did not run.</li>
+<li>Insert-once persistence: one decision per symbol; 40 later ticks per symbol did not rewrite it.</li>
+<li>No persistence failures: contiguous IDs, no duplicates, no rollbacks.</li>
+<li>Virtual account initialised and unchanged at &#8377;15,000.</li>
+<li>Correct absence of positions, events and exits on a NO-TRADE day.</li>
+<li>Strategy frozen: every Friday record carries <code>11d-paper-v1</code> / <code>9c7c362d7e0c6a14</code>.</li>
+<li>Paper-only safety: no order-placement path exists anywhere in the project.</li>
+<li>The API correctly stores and serves Friday's decisions.</li>
+</ul>
+
+<h2 id="s18">18. What failed</h2>
+<p><b>Nothing that affected the paper session.</b> Non-blocking issues observed: the external network outage (09:20&ndash;09:23), one Dhan option-chain failure (09:35 SENSEX), post-close snapshot mislabelling (15:30/15:31), and the observability and presentation gaps in &sect;16. None of these prevented, delayed or corrupted the 14:59 decision or its persistence.</p>
+
+<h2 id="s19">19. Whether Friday counts as a valid paper-trading session</h2>
+<div class="ok"><b>Yes.</b> Friday meets every condition of a valid session. The agent ran for the full session under the frozen strategy and configuration, reached the 14:59 freeze on fresh, good-quality data, applied its rules, and persisted an insert-once decision for both symbols. No real order was possible or sent. A NO-TRADE outcome is explicitly a valid result of the experiment design.</div>
+<p><b>Experiment position.</b> Stored decision dates are 2026-09-09, 2026-09-10 and 2026-09-11, so <b>Friday is Day 3 of 5</b>. The service's own day counter agrees: on Sunday it reports "Day 4 of 5" for the not-yet-traded next day. The running tally across all three sessions is 6 decisions, 6 NO TRADE, 0 trades, &#8377;15,000 unchanged.</p>
+
+<h2 id="s20">20. Recommended next action</h2>
+<div class="finding"><b>No operational fix is required.</b> The agent executed correctly. Nothing should be restarted, re-run, back-filled or changed, and the experiment continues unchanged on the next trading session.</div>
+<p><b>Optional, for after the five-session experiment ends</b> &mdash; recorded here, not implemented, and none of them touches the strategy:</p>
+<table>
+<tr><th>#</th><th>Item</th><th>Why</th><th>Touches strategy?</th></tr>
+<tr><td>1</td><td>Show the most recent session's decisions in the Command Center (or add a date picker), not only the current calendar day</td><td>Removes the "looks like it didn't run" confusion on weekends and holidays</td><td>No &mdash; presentation only</td></tr>
+<tr><td>2</td><td>Log <code>run_paper_tick</code>'s <code>{state, summary}</code> once per tick</td><td>Makes per-minute invocation provable from the log, closing the silent-return blind spot</td><td>No &mdash; logging only</td></tr>
+<tr><td>3</td><td>Keep a heartbeat history (append-only), not just <code>last_heartbeat</code></td><td>Makes tick gaps measurable</td><td>No</td></tr>
+<tr><td>4</td><td>Guard snapshots against post-close padding candles stamped ahead of wall-clock time</td><td>Prevents the 15:30/15:31 &rarr; 15:38 mislabelling</td><td>No &mdash; data pipeline</td></tr>
+</table>
+<p>Per the freeze, items 2&ndash;4 change the live pipeline process and should wait until the experiment is complete; item 1 is UI-only but was likewise out of scope for this read-only investigation.</p>
+
+<h2>Summary table</h2>
+<table>
+<tr><th>Check</th><th>SENSEX</th><th>NIFTY</th><th>Evidence</th></tr>
+<tr><td>Live loop running</td><td><span class="tag pass">YES</span></td><td><span class="tag pass">YES</span></td><td>Log: start 09:10:25, clean exit 15:40:15, one start, no crash; 385 ticks each</td></tr>
+<tr><td>Market data available</td><td><span class="tag pass">YES</span></td><td><span class="tag pass">YES</span></td><td>Candles 385/385; chain 378/385 (SENSEX), 379/385 (NIFTY); gaps explained (&sect;6)</td></tr>
+<tr><td>14:59 data available</td><td><span class="tag pass">YES</span></td><td><span class="tag pass">YES</span></td><td>Candle/levels written 14:59:18.7 (SENSEX), 14:59:24.7 (NIFTY), before the decision; chain age 0 s, quality GOOD</td></tr>
+<tr><td>Paper agent invoked</td><td><span class="tag pass">YES &mdash; PROVEN</span></td><td><span class="tag pass">YES &mdash; PROVEN</span></td><td>772 state writes = 385&times;2 + 2 (exact); decision rows; last heartbeat 15:39:24.873</td></tr>
+<tr><td>14:59 decision reached</td><td><span class="tag pass">YES</span> 14:59:19.093</td><td><span class="tag pass">YES</span> 14:59:25.111</td><td><code>paper_decisions</code> ids 18, 19</td></tr>
+<tr><td>Decision persisted</td><td><span class="tag pass">YES</span></td><td><span class="tag pass">YES</span></td><td>Rows created 14:59:19.998 / 14:59:25.226; contiguous IDs; no duplicates; API returns both</td></tr>
+<tr><td>Decision</td><td><b>NO_TRADE</b> &mdash; CONFLICTING_SIGNALS</td><td><b>NO_TRADE</b> &mdash; CONFLICTING_SIGNALS</td><td>4 and 5 conflicting factors vs frozen max 2; gate 2</td></tr>
+<tr><td>Option selected</td><td><span class="tag na">N/A</span> (gate 4 not reached)</td><td><span class="tag na">N/A</span> (gate 4 not reached)</td><td>Stopped at gate 2</td></tr>
+<tr><td>Paper trade created</td><td><span class="tag na">NO &mdash; correct</span></td><td><span class="tag na">NO &mdash; correct</span></td><td>NO_TRADE decision; 0 position rows</td></tr>
+<tr><td>Paper position created</td><td><span class="tag na">NO &mdash; correct</span></td><td><span class="tag na">NO &mdash; correct</span></td><td><code>paper_positions</code>: 0 rows</td></tr>
+<tr><td>Exit processed</td><td><span class="tag na">N/A</span></td><td><span class="tag na">N/A</span></td><td>No position; <code>paper_position_events</code>: 0 rows</td></tr>
+<tr><td>Real order sent</td><td><span class="tag pass">NO</span></td><td><span class="tag pass">NO</span></td><td>No order-placement code exists in the project; safety scan NONE; no order text in the log</td></tr>
+<tr><td>Valid paper session</td><td><span class="tag pass">YES &mdash; B. NO TRADE</span></td><td><span class="tag pass">YES &mdash; B. NO TRADE</span></td><td>All of the above</td></tr>
+</table>
+
+<h2>Final decision</h2>
+<div class="verdict">
+<b>FRIDAY STATUS:</b> VALID SESSION<br><br>
+<b>COUNT FRIDAY TOWARD FIVE-DAY PAPER EXPERIMENT:</b> YES<br><br>
+<b>REASON:</b> The frozen 11D agent (<code>11d-paper-v1</code> / <code>9c7c362d7e0c6a14</code>) ran every tick of the full session for both symbols, reached the 14:59 freeze on fresh GOOD-quality data, and persisted a single insert-once decision per symbol: NO_TRADE &mdash; CONFLICTING_SIGNALS. There were zero agent exceptions, zero persistence failures and zero real orders. The absence of trades is the strategy correctly declining contradictory setups, not a system failure.<br><br>
+<b>NEXT ACTION:</b> No operational fix is required. Continue the experiment unchanged: Friday is Day 3 of 5. The presentation and observability items in &sect;20 are optional and should wait until the experiment ends.
+</div>
+
+<div style="background:#2c3e50;color:#fff;padding:14px 18px;border-radius:6px;font-size:1.1em;font-weight:bold;text-align:center;letter-spacing:1px;margin:26px 0">NO CHANGES MADE.</div>
+
+<footer>
+Operational forensic diagnosis of the 11D paper-trading agent for Friday 2026-09-11, performed 2026-09-13. Evidence sources: <code>logs/live_loop_daily.log</code>; <code>SELECT</code>-only queries on <code>paper_sessions</code>, <code>paper_decisions</code>, <code>paper_account_snapshots</code>, <code>paper_positions</code>, <code>paper_position_events</code>, <code>raw_candles</code>, <code>option_chain_raw</code> and <code>levels_snapshots</code>; read-only inspection of ID sequences; source inspection of <code>pipeline/live_loop.py</code>, <code>pipeline/run_snapshot.py</code>, <code>paper_trading/*</code>; and GET requests to the read-only paper-trading API.
+No code, configuration, database record, schema, strategy parameter or process was modified, restarted or re-executed. Milestone 12 research was not incorporated.
+</footer>
+
+</body>
+</html>

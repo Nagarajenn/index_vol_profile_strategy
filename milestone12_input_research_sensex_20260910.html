@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SENSEX Expiry Transition Forensics</title>
+<style>
+ body{font-family:Georgia,'Times New Roman',serif;max-width:1200px;margin:0 auto;padding:32px 24px 80px;color:#1c1c1c;background:#fbfaf7;line-height:1.55}
+ h1{font-size:1.7em;border-bottom:3px solid #2c3e50;padding-bottom:10px}
+ h2{font-size:1.28em;color:#1a3a5c;margin-top:2.2em;border-left:5px solid #2c3e50;padding-left:10px}
+ h3{font-size:1.03em;color:#2c3e50;margin-top:1.5em}
+ table{border-collapse:collapse;width:100%;margin:12px 0;font-size:0.83em}
+ th,td{border:1px solid #ccc;padding:4px 7px;text-align:left;vertical-align:top}
+ th{background:#2c3e50;color:#fff}
+ tr:nth-child(even){background:#f2f0ea}
+ code{background:#eee;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:0.87em}
+ pre{background:#1e1e1e;color:#d4d4d4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:0.78em;line-height:1.45}
+ .tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:0.72em;font-weight:bold;color:#fff}
+ .obs{background:#2e7d32}.inf{background:#f9a825;color:#222}.unk{background:#c62828}.cand{background:#1a5c8a}
+ .callout{background:#fff8e1;border-left:4px solid #f9a825;padding:10px 14px;margin:14px 0}
+ .finding{background:#e8f0fe;border-left:4px solid #1a3a5c;padding:10px 14px;margin:14px 0}
+ .warn{background:#ffebee;border-left:4px solid #c62828;padding:10px 14px;margin:14px 0}
+ .ok{background:#e8f5e9;border-left:4px solid #2e7d32;padding:10px 14px;margin:14px 0}
+ .toc a{display:block;margin:3px 0;color:#1a3a5c;text-decoration:none}
+ .toc a:hover{text-decoration:underline}
+ .num{text-align:right;font-family:Consolas,monospace}
+ .stale{background:#ffe0e0 !important;color:#8a1a1a}
+ .hot{background:#fff3cd !important;font-weight:bold}
+ footer{margin-top:60px;padding-top:16px;border-top:1px solid #ccc;font-size:0.85em;color:#666}
+ .nochange{background:#2c3e50;color:#fff;padding:14px 18px;border-radius:6px;font-size:1.15em;font-weight:bold;text-align:center;letter-spacing:1px;margin:26px 0}
+</style>
+</head>
+<body>
+
+<h1>Milestone 12 Input Research<br><span style="font-size:0.62em;font-weight:normal;color:#555">SENSEX 2026-09-10 expiry-day transition forensics &mdash; read-only</span></h1>
+
+<p><b>Symbol:</b> SENSEX &middot; <b>Date:</b> 2026-09-10 (same-day expiry, DTE = 0) &middot; <b>Branch:</b> <code>market-transition-cas-analysis</code> &middot; <b>Frozen experiment:</b> <code>11d-paper-v1</code> / <code>9c7c362d7e0c6a14</code>, untouched.</p>
+
+<h2 id="s1">1. Executive summary</h2>
+
+<div class="warn"><b>The central finding overturns the framing of the question.</b> The <b>+273 points did not happen between 15:15 and 15:30 in any way our underlying feed recorded.</b> From 15:15 to 15:28 the SENSEX 1-minute series is <b>completely frozen</b> &mdash; fourteen consecutive candles with <code>open = high = low = close = 74,629.50</code>, range <code>0.00</code>, and <b>volume stuck at the identical value 48,157</b> carried over from 15:14. The entire +273 appears in our database as <b>one single bar at 15:29</b>. It is not a 15-minute move in our data; it is a one-minute step.</div>
+
+<div class="ok"><b>But the move itself was real, and the option chain proves it &mdash; and dates it.</b> The option feed kept updating while the index feed was stale. Reconstructing the underlying from put&ndash;call parity on mid-quotes across 11 strikes (valid at DTE = 0, where <code>S &asymp; K + CE &minus; PE</code>) gives an internally consistent estimate (interquartile spread of only 1&ndash;9 points across strikes). It shows the underlying at <b>74,556 at 15:19</b>, <b>74,789 at 15:20</b> and <b>74,990 at 15:21</b> &mdash; while our index feed still read 74,629.50. Option volume surged in the same minutes, from a ~6&ndash;13 M/min baseline to <b>+33.9 M (CE) and +25.0 M (PE) at 15:21</b>. At 15:29 the index feed caught up to 74,902.59 and parity read 74,906. From 15:30 the two agree to within 0.1 point.</div>
+
+<div class="finding"><b>So the honest answer is a combination &mdash; option H &mdash; with a specific decomposition:</b> a genuine underlying repricing occurred in roughly a <b>two-minute window around 15:20&ndash;15:21</b> (option-implied, <span class="tag inf">INFERRED</span>), our index feed failed to record it (<span class="tag obs">OBSERVED</span>), and it therefore surfaces in our data as a closing-print artifact at 15:29 (<span class="tag obs">OBSERVED</span>). Expiry mechanics are visible and material &mdash; every option converged to intrinsic value against 74,902.59 &mdash; but <b>we cannot establish what caused the underlying to move.</b> There is no order-flow, no dealer positioning, and no trustworthy underlying volume after 15:14.</div>
+
+<div class="callout"><b>A second finding that matters more for Milestone 12 than the spike does.</b> The 14:59 note <i>"Bearish price but Put OI concentration is increasing"</i> is <b>arithmetically true but mechanically misleading</b>. Between 14:30 and 14:59, put open interest <b>fell at every single strike</b> in ATM&plusmn;5 (&minus;145 K to &minus;1.43 M). PCR rose only because <b>call</b> OI fell faster. Nothing was accumulating. A ratio increase driven by a collapsing denominator was reported in language that implies a growing numerator &mdash; and that is a systematic wording defect, not a one-day accident.</div>
+
+<div class="toc">
+<b>Contents</b>
+<a href="#s2">2. Underlying price timeline</a> <a href="#s3">3. Price phase analysis</a> <a href="#s4">4. Volume profile / VWAP / POC</a>
+<a href="#s5">5. Option data coverage</a> <a href="#s6">6. Expiry details</a> <a href="#s7">7. CE analysis</a> <a href="#s8">8. PE analysis</a>
+<a href="#s9">9. CE vs PE comparison</a> <a href="#s10">10. Option lead/lag</a> <a href="#s11">11. OI + price + IV</a> <a href="#s12">12. Strike concentration</a>
+<a href="#s13">13. 15:15&ndash;15:30 forensics</a> <a href="#s14">14. Post-CAS volume analysis</a> <a href="#s15">15. SMC-style structural events</a>
+<a href="#s16">16. Accumulation / distribution hypothesis</a> <a href="#s17">17. Validation of the 14:59 observation</a> <a href="#s18">18. Transition classification</a>
+<a href="#s19">19. Direct answer: why +273?</a> <a href="#s20">20. Observed vs inferred vs unknown</a> <a href="#s21">21. Milestone 12 feature requirements</a>
+<a href="#s22">22. Data limitations</a> <a href="#s23">23. Final conclusion</a>
+</div>
+
+<h2 id="s2">2. Underlying price timeline (14:45 &rarr; 15:39, 1-minute)</h2>
+<p>Pulled directly from <code>raw_candles</code>, not from the CAS table. Frozen minutes are shaded red; the single jump bar is shaded amber.</p>
+<table><tr><th>Time</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>1-min &Delta;</th><th>Range</th><th>Volume</th><th>Note</th></tr>
+<tr><td>14:45</td><td class="num">74708.06</td><td class="num">74716.17</td><td class="num">74703.40</td><td class="num">74712.95</td><td class="num"></td><td class="num">12.77</td><td class="num">11,351</td><td></td></tr>
+<tr><td>14:46</td><td class="num">74710.86</td><td class="num">74722.30</td><td class="num">74709.61</td><td class="num">74715.33</td><td class="num">+2.38</td><td class="num">12.69</td><td class="num">10,265</td><td></td></tr>
+<tr><td>14:47</td><td class="num">74718.43</td><td class="num">74734.85</td><td class="num">74717.26</td><td class="num">74734.85</td><td class="num">+19.52</td><td class="num">17.59</td><td class="num">11,145</td><td></td></tr>
+<tr><td>14:48</td><td class="num">74732.06</td><td class="num">74741.21</td><td class="num">74696.03</td><td class="num">74740.06</td><td class="num">+5.21</td><td class="num">45.18</td><td class="num">158,176</td><td>volume spike 158,176</td></tr>
+<tr><td>14:49</td><td class="num">74749.01</td><td class="num">74757.46</td><td class="num">74737.36</td><td class="num">74745.71</td><td class="num">+5.65</td><td class="num">20.10</td><td class="num">111,381</td><td></td></tr>
+<tr><td>14:50</td><td class="num">74746.59</td><td class="num">74762.62</td><td class="num">74746.59</td><td class="num">74755.44</td><td class="num">+9.73</td><td class="num">16.03</td><td class="num">33,059</td><td></td></tr>
+<tr><td>14:51</td><td class="num">74756.57</td><td class="num">74766.63</td><td class="num">74755.18</td><td class="num">74760.28</td><td class="num">+4.84</td><td class="num">11.45</td><td class="num">12,296</td><td></td></tr>
+<tr><td>14:52</td><td class="num">74759.93</td><td class="num">74771.69</td><td class="num">74730.82</td><td class="num">74739.20</td><td class="num">-21.08</td><td class="num">40.87</td><td class="num">13,537</td><td></td></tr>
+<tr><td>14:53</td><td class="num">74739.26</td><td class="num">74745.75</td><td class="num">74727.77</td><td class="num">74744.91</td><td class="num">+5.71</td><td class="num">17.98</td><td class="num">21,477</td><td></td></tr>
+<tr><td>14:54</td><td class="num">74744.52</td><td class="num">74750.27</td><td class="num">74728.47</td><td class="num">74734.33</td><td class="num">-10.58</td><td class="num">21.80</td><td class="num">20,216</td><td></td></tr>
+<tr><td>14:55</td><td class="num">74735.18</td><td class="num">74744.54</td><td class="num">74724.69</td><td class="num">74726.65</td><td class="num">-7.68</td><td class="num">19.85</td><td class="num">14,508</td><td></td></tr>
+<tr><td>14:56</td><td class="num">74730.88</td><td class="num">74742.29</td><td class="num">74727.12</td><td class="num">74732.89</td><td class="num">+6.24</td><td class="num">15.17</td><td class="num">12,755</td><td></td></tr>
+<tr><td>14:57</td><td class="num">74731.29</td><td class="num">74742.12</td><td class="num">74725.34</td><td class="num">74727.70</td><td class="num">-5.19</td><td class="num">16.78</td><td class="num">4,827</td><td></td></tr>
+<tr><td>14:58</td><td class="num">74726.85</td><td class="num">74728.72</td><td class="num">74704.32</td><td class="num">74708.38</td><td class="num">-19.32</td><td class="num">24.40</td><td class="num">18,158</td><td></td></tr>
+<tr><td>14:59</td><td class="num">74710.85</td><td class="num">74716.31</td><td class="num">74693.14</td><td class="num">74694.27</td><td class="num">-14.11</td><td class="num">23.17</td><td class="num">35,607</td><td></td></tr>
+<tr><td>15:00</td><td class="num">74695.53</td><td class="num">74695.92</td><td class="num">74624.75</td><td class="num">74629.11</td><td class="num">-65.16</td><td class="num">71.17</td><td class="num">40,708</td><td>largest genuine 1-min down move</td></tr>
+<tr><td>15:01</td><td class="num">74621.43</td><td class="num">74661.44</td><td class="num">74602.08</td><td class="num">74655.77</td><td class="num">+26.66</td><td class="num">59.36</td><td class="num">48,676</td><td></td></tr>
+<tr><td>15:02</td><td class="num">74656.92</td><td class="num">74660.78</td><td class="num">74635.35</td><td class="num">74638.87</td><td class="num">-16.90</td><td class="num">25.43</td><td class="num">40,689</td><td></td></tr>
+<tr><td>15:03</td><td class="num">74643.26</td><td class="num">74643.86</td><td class="num">74628.12</td><td class="num">74628.26</td><td class="num">-10.61</td><td class="num">15.74</td><td class="num">25,558</td><td></td></tr>
+<tr><td>15:04</td><td class="num">74630.98</td><td class="num">74643.02</td><td class="num">74614.59</td><td class="num">74621.94</td><td class="num">-6.32</td><td class="num">28.43</td><td class="num">36,057</td><td></td></tr>
+<tr><td>15:05</td><td class="num">74626.49</td><td class="num">74642.35</td><td class="num">74615.86</td><td class="num">74642.35</td><td class="num">+20.41</td><td class="num">26.49</td><td class="num">26,789</td><td></td></tr>
+<tr><td>15:06</td><td class="num">74642.70</td><td class="num">74642.70</td><td class="num">74598.47</td><td class="num">74632.16</td><td class="num">-10.19</td><td class="num">44.23</td><td class="num">40,306</td><td></td></tr>
+<tr><td>15:07</td><td class="num">74631.55</td><td class="num">74638.85</td><td class="num">74607.40</td><td class="num">74612.97</td><td class="num">-19.19</td><td class="num">31.45</td><td class="num">29,489</td><td></td></tr>
+<tr><td>15:08</td><td class="num">74611.85</td><td class="num">74627.85</td><td class="num">74607.38</td><td class="num">74623.35</td><td class="num">+10.38</td><td class="num">20.47</td><td class="num">21,496</td><td></td></tr>
+<tr><td>15:09</td><td class="num">74619.61</td><td class="num">74639.52</td><td class="num">74617.97</td><td class="num">74627.39</td><td class="num">+4.04</td><td class="num">21.55</td><td class="num">23,599</td><td></td></tr>
+<tr><td>15:10</td><td class="num">74629.57</td><td class="num">74644.46</td><td class="num">74622.52</td><td class="num">74636.09</td><td class="num">+8.70</td><td class="num">21.94</td><td class="num">30,668</td><td></td></tr>
+<tr><td>15:11</td><td class="num">74637.98</td><td class="num">74642.15</td><td class="num">74625.80</td><td class="num">74625.89</td><td class="num">-10.20</td><td class="num">16.35</td><td class="num">17,542</td><td></td></tr>
+<tr><td>15:12</td><td class="num">74628.44</td><td class="num">74640.11</td><td class="num">74606.15</td><td class="num">74624.18</td><td class="num">-1.71</td><td class="num">33.96</td><td class="num">259,837</td><td>volume spike 259,837</td></tr>
+<tr><td>15:13</td><td class="num">74632.80</td><td class="num">74671.28</td><td class="num">74626.28</td><td class="num">74637.89</td><td class="num">+13.71</td><td class="num">45.00</td><td class="num">109,857</td><td></td></tr>
+<tr><td>15:14</td><td class="num">74637.41</td><td class="num">74653.17</td><td class="num">74616.94</td><td class="num">74640.99</td><td class="num">+3.10</td><td class="num">36.23</td><td class="num">48,157</td><td></td></tr>
+<tr class="stale"><td>15:15</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">-11.49</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:16</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:17</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:18</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:19</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:20</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:21</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:22</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:23</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:24</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:25</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:26</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:27</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="stale"><td>15:28</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">74629.50</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">48,157</td><td>FROZEN &mdash; identical OHLC, volume carried from 15:14</td></tr>
+<tr class="hot"><td>15:29</td><td class="num">74629.50</td><td class="num">74902.59</td><td class="num">74629.50</td><td class="num">74902.59</td><td class="num">+273.09</td><td class="num">273.09</td><td class="num">48,157</td><td>SINGLE-BAR JUMP +273.09 &mdash; volume still 48,157 (unchanged)</td></tr>
+<tr><td>15:30</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+<tr><td>15:31</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+<tr><td>15:32</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+<tr><td>15:33</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+<tr><td>15:34</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+<tr><td>15:35</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+<tr><td>15:36</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+<tr><td>15:37</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+<tr><td>15:38</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+<tr><td>15:39</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">+0.00</td><td class="num">0.00</td><td class="num">0</td><td>post-close, volume 0</td></tr>
+</table>
+<table>
+<tr><th>Question asked</th><th>Answer from the series</th></tr>
+<tr><td>First meaningful downside impulse</td><td><b>14:58</b> (&minus;19.32), extending 14:59 (&minus;14.11) &mdash; the pre-window's final leg</td></tr>
+<tr><td>Largest 1-minute downside move</td><td><b>15:00, &minus;65.16</b> (74,695.53 &rarr; 74,629.11, range 71.17) &mdash; the CAS transition minute itself</td></tr>
+<tr><td>Largest 1-minute upside move (genuine trading)</td><td><b>15:01, +26.66</b>. The larger 15:29 print is not continuous trading &mdash; see below</td></tr>
+<tr><td>First reversal signal</td><td>None visible in the underlying before 15:29. 15:01&ndash;15:14 is a 74,598&ndash;74,671 chop with no directional break</td></tr>
+<tr><td>First sustained upside movement</td><td><b>Not present in the underlying feed at all.</b> Option-implied, it begins at 15:20 (&sect;13)</td></tr>
+<tr><td>Exact minute the +273 began</td><td>In our feed: <b>15:29, in one bar</b>. Option-implied: <b>between 15:19 and 15:20</b></td></tr>
+<tr><td>Gradual or jump?</td><td><b>One jump</b> in the feed. Option-implied: a fast two-minute repricing, then a wide chop, not a smooth trend</td></tr>
+</table>
+
+<h3>What does the 15:30 value actually represent?</h3>
+<p>The audit brief said not to assume &mdash; so this was tested against ingestion semantics and against other days.</p>
+<p><b>Ingestion semantics.</b> <code>raw_candles</code> is written by <code>db.writer.insert_raw_candles</code> from Dhan's <code>/charts/intraday</code> response; the pipeline performs no synthesis, no forward-fill and no interpolation. Therefore the repeated bars <b>came from the broker feed itself</b> &mdash; Dhan returned the last known value repeatedly. Our code did not manufacture them.</p>
+<p><b>Cross-day test.</b> The pattern is systematic, not a one-off:</p>
+<table>
+<tr><th>Day</th><th>Symbol</th><th>Frozen from</th><th>Frozen value</th><th>Jump minute</th><th>Post-jump value</th><th>Step</th></tr>
+<tr><td>2026-09-10</td><td>SENSEX</td><td>15:15</td><td class="num">74,629.50</td><td>15:29</td><td class="num">74,902.59</td><td class="num"><b>+273.09</b></td></tr>
+<tr><td>2026-09-10</td><td>NIFTY</td><td>15:15</td><td class="num">23,389.25</td><td>15:29</td><td class="num">23,477.80</td><td class="num">+88.55</td></tr>
+<tr><td>2026-09-09</td><td>SENSEX</td><td>15:15</td><td class="num">74,895.36</td><td>15:28</td><td class="num">74,764.23</td><td class="num">&minus;131.13</td></tr>
+<tr><td>2026-09-08</td><td>SENSEX</td><td>15:15</td><td class="num">75,594.73</td><td>15:28</td><td class="num">75,577.58</td><td class="num">&minus;17.15</td></tr>
+<tr><td>2026-09-03</td><td>SENSEX</td><td>15:15</td><td class="num">76,554.20</td><td>15:28</td><td class="num">76,152.86</td><td class="num">&minus;401.34</td></tr>
+</table>
+<div class="finding"><b>Conclusion on the 15:30 value.</b> It is <b>not</b> a normal traded 1-minute close and <b>not</b> a special checkpoint in our code. It is the <b>settlement / closing value arriving as a single late feed refresh</b>, after roughly 14 minutes during which the index feed published nothing new. Every trading day in the sample shows the same shape, with steps ranging from &minus;401 to +273 &mdash; today's is simply one of the larger ones. <b>Any research that treats 15:15&rarr;15:30 as an observed intraday path is measuring a feed artifact.</b> NIFTY additionally receives a one-off 119,454,668 volume print at its jump minute; SENSEX receives none, so SENSEX's step carries no volume information whatsoever.</div>
+
+<h2 id="s3">3. Price phase analysis</h2>
+<table>
+<tr><th>Phase</th><th>Window</th><th>Open</th><th>High</th><th>Low</th><th>Close</th><th>Net</th><th>Range</th><th>Largest 1-min</th><th>Avg abs 1-min</th><th>Volume</th><th>Persistence</th></tr>
+<tr><td>A</td><td>13:30-14:29</td><td class="num">74780.79</td><td class="num">74819.23</td><td class="num">74683.06</td><td class="num">74724.95</td><td class="num">-55.84</td><td class="num">136.17</td><td class="num">-26.68</td><td class="num">7.97</td><td class="num">634,624</td><td>27u / 32d</td></tr>
+<tr><td>B</td><td>14:30-14:49</td><td class="num">74724.69</td><td class="num">74757.46</td><td class="num">74665.77</td><td class="num">74745.71</td><td class="num">+21.02</td><td class="num">91.69</td><td class="num">+19.52</td><td class="num">8.38</td><td class="num">617,094</td><td>9u / 10d</td></tr>
+<tr><td>C</td><td>14:50-14:59</td><td class="num">74746.59</td><td class="num">74771.69</td><td class="num">74693.14</td><td class="num">74694.27</td><td class="num">-52.32</td><td class="num">78.55</td><td class="num">-21.08</td><td class="num">10.53</td><td class="num">186,440</td><td>3u / 6d</td></tr>
+<tr><td>D</td><td>15:00-15:05</td><td class="num">74695.53</td><td class="num">74695.92</td><td class="num">74602.08</td><td class="num">74642.35</td><td class="num">-53.18</td><td class="num">93.84</td><td class="num">+26.66</td><td class="num">16.18</td><td class="num">218,477</td><td>2u / 3d</td></tr>
+<tr><td>E</td><td>15:06-15:15</td><td class="num">74642.70</td><td class="num">74671.28</td><td class="num">74598.47</td><td class="num">74629.50</td><td class="num">-13.20</td><td class="num">72.81</td><td class="num">-19.19</td><td class="num">9.17</td><td class="num">629,108</td><td>5u / 4d</td></tr>
+<tr class="stale"><td>F</td><td>15:16-15:29</td><td class="num">74629.50</td><td class="num">74902.59</td><td class="num">74629.50</td><td class="num">74902.59</td><td class="num">+273.09</td><td class="num">273.09</td><td class="num">+273.09</td><td class="num">21.01</td><td class="num">674,198*</td><td>1u / 0d</td></tr>
+<tr class="stale"><td>G</td><td>15:30-15:39</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">74902.59</td><td class="num">0.00</td><td class="num">0.00</td><td class="num">0.00</td><td class="num">0.00</td><td class="num">0</td><td>0u / 0d</td></tr>
+</table>
+<div class="warn"><b>Phase F's statistics are not measurements &mdash; do not use them.</b> Its "volume" of 674,198 is the frozen value 48,157 repeated fourteen times, and its "avg 1-min move" of 21.01 is one +273 bar averaged across thirteen zeros. Phase G is entirely post-close padding. <b>Only phases A-E contain genuine minute-level market data.</b> F and G are shown to document the artifact, not to characterise the market.</div>
+<div class="finding"><b>Where the transition actually happened, on observed data.</b> Every genuine phase from 14:50 onward is <b>down</b>: C &minus;52.32, D &minus;53.18, E &minus;13.20. The last honestly-traded close is <b>74,640.99 at 15:14</b>, which is <b>&minus;53.28 below the 14:59 close</b>. Across the entire observable post-transition window the market went <b>down</b>, continuing the pre-window direction. <b>Nothing in phases A-E reverses.</b> The reversal exists only in the settlement print.</div>
+
+<h2 id="s4">4. Volume profile / VWAP / POC</h2>
+<table>
+<tr><th>Time</th><th>Close</th><th>VWAP</th><th>Close &minus; VWAP</th><th>POC</th><th>VAH</th><th>VAL</th><th>Support</th><th>Resistance</th><th>Trend label</th><th>Conf</th></tr>
+<tr><td>14:30</td><td class="num">74729.45</td><td class="num">74795.72</td><td class="num">-66.27</td><td class="num">74838</td><td class="num">74850</td><td class="num">74750</td><td>74500-74600</td><td>74780-74875</td><td>Strong Bearish</td><td class="num">54</td></tr>
+<tr><td>14:40</td><td class="num">74679.75</td><td class="num">74794.34</td><td class="num">-114.59</td><td class="num">74838</td><td class="num">74850</td><td class="num">74750</td><td>74500-74600</td><td>74780-74875</td><td>Strong Bearish</td><td class="num">55</td></tr>
+<tr><td>14:45</td><td class="num">74711.05</td><td class="num">74793.61</td><td class="num">-82.56</td><td class="num">74838</td><td class="num">74850</td><td class="num">74750</td><td>74500-74600</td><td>74780-74875</td><td>Strong Bearish</td><td class="num">54</td></tr>
+<tr><td>14:50</td><td class="num">74758.56</td><td class="num">74792.40</td><td class="num">-33.84</td><td class="num">74838</td><td class="num">74850</td><td class="num">74750</td><td>74600-74700</td><td>74869-74907</td><td>Bearish</td><td class="num">44</td></tr>
+<tr><td>14:55</td><td class="num">74739.77</td><td class="num">74792.12</td><td class="num">-52.35</td><td class="num">74838</td><td class="num">74850</td><td class="num">74750</td><td>74500-74600</td><td>74780-74875</td><td>Strong Bearish</td><td class="num">53</td></tr>
+<tr><td><b>14:59</b></td><td class="num">74707.70</td><td class="num">74791.89</td><td class="num">-84.19</td><td class="num">74838</td><td class="num">74850</td><td class="num">74750</td><td>74500-74600</td><td>74780-74875</td><td>Strong Bearish</td><td class="num">54</td></tr>
+<tr><td>15:00</td><td class="num">74674.37</td><td class="num">74791.63</td><td class="num">-117.26</td><td class="num">74838</td><td class="num">74850</td><td class="num">74750</td><td>74500-74600</td><td>74780-74875</td><td>Bearish</td><td class="num">32</td></tr>
+<tr><td>15:05</td><td class="num">74625.09</td><td class="num">74789.73</td><td class="num">-164.64</td><td class="num">74838</td><td class="num">74850</td><td class="num">74725</td><td>74400-74500</td><td>74725-74826</td><td>Bearish</td><td class="num">34</td></tr>
+<tr><td>15:10</td><td class="num">74626.65</td><td class="num">74788.22</td><td class="num">-161.57</td><td class="num">74838</td><td class="num">74850</td><td class="num">74725</td><td>74400-74500</td><td>74725-74826</td><td>Bearish</td><td class="num">33</td></tr>
+<tr><td>15:15</td><td class="num">74629.50</td><td class="num">74783.81</td><td class="num">-154.31</td><td class="num">74838</td><td class="num">74850</td><td class="num">74725</td><td>74400-74500</td><td>74725-74826</td><td>Strong Bearish</td><td class="num">42</td></tr>
+<tr class="stale"><td>15:29</td><td class="num">74629.50</td><td class="num">74777.64</td><td class="num">-148.14</td><td class="num">74838</td><td class="num">74850</td><td class="num">74725</td><td>74400-74500</td><td>74725-74826</td><td>Strong Bearish</td><td class="num">49</td></tr>
+<tr class="hot"><td>15:30</td><td class="num">74902.59</td><td class="num">74777.73</td><td class="num">+124.86</td><td class="num">74838</td><td class="num">74850</td><td class="num">74725</td><td>74780-74875</td><td>75025-75100</td><td>Bullish</td><td class="num">33</td></tr>
+</table>
+<p style="font-size:0.85em;color:#666">The 15:30 row's support/resistance and Bullish label flip only because the settlement print re-entered the calculation. It describes the artifact, not a tradeable market state.</p>
+<table>
+<tr><th>Structural question</th><th>Answer</th></tr>
+<tr><td>Did price move away from value before 15:00?</td><td><b>Yes, and it had already done so.</b> Close was below VWAP for the entire afternoon and below VAL (74,750) from ~14:30. Sustained downside value rejection, established well before the CAS window.</td></tr>
+<tr><td>Did POC migrate before the move?</td><td><b>No.</b> POC is pinned at <b>74,838 from 14:30 through 15:39 &mdash; zero migration all afternoon.</b> POC carried no predictive information today.</td></tr>
+<tr><td>Was there absorption?</td><td><b>Absorption candidate at 14:48</b> &mdash; volume 158,176 (~14x neighbouring minutes) on a 45.18-point range with only +5.21 net change, and no breakdown followed. Also <b>15:12</b>: volume 259,837 on a 33.96 range, &minus;1.71 net.</td></tr>
+<tr><td>Was there a liquidity sweep?</td><td><b>Candidate at 15:00-15:01.</b> The 15:00 bar drove to 74,624.75, then 15:01 immediately recovered +26.66 to 74,655.77. Sweep-then-reject shape. <b>Not confirmable</b> without order-flow.</td></tr>
+<tr><td>Was there a break of structure?</td><td><b>Downward yes</b> &mdash; the 15:00 break below the 14:50-14:59 range low held. <b>Upward not observable</b>: the only upward break is the 15:29 artifact.</td></tr>
+<tr><td>Was there displacement?</td><td><b>Yes, at 15:00</b>: &minus;65.16 in one minute on a 71.17 range, roughly 6x the prevailing average 1-minute move. Downward displacement.</td></tr>
+<tr><td>Was there acceptance after the initial move?</td><td><b>Yes.</b> 15:01-15:15 held a 74,598-74,671 band for fifteen minutes without reclaiming VAL &mdash; acceptance at the lower level, not a failed break.</td></tr>
+</table>
+
+<h2 id="s5">5. Option data coverage</h2>
+<table>
+<tr><th>Metric</th><th>Value</th></tr>
+<tr><td>Snapshots, SENSEX, 2026-09-10 (full day)</td><td><b>385</b></td></tr>
+<tr><td>First / last timestamp</td><td><b>09:15:00 / 15:39:00</b></td></tr>
+<tr><td>Missing minutes across the full session</td><td><b>0</b> &mdash; 385 of 385</td></tr>
+<tr><td>Duplicate timestamps</td><td><b>0</b></td></tr>
+<tr><td>Coverage 13:30-15:30</td><td><b>121 / 121 minutes, complete</b></td></tr>
+<tr><td>Coverage 14:30-15:15 (CAS window)</td><td><b>46 / 46, complete</b></td></tr>
+<tr><td>Strikes per snapshot</td><td><b>183</b>, constant all day</td></tr>
+<tr><td>Stale snapshots (payload identical to prior minute)</td><td><b>0</b> in the studied window &mdash; the option feed never froze</td></tr>
+</table>
+<div class="ok"><b>2026-09-10 is the most completely captured day in the entire dataset</b> &mdash; 385/385 option snapshots and 385/385 underlying candles. Every gap discussed in this report is a <i>content</i> problem in the underlying feed, never a <i>capture</i> problem. Critically, <b>the option chain kept updating through 15:15-15:29 while the index feed was frozen</b>, which is the only reason this forensic reconstruction is possible at all.</div>
+
+<h2 id="s6">6. Expiry details</h2>
+<table>
+<tr><th>Field</th><th>Value</th></tr>
+<tr><td>Expiry used</td><td><b>2026-09-10 &mdash; same-day expiry</b></td></tr>
+<tr><td>Days to expiry</td><td><b>0</b></td></tr>
+<tr><td>Other expiries in the captured chain</td><td><b>None.</b> Exactly one expiry, all 385 snapshots &mdash; no contamination from later series</td></tr>
+<tr><td>ATM at 14:59</td><td>74,700 (spot 74,707.86)</td></tr>
+<tr><td>ATM at 15:00</td><td>74,700 (spot 74,673.77)</td></tr>
+<tr><td>ATM at 15:15</td><td>74,600 (spot 74,629.50)</td></tr>
+<tr><td>ATM at 15:30</td><td><b>74,900</b> (spot 74,902.59)</td></tr>
+<tr><td>CAS engine's stored expiry_type</td><td><code>weekly</code></td></tr>
+</table>
+<div class="callout"><b>An analysis trap this creates.</b> The ATM strike is derived from the <i>feed</i> spot, which was frozen at 74,629.50 from 15:15 to 15:29. So any ATM-relative window stays anchored at 74,600 through that period and then jumps to 74,900 at 15:30. <b>Aggregates computed over "ATM&plusmn;N" are therefore comparing different strike sets across that boundary</b> &mdash; a large apparent OI jump at 15:30 is mostly the window moving, not positions changing. Every strike-level table in this report uses a <b>fixed strike set</b> to avoid exactly that error.</div>
+
+<h2 id="s7">7. CE analysis (14:30 &rarr; 14:59, fixed strikes)</h2>
+<div class="callout"><b>OI rule applied throughout (Part 7 of the brief).</b> Intraday OI change is computed as <code>OI(t2) &minus; OI(t1)</code> from two actual snapshots. Dhan's <code>previous_oi</code> is <b>not</b> used: it is a prior-day-close baseline, confirmed in <code>option_chain/summary.py</code>, whose own docstring states the OI deltas are measured "vs <code>previous_oi</code>, Dhan's prior-day-close baseline". Using it as an intraday delta would be wrong by a full day.</div>
+<table>
+<tr><th>Strike</th><th>OI 14:30</th><th>OI 14:50</th><th>OI 14:59</th><th>&Delta;OI</th><th>LTP 14:30</th><th>LTP 14:59</th><th>&Delta;LTP</th><th>IV 14:30</th><th>IV 14:59</th><th>&Delta;IV</th><th>Pattern candidate</th></tr>
+<tr><td class="num">74400</td><td class="num">184,040</td><td class="num">187,100</td><td class="num">180,220</td><td class="num">-3,820</td><td class="num">359.95</td><td class="num">325.75</td><td class="num">-34.20</td><td class="num">15.70</td><td class="num">12.64</td><td class="num">-3.06</td><td>long-unwinding cand.</td></tr>
+<tr><td class="num">74500</td><td class="num">799,520</td><td class="num">802,940</td><td class="num">797,100</td><td class="num">-2,420</td><td class="num">281.05</td><td class="num">246.90</td><td class="num">-34.15</td><td class="num">16.03</td><td class="num">13.75</td><td class="num">-2.27</td><td>long-unwinding cand.</td></tr>
+<tr><td class="num">74600</td><td class="num">1,487,600</td><td class="num">1,585,480</td><td class="num">1,547,980</td><td class="num">+60,380</td><td class="num">206.90</td><td class="num">179.80</td><td class="num">-27.10</td><td class="num">15.62</td><td class="num">14.47</td><td class="num">-1.15</td><td><b>short-buildup cand.</b></td></tr>
+<tr><td class="num">74700</td><td class="num">3,926,400</td><td class="num">4,000,820</td><td class="num">3,695,440</td><td class="num">-230,960</td><td class="num">144.40</td><td class="num">122.85</td><td class="num">-21.55</td><td class="num">15.35</td><td class="num">14.68</td><td class="num">-0.67</td><td>long-unwinding cand.</td></tr>
+<tr><td class="num">74800</td><td class="num">6,949,640</td><td class="num">6,650,300</td><td class="num">6,299,300</td><td class="num">-650,340</td><td class="num">97.60</td><td class="num">82.75</td><td class="num">-14.85</td><td class="num">15.50</td><td class="num">15.31</td><td class="num">-0.19</td><td>long-unwinding cand.</td></tr>
+<tr><td class="num">74900</td><td class="num">5,754,880</td><td class="num">5,354,880</td><td class="num">5,038,620</td><td class="num">-716,260</td><td class="num">65.50</td><td class="num">56.55</td><td class="num">-8.95</td><td class="num">16.03</td><td class="num">16.16</td><td class="num">+0.13</td><td>long-unwinding cand.</td></tr>
+<tr><td class="num">75000</td><td class="num">8,623,720</td><td class="num">8,383,940</td><td class="num">7,782,580</td><td class="num">-841,140</td><td class="num">43.50</td><td class="num">38.30</td><td class="num">-5.20</td><td class="num">16.66</td><td class="num">17.19</td><td class="num">+0.54</td><td>long-unwinding cand.</td></tr>
+</table>
+<div class="finding"><b>CE reading.</b> Six of seven strikes show falling OI with falling price &mdash; <b>call long-unwinding candidates</b>, and the effect grows with distance above spot (&minus;841 K at 75000 vs &minus;3.8 K at 74400). On a same-day expiry this is the expected mechanical decay of OTM calls that are running out of time, so it is <b>weak evidence of directional intent</b>. Only 74600 CE built OI (+60 K) while its price fell &mdash; a short-buildup candidate, i.e. call writing just above the prevailing price. <b>Contradiction to note honestly:</b> IV <i>fell</i> on the near strikes while it <i>rose</i> on 74900/75000, so a single "calls are being sold" story does not fit the whole curve.</div>
+
+<h2 id="s8">8. PE analysis (14:30 &rarr; 14:59, fixed strikes)</h2>
+<table>
+<tr><th>Strike</th><th>OI 14:30</th><th>OI 14:50</th><th>OI 14:59</th><th>&Delta;OI</th><th>LTP 14:30</th><th>LTP 14:59</th><th>&Delta;LTP</th><th>IV 14:30</th><th>IV 14:59</th><th>&Delta;IV</th><th>Pattern candidate</th></tr>
+<tr><td class="num">74400</td><td class="num">4,565,700</td><td class="num">4,283,160</td><td class="num">4,420,360</td><td class="num">-145,340</td><td class="num">43.40</td><td class="num">58.60</td><td class="num">+15.20</td><td class="num">19.14</td><td class="num">21.84</td><td class="num">+2.70</td><td>short-covering cand.</td></tr>
+<tr><td class="num">74500</td><td class="num">8,402,460</td><td class="num">7,451,800</td><td class="num">7,275,580</td><td class="num">-1,126,880</td><td class="num">63.45</td><td class="num">83.30</td><td class="num">+19.85</td><td class="num">18.65</td><td class="num">21.37</td><td class="num">+2.72</td><td>short-covering cand.</td></tr>
+<tr><td class="num">74600</td><td class="num">5,278,060</td><td class="num">4,888,960</td><td class="num">4,662,760</td><td class="num">-615,300</td><td class="num">90.90</td><td class="num">116.50</td><td class="num">+25.60</td><td class="num">18.11</td><td class="num">21.12</td><td class="num">+3.01</td><td>short-covering cand.</td></tr>
+<tr><td class="num">74700</td><td class="num">6,634,320</td><td class="num">6,045,420</td><td class="num">5,996,860</td><td class="num">-637,460</td><td class="num">128.10</td><td class="num">158.45</td><td class="num">+30.35</td><td class="num">17.63</td><td class="num">21.02</td><td class="num">+3.39</td><td>short-covering cand.</td></tr>
+<tr><td class="num">74800</td><td class="num">5,334,860</td><td class="num">3,871,940</td><td class="num">3,904,440</td><td class="num">-1,430,420</td><td class="num">180.40</td><td class="num">218.40</td><td class="num">+38.00</td><td class="num">17.62</td><td class="num">21.65</td><td class="num">+4.03</td><td>short-covering cand.</td></tr>
+<tr><td class="num">74900</td><td class="num">2,380,740</td><td class="num">2,214,180</td><td class="num">2,201,520</td><td class="num">-179,220</td><td class="num">248.15</td><td class="num">289.00</td><td class="num">+40.85</td><td class="num">18.41</td><td class="num">22.76</td><td class="num">+4.35</td><td>short-covering cand.</td></tr>
+<tr><td class="num">75000</td><td class="num">1,686,700</td><td class="num">1,480,360</td><td class="num">1,491,660</td><td class="num">-195,040</td><td class="num">326.75</td><td class="num">373.65</td><td class="num">+46.90</td><td class="num">19.38</td><td class="num">24.97</td><td class="num">+5.60</td><td>short-covering cand.</td></tr>
+</table>
+<div class="warn"><b>This directly contradicts the 14:59 narrative.</b> Answering the brief's questions in order: <b>which PE strikes?</b> All seven. <b>How much OI changed?</b> &minus;145 K to &minus;1.43 M &mdash; <b>every strike fell</b>, none rose. <b>When?</b> Steadily across 14:30-14:59, largest at 74800 and 74500. <b>PE price?</b> Rising everywhere (+15 to +47). <b>PE IV?</b> Rising everywhere (+2.70 to +5.60), and rising fastest on the higher strikes. <b>Concentrated where?</b> Around and just above the money (74500-74800), not at the wings. <b>Before the 15:00 move?</b> Yes, entirely pre-15:00. <b>Did it remain after 15:15?</b> No &mdash; see &sect;12.
+<br><br>
+Falling OI with rising price and rising IV is the textbook <b>put short-covering</b> signature: existing put writers buying back, not new put buyers accumulating. <b>Put OI was not concentrating; it was draining.</b></div>
+
+<h2 id="s9">9. CE vs PE comparison</h2>
+<p>Fixed strike set 74400-75000, so nothing here is contaminated by the ATM window drifting.</p>
+<table>
+<tr><th>Phase</th><th>&Delta;CE OI</th><th>&Delta;PE OI</th><th>&Delta;CE volume</th><th>&Delta;PE volume</th><th>&Delta;&Sigma;CE price</th><th>&Delta;&Sigma;PE price</th><th>PCR start</th><th>PCR end</th><th>Strongest side</th></tr>
+<tr><td>14:30-14:50</td><td class="num">-760,340</td><td class="num">-4,047,020</td><td class="num">+74.9 M</td><td class="num">+103.4 M</td><td class="num">+87.35</td><td class="num">-37.80</td><td class="num">1.236</td><td class="num">1.121</td><td><b>PE</b> (OI drain 5x CE)</td></tr>
+<tr><td>14:50-14:59</td><td class="num">-1,624,220</td><td class="num">-282,640</td><td class="num">+42.4 M</td><td class="num">+41.8 M</td><td class="num">-233.35</td><td class="num">+254.55</td><td class="num">1.121</td><td class="num">1.182</td><td><b>CE</b> (OI drain 6x PE)</td></tr>
+<tr><td>14:59-15:00</td><td class="num">0*</td><td class="num">0*</td><td class="num">+6.0 M</td><td class="num">+9.4 M</td><td class="num">-77.05</td><td class="num">+110.10</td><td class="num">1.182</td><td class="num">1.182</td><td>PE on price, OI not refreshed</td></tr>
+<tr><td>15:00-15:15</td><td class="num">+2,483,480</td><td class="num">-9,960,040</td><td class="num">+124.0 M</td><td class="num">+125.5 M</td><td class="num">-317.25</td><td class="num">+546.35</td><td class="num">1.182</td><td class="num">0.719</td><td><b>PE</b> (massive OI drain)</td></tr>
+<tr class="hot"><td>15:15-15:29</td><td class="num">-16,039,640</td><td class="num">+11,051,600</td><td class="num">+292.4 M</td><td class="num">+386.4 M</td><td class="num">+897.65</td><td class="num">-1,840.10</td><td class="num">0.719</td><td class="num">2.634</td><td><b>Both, violently</b></td></tr>
+<tr><td>15:29-15:30</td><td class="num">0*</td><td class="num">0*</td><td class="num">+25.1 M</td><td class="num">+32.2 M</td><td class="num">-35.35</td><td class="num">-15.95</td><td class="num">2.634</td><td class="num">2.634</td><td>settled</td></tr>
+</table>
+<p style="font-size:0.85em;color:#666">* <b>Not zero change &mdash; no refresh.</b> Dhan republishes OI less often than price; several minutes carry an unchanged OI field. This is a real data-granularity limit and is flagged rather than smoothed over. It also means <b>minute-resolution OI analysis is not reliable</b>; only multi-minute deltas are.</p>
+<div class="finding"><b>Which side showed the strongest change? Answer: it depends on the phase, and forcing one answer would be wrong.</b> Pre-15:00 it was <b>PE</b> on OI drain and <b>PE</b> on price. Across 15:00-15:15, PE OI fell nearly 10 M while CE OI <i>rose</i> 2.5 M and CE prices fell &mdash; consistent with continued bearish drift plus expiry decay. Then 15:15-15:29 both sides move violently in opposite directions: CE OI &minus;16.0 M with CE prices <b>+898</b>, PE OI +11.1 M with PE prices <b>&minus;1,840</b>. That is the signature of the underlying repricing sharply upward, not of a positioning decision.</div>
+
+<h2 id="s10">10. Option lead/lag</h2>
+<table>
+<tr><th>Window</th><th>What moved first</th><th>Evidence</th></tr>
+<tr><td>14:30-14:59</td><td><b>SIMULTANEOUS / UNCLEAR</b></td><td>PE prices and PE IV rose while spot drifted down. Options tracked spot; no measurable lead in either direction at 1-minute resolution.</td></tr>
+<tr><td>14:50-15:00</td><td><b>SPOT</b></td><td>The 15:00 displacement (&minus;65.16) appears in the underlying first; the option chain's implied spot follows in the same and next minute (parity: 74,664 at 14:59 &rarr; 74,640 at 15:00 &rarr; 74,589 at 15:01). <b>No option precursor is visible in the 14:50-14:59 window.</b></td></tr>
+<tr><td>15:00-15:15</td><td><b>SPOT</b></td><td>Options continue to track. Parity-implied spot stays 20-115 points below feed spot throughout &mdash; a stable offset, not a divergence.</td></tr>
+<tr class="hot"><td>15:15-15:30</td><td><b>OPTION, by roughly 9 minutes</b></td><td>Option-implied spot reaches 74,789 at <b>15:20</b> and 74,990 at <b>15:21</b>. The index feed does not print 74,902.59 until <b>15:29</b>.</td></tr>
+</table>
+<div class="warn"><b>Read that last row precisely &mdash; it is not option prescience.</b> The correct statement is: <b>"Option-implied underlying preceded the index feed's printed value by approximately 9 minutes."</b> The most likely reason is simply that the option feed stayed live while the index feed went stale, so options reflected a market reality our underlying series had stopped reporting. That is a <b>data-plumbing lead, not a predictive lead</b>, and Milestone 12 must not present it as the latter. <b>No causality is claimed in either direction.</b></div>
+
+<h2 id="s11">11. OI + price + IV read together</h2>
+<table>
+<tr><th>Window</th><th>Pattern</th><th>Supporting</th><th>Contradicting</th><th>Verdict</th></tr>
+<tr><td>14:30-14:59 PE</td><td>Put short-covering</td><td>OI down at all 7 strikes, price up at all 7, IV up at all 7</td><td>None material</td><td><b>Consistent</b> &mdash; strongest single reading in the pre-window</td></tr>
+<tr><td>14:30-14:59 CE</td><td>Call long-unwinding</td><td>OI down 6/7, price down 7/7</td><td>IV falls on near strikes but rises on 74900/75000 &mdash; not one uniform flow</td><td><b>Partly consistent</b>; heavily confounded by DTE-0 decay</td></tr>
+<tr><td>15:00-15:15</td><td>Volatility expansion on the put side</td><td>PE price sum +546 while spot fell; PE OI &minus;10.0 M</td><td>CE OI <i>rose</i> 2.5 M &mdash; inconsistent with a pure directional bear flow</td><td><b>Mixed</b></td></tr>
+<tr class="hot"><td>15:15-15:29</td><td>Underlying repricing, then expiry convergence</td><td>CE +898 / PE &minus;1,840 on prices; parity-implied spot jumps 74,556 &rarr; 74,990; option volume 3-7x baseline</td><td>OI direction is unreliable here (exercise/assignment bookkeeping at expiry)</td><td><b>Strong on price and volume; weak on OI</b></td></tr>
+<tr><td>15:29-15:39</td><td>Full intrinsic convergence</td><td>Parity-implied spot equals feed spot to within 0.1 pt for ten consecutive minutes</td><td>None</td><td><b>Confirmed</b></td></tr>
+</table>
+<p><b>Behaviour changed at a specific minute.</b> Everything from 14:30 through 15:19 is one regime (spot leads, options track, stable parity offset). Everything from 15:20 is a different regime (options reprice ~350 points higher, volume triples, index feed silent). <b>The regime break is at 15:20, not at 15:00 and not at 15:15.</b></p>
+
+<h2 id="s12">12. Strike concentration and migration</h2>
+<p>Fixed strikes, three checkpoints. Settlement was 74,902.59 &mdash; intrinsic values are shown for comparison.</p>
+<table>
+<tr><th>Strike</th><th>CE OI 14:59</th><th>CE OI 15:15</th><th>CE OI 15:29</th><th>CE LTP 14:59</th><th>CE LTP 15:15</th><th>CE LTP 15:29</th><th>CE intrinsic @ settle</th></tr>
+<tr><td class="num">74400</td><td class="num">180,220</td><td class="num">313,840</td><td class="num">144,900</td><td class="num">325.75</td><td class="num">218.75</td><td class="num">503.25</td><td class="num">502.59</td></tr>
+<tr><td class="num">74500</td><td class="num">797,100</td><td class="num">1,266,340</td><td class="num">537,540</td><td class="num">246.90</td><td class="num">157.75</td><td class="num">406.45</td><td class="num">402.59</td></tr>
+<tr><td class="num">74600</td><td class="num">1,547,980</td><td class="num">2,641,520</td><td class="num">779,820</td><td class="num">179.80</td><td class="num">108.20</td><td class="num">308.95</td><td class="num">302.59</td></tr>
+<tr><td class="num">74700</td><td class="num">3,695,440</td><td class="num">5,161,500</td><td class="num">1,124,460</td><td class="num">122.85</td><td class="num">70.80</td><td class="num">208.75</td><td class="num">202.59</td></tr>
+<tr><td class="num">74800</td><td class="num">6,299,300</td><td class="num">5,840,940</td><td class="num">1,423,640</td><td class="num">82.75</td><td class="num">47.90</td><td class="num">108.10</td><td class="num">102.59</td></tr>
+<tr><td class="num">74900</td><td class="num">5,038,620</td><td class="num">4,793,800</td><td class="num">2,628,020</td><td class="num">56.55</td><td class="num">31.75</td><td class="num">16.55</td><td class="num">2.59</td></tr>
+<tr><td class="num">75000</td><td class="num">7,782,580</td><td class="num">7,806,780</td><td class="num">5,146,700</td><td class="num">38.30</td><td class="num">23.45</td><td class="num">4.20</td><td class="num">0.00</td></tr>
+</table>
+<table>
+<tr><th>Strike</th><th>PE OI 14:59</th><th>PE OI 15:15</th><th>PE OI 15:29</th><th>PE LTP 14:59</th><th>PE LTP 15:15</th><th>PE LTP 15:29</th><th>PE intrinsic @ settle</th></tr>
+<tr><td class="num">74400</td><td class="num">4,420,360</td><td class="num">3,499,900</td><td class="num">2,428,720</td><td class="num">58.60</td><td class="num">104.55</td><td class="num">0.20</td><td class="num">0.00</td></tr>
+<tr><td class="num">74500</td><td class="num">7,275,580</td><td class="num">4,808,900</td><td class="num">4,192,280</td><td class="num">83.30</td><td class="num">143.90</td><td class="num">0.65</td><td class="num">0.00</td></tr>
+<tr><td class="num">74600</td><td class="num">4,662,760</td><td class="num">3,414,320</td><td class="num">4,270,380</td><td class="num">116.50</td><td class="num">190.55</td><td class="num">0.95</td><td class="num">0.00</td></tr>
+<tr><td class="num">74700</td><td class="num">5,996,860</td><td class="num">3,135,580</td><td class="num">5,863,000</td><td class="num">158.45</td><td class="num">256.45</td><td class="num">1.35</td><td class="num">0.00</td></tr>
+<tr><td class="num">74800</td><td class="num">3,904,440</td><td class="num">2,092,780</td><td class="num">6,234,600</td><td class="num">218.40</td><td class="num">334.30</td><td class="num">1.90</td><td class="num">0.00</td></tr>
+<tr><td class="num">74900</td><td class="num">2,201,520</td><td class="num">1,752,060</td><td class="num">4,326,880</td><td class="num">289.00</td><td class="num">415.70</td><td class="num">12.15</td><td class="num">0.00</td></tr>
+<tr><td class="num">75000</td><td class="num">1,491,660</td><td class="num">1,289,600</td><td class="num">3,728,880</td><td class="num">373.65</td><td class="num">508.90</td><td class="num">97.05</td><td class="num">97.41</td></tr>
+</table>
+<div class="finding"><b>Every option converged to intrinsic value against 74,902.59.</b> 74600 CE 308.95 vs 302.59 intrinsic; 74700 CE 208.75 vs 202.59; 74800 CE 108.10 vs 102.59; 75000 PE 97.05 vs 97.41. All puts at and below 74,800 collapsed to 0.20-1.90. <b>This is the single strongest confirmation that 74,902.59 is the genuine settlement value</b> &mdash; the entire option chain agrees with it independently of the index feed.</div>
+<div class="callout"><b>Was there strike migration?</b> Yes, but read it carefully. Largest CE OI concentration moved <b>75000 &rarr; 74800/74900</b> between 14:59 and 15:29, i.e. <b>toward the settlement level</b>. Largest PE OI moved <b>74500 &rarr; 74800</b> over the same span. The correct phrasing is <b>"positioning/activity migrated toward the eventual settlement strike"</b> &mdash; not "smart money moved". <b>And it must be discounted:</b> OI at expiry is contaminated by exercise and assignment bookkeeping, which is why PE OI at 74800-75000 <i>rises</i> even though those puts were being crushed. <b>OI in the final 15 minutes of an expiry day is not a reliable positioning signal.</b></div>
+
+<h2 id="s13">13. The 15:15 &rarr; 15:30 forensics</h2>
+<p><b>Method.</b> At DTE = 0 with r&middot;T effectively zero, put-call parity reduces to <code>S &asymp; K + CE &minus; PE</code>. Applying it to <b>mid-quotes</b> (not last-traded prices) across the <b>11 strikes within 500 points of the money</b> yields an independent estimate of the underlying. The interquartile spread across those 11 strikes is reported as a reliability check: a tight IQR means all strikes agree, so the estimate is signal rather than one stale quote. Option volumes are summed over a fixed 74600-75000 strike set.</p>
+<table><tr><th>Time</th><th>Index feed</th><th>Option-implied spot</th><th>Feed error</th><th>IQR across 11 strikes</th><th>&Delta;CE volume</th><th>&Delta;PE volume</th><th>Reading</th></tr>
+<tr><td>15:13</td><td class="num">74,637.89</td><td class="num">74,556.65</td><td class="num">-81.24</td><td class="num">1.13</td><td class="num"></td><td class="num"></td><td></td></tr>
+<tr><td>15:14</td><td class="num">74,640.99</td><td class="num">74,553.45</td><td class="num">-87.54</td><td class="num">1.93</td><td class="num">+6.2 M</td><td class="num">+2.1 M</td><td></td></tr>
+<tr class="stale"><td>15:15</td><td class="num">74,629.50</td><td class="num">74,515.07</td><td class="num">-114.43</td><td class="num">3.02</td><td class="num">+10.5 M</td><td class="num">+3.7 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:16</td><td class="num">74,629.50</td><td class="num">74,532.20</td><td class="num">-97.30</td><td class="num">4.27</td><td class="num">+7.2 M</td><td class="num">+2.7 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:17</td><td class="num">74,629.50</td><td class="num">74,608.98</td><td class="num">-20.52</td><td class="num">3.12</td><td class="num">+13.5 M</td><td class="num">+7.0 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:18</td><td class="num">74,629.50</td><td class="num">74,536.85</td><td class="num">-92.65</td><td class="num">8.73</td><td class="num">+9.5 M</td><td class="num">+3.5 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:19</td><td class="num">74,629.50</td><td class="num">74,555.75</td><td class="num">-73.75</td><td class="num">2.15</td><td class="num">+8.2 M</td><td class="num">+3.5 M</td><td>index feed frozen</td></tr>
+<tr class="hot"><td>15:20</td><td class="num">74,629.50</td><td class="num">74,788.67</td><td class="num">+159.17</td><td class="num">4.37</td><td class="num">+18.2 M</td><td class="num">+7.9 M</td><td><b>REPRICING + volume surge</b></td></tr>
+<tr class="hot"><td>15:21</td><td class="num">74,629.50</td><td class="num">74,989.83</td><td class="num">+360.33</td><td class="num">6.95</td><td class="num">+33.9 M</td><td class="num">+25.0 M</td><td><b>REPRICING + volume surge</b></td></tr>
+<tr class="stale"><td>15:22</td><td class="num">74,629.50</td><td class="num">74,655.30</td><td class="num">+25.80</td><td class="num">4.95</td><td class="num">+37.5 M</td><td class="num">+34.5 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:23</td><td class="num">74,629.50</td><td class="num">74,957.30</td><td class="num">+327.80</td><td class="num">4.72</td><td class="num">+39.1 M</td><td class="num">+25.3 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:24</td><td class="num">74,629.50</td><td class="num">74,927.18</td><td class="num">+297.68</td><td class="num">2.03</td><td class="num">+21.4 M</td><td class="num">+25.0 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:25</td><td class="num">74,629.50</td><td class="num">74,946.57</td><td class="num">+317.07</td><td class="num">2.80</td><td class="num">+11.0 M</td><td class="num">+19.6 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:26</td><td class="num">74,629.50</td><td class="num">74,883.65</td><td class="num">+254.15</td><td class="num">7.50</td><td class="num">+14.9 M</td><td class="num">+20.5 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:27</td><td class="num">74,629.50</td><td class="num">74,984.30</td><td class="num">+354.80</td><td class="num">3.57</td><td class="num">+21.5 M</td><td class="num">+30.8 M</td><td>index feed frozen</td></tr>
+<tr class="stale"><td>15:28</td><td class="num">74,629.50</td><td class="num">75,041.55</td><td class="num">+412.05</td><td class="num">2.40</td><td class="num">+23.5 M</td><td class="num">+36.0 M</td><td>index feed frozen</td></tr>
+<tr class="hot"><td>15:29</td><td class="num">74,902.59</td><td class="num">74,906.30</td><td class="num">+3.71</td><td class="num">2.50</td><td class="num">+20.7 M</td><td class="num">+34.1 M</td><td>feed catches up</td></tr>
+<tr><td>15:30</td><td class="num">74,902.59</td><td class="num">74,903.18</td><td class="num">+0.59</td><td class="num">1.20</td><td class="num">+24.9 M</td><td class="num">+28.8 M</td><td>converged, |diff| &lt; 0.5 pt</td></tr>
+<tr><td>15:31</td><td class="num">74,902.59</td><td class="num">74,902.70</td><td class="num">+0.11</td><td class="num">0.48</td><td class="num">+14.2 M</td><td class="num">+13.6 M</td><td>converged, |diff| &lt; 0.5 pt</td></tr>
+<tr><td>15:32</td><td class="num">74,902.59</td><td class="num">74,902.69</td><td class="num">+0.10</td><td class="num">0.45</td><td class="num">+7.3 M</td><td class="num">+3.9 M</td><td>converged, |diff| &lt; 0.5 pt</td></tr>
+</table>
+<div class="finding"><b>The IQR column is what makes this trustworthy.</b> Across the whole window it stays between 0.45 and 8.73 points &mdash; eleven independent strikes agreeing on the underlying to within a few points. This is <b>not</b> one stale quote producing a spurious number; the entire chain repriced together.</div>
+<table>
+<tr><th>#</th><th>Question</th><th>Answer</th></tr>
+<tr><td>1</td><td>First minute of upside movement</td><td><b>15:20</b> (option-implied 74,789, up 233 from 15:19). In the index feed: 15:29.</td></tr>
+<tr><td>2</td><td>Largest 1-minute upside move</td><td>Option-implied <b>+233 at 15:20</b>, followed by <b>+201 at 15:21</b>. Feed: one +273.09 bar at 15:29.</td></tr>
+<tr><td>3</td><td>Did upside accelerate?</td><td><b>No &mdash; it was abrupt, then choppy.</b> ~+435 points across two minutes, then a wide 74,655-75,042 oscillation for seven minutes before settling at 74,902.59. Not a trend.</td></tr>
+<tr><td>4</td><td>Did premiums respond before spot?</td><td><b>Before the printed spot, yes, by ~9 minutes.</b> Before the true spot &mdash; unknowable, because the true spot is not recorded.</td></tr>
+<tr><td>5</td><td>Did CE premiums rise first?</td><td>CE and PE moved <b>in the same minute</b> (15:20-15:21), in opposite directions. Neither led at 1-minute resolution.</td></tr>
+<tr><td>6</td><td>Did PE premiums collapse first?</td><td>No &mdash; simultaneous. 74600 PE: 190.55 (15:15) &rarr; 57.75 (15:20) &rarr; 14.10 (15:21) &rarr; 0.95 (15:29).</td></tr>
+<tr><td>7</td><td>Did CE OI change?</td><td>Yes: &minus;16.0 M on the fixed strike set across 15:15-15:29, with the largest single drop &minus;7.7 M at 15:21.</td></tr>
+<tr><td>8</td><td>Did PE OI change?</td><td>Yes: +11.1 M &mdash; but see the expiry-bookkeeping caveat in &sect;12. <b>Do not read this directionally.</b></td></tr>
+<tr><td>9</td><td>Did IV change?</td><td>IV becomes meaningless in the final minutes at DTE 0 &mdash; premiums are pure intrinsic and the implied-vol solve is unstable. <b>Not analysed for this window.</b></td></tr>
+<tr><td>10</td><td>Did positioning unwind?</td><td>Yes on the CE side, sharply, concentrated at 15:21, 15:24 and 15:26. Consistent with ITM calls being closed as the underlying repriced up.</td></tr>
+<tr><td>11</td><td>Was there strike migration?</td><td>Yes &mdash; toward the settlement strike (&sect;12), with the OI-reliability caveat.</td></tr>
+<tr><td>12</td><td>Sudden change around ATM?</td><td>Yes. 74600 CE 108.20 &rarr; 406.70 between 15:15 and 15:21 while 74600 PE fell 190.55 &rarr; 14.10.</td></tr>
+<tr><td>13</td><td><b>Was 15:30 a traded price or an artifact?</b></td><td><b>Both, and the distinction is the whole point.</b> 74,902.59 is a genuine settlement value &mdash; the option chain independently confirms it to within 0.1 point. But <b>its arrival in our series at 15:29 as a single bar is an artifact</b> of the index feed having published nothing for fourteen minutes. The <i>level</i> is real; the <i>path</i> in our data is not.</td></tr>
+</table>
+
+<h2 id="s14">14. Post-CAS volume analysis</h2>
+<p>The hypothesis to test was: <i>"The +273 move was caused by post-market buy/sell volume."</i> It was not accepted automatically.</p>
+<table>
+<tr><th>Question</th><th>Finding</th></tr>
+<tr><td>Is trustworthy underlying volume available after 15:15?</td><td><b>No.</b> Volume is frozen at 48,157 for every minute 15:15-15:29 &mdash; the identical value carried from 15:14 &mdash; then 0 from 15:30. There is <b>zero usable underlying volume information</b> in this window.</td></tr>
+<tr><td>Does the Dhan feed report volume after the auction boundary?</td><td><b>For SENSEX today, no.</b> For NIFTY today it emitted a single 119,454,668 print at its 15:29 jump bar. The behaviour differs by symbol and cannot be relied on.</td></tr>
+<tr><td>Is option volume available after 15:15?</td><td><b>Yes, and it is genuine and continuous.</b> Cumulative option volume rises every single minute through 15:39.</td></tr>
+<tr><td>Are option OI changes available?</td><td>Yes, but <b>unreliable at expiry</b> (exercise/assignment bookkeeping, and irregular refresh).</td></tr>
+<tr><td>Can the price move be linked temporally to option activity?</td><td><b>Yes, temporally.</b> Option volume runs at +6-13 M/min through 15:19, then jumps to +18.2 M at 15:20 and <b>+33.9 M CE / +25.0 M PE at 15:21</b>, peaking +37.5 M / +34.5 M at 15:22 &mdash; roughly 3-7x baseline, in the exact minutes the parity-implied spot repriced.</td></tr>
+</table>
+<div class="warn"><b>Verdict on the hypothesis.</b> <b>Cannot establish volume causality from available data.</b> There is no trustworthy underlying volume after 15:14, so no claim about underlying buy/sell pressure can be supported. What <i>can</i> be stated: <b>option-market activity surged 3-7x coincident with the repricing</b> &mdash; a temporal association, in a window where option trading was demonstrably real. Price movement is <b>not</b> substituted for volume anywhere in this report, and "post-market volume caused it" is <b>not</b> supported.</div>
+
+<h2 id="s15">15. SMC-style structural events</h2>
+<table>
+<tr><th>Time</th><th>Price</th><th>Prior structure</th><th>Event (candidate)</th><th>Subsequent response</th><th>Confidence</th></tr>
+<tr><td>14:48</td><td class="num">74,740.06</td><td>Drifting below VWAP and VAL since 14:30</td><td><span class="tag cand">Absorption candidate</span> &mdash; volume 158,176 (~14x neighbours) on a 45.18 range, net only +5.21</td><td>Price held and rose to 74,760 by 14:51; no breakdown followed</td><td>Moderate</td></tr>
+<tr><td>14:58-14:59</td><td class="num">74,708 &rarr; 74,694</td><td>Range-bound 74,725-74,772 since 14:52</td><td><span class="tag cand">Rejection</span> of the upper range on collapsing participation (RVOL 18.7%, sell dominance 1.00)</td><td>Set up the 15:00 break</td><td>Moderate</td></tr>
+<tr><td>15:00</td><td class="num">74,629.11</td><td>Range low ~74,693</td><td><span class="tag cand">Displacement (down)</span> &minus;65.16 in one minute, ~6x the average 1-minute move, 71.17 range</td><td>Range broken and not reclaimed for 15 minutes</td><td><b>High</b></td></tr>
+<tr><td>15:00-15:01</td><td class="num">74,624.75 &rarr; 74,655.77</td><td>Session-low area</td><td><span class="tag cand">Liquidity sweep candidate</span> &mdash; drive to the low, immediate +26.66 recovery</td><td>Recovery failed to reclaim VAL; price re-sank</td><td>Low-Moderate &mdash; <b>not confirmable without order-flow</b></td></tr>
+<tr><td>15:01-15:15</td><td class="num">74,598-74,671</td><td>Post-displacement</td><td><span class="tag cand">Acceptance</span> at the lower level &mdash; 15 minutes of trade below the broken range with no reclaim</td><td>Confirmed the downside break rather than rejecting it</td><td><b>High</b></td></tr>
+<tr><td>15:12</td><td class="num">74,624.18</td><td>Inside the acceptance band</td><td><span class="tag cand">Absorption candidate</span> &mdash; volume 259,837, the day's largest 1-minute print, on a 33.96 range and &minus;1.71 net</td><td>No immediate directional resolution in the feed; the repricing follows 8 minutes later</td><td>Moderate &mdash; <b>suggestive, and the closest thing to a precursor found anywhere in this session</b></td></tr>
+<tr class="hot"><td>~15:20-15:21</td><td class="num">74,556 &rarr; 74,990 (implied)</td><td>Accepted below 74,671 for 20 minutes</td><td><span class="tag cand">Displacement (up)</span> and <span class="tag cand">Change of Character</span> &mdash; option-implied, ~+435 in two minutes on 3-7x option volume</td><td>Chop 74,655-75,042, settle 74,902.59</td><td>Moderate &mdash; <span class="tag inf">INFERRED</span> from options, <b>not observed in the underlying</b></td></tr>
+</table>
+<p><b>Fair Value Gap:</b> <b>not objectively derivable</b> for the 15:20 event. An FVG requires three consecutive candles whose wicks fail to overlap; the underlying candles across that window are frozen and therefore carry no valid highs or lows. Attempting to mark an FVG there would be reading structure into a flat line.</p>
+
+<h2 id="s16">16. Accumulation / distribution hypothesis</h2>
+<table>
+<tr><th>Hypothesis</th><th>Evidence FOR</th><th>Evidence AGAINST</th><th>Confidence</th></tr>
+<tr><td><b>Put short-covering</b> (14:30-14:59)</td><td>PE OI fell at all 7 strikes; PE price rose at all 7; PE IV rose at all 7. Three independent measures agree.</td><td>DTE-0 decay pushes OI down on both sides regardless of intent.</td><td><b>Moderate-High</b> &mdash; the strongest single reading in the pre-window</td></tr>
+<tr><td><b>Call long-unwinding</b> (14:30-14:59)</td><td>CE OI down 6/7, CE price down 7/7, largest at the far OTM strikes.</td><td>Almost fully explained by same-day time decay. IV is not uniform across the curve.</td><td><b>Low-Moderate</b> &mdash; largely mechanical</td></tr>
+<tr><td><b>Absorption</b></td><td>Two clear candidates: 14:48 (158 K volume, +5.21 net) and 15:12 (260 K volume, &minus;1.71 net).</td><td>Both are single minutes; no order-flow to confirm who absorbed what.</td><td><b>Moderate</b></td></tr>
+<tr><td><b>Distribution</b> (bearish)</td><td>Price below VWAP and VAL all afternoon; downward displacement at 15:00; acceptance below.</td><td>The session <i>closed up</i>. POC never migrated. No sustained rising-volume-on-declines pattern.</td><td><b>Low</b></td></tr>
+<tr><td><b>Accumulation</b> (bullish)</td><td>The two absorption candidates, and the eventual +273 settlement.</td><td>No POC migration, no rising-lows structure, no CE OI buildup, and price was rejected from value all afternoon. <b>The bullish outcome is visible only at settlement.</b></td><td><b>Low</b></td></tr>
+<tr><td><b>Position unwinding at expiry</b></td><td>CE OI &minus;16.0 M across 15:15-15:29; full intrinsic convergence; option volume 3-7x baseline.</td><td>OI at expiry is contaminated by exercise/assignment bookkeeping.</td><td><b>High</b> &mdash; that unwinding happened is not in doubt</td></tr>
+</table>
+<div class="finding"><b>Overall classification: UNCLEAR for the session as a directional narrative, HIGH-CONFIDENCE for expiry-driven unwinding.</b> The honest reading is that today was <b>not</b> an accumulation or distribution day in any structural sense &mdash; it was a bearish drift that ended at a settlement value 273 points above where continuous trading in our data left it. Classifying it from candle shape would produce "distribution", and that would be wrong.</div>
+
+<h2 id="s17">17. Validation of the 14:59 observation</h2>
+<p><b>Evaluated strictly on information available at 14:59.</b> No post-14:59 outcome is used in this subsection.</p>
+<table>
+<tr><th>Element of the 14:59 output</th><th>Assessment</th><th>Reasoning (14:59 information only)</th></tr>
+<tr><td>Verdict <code>CONFLICTED</code></td><td><span class="tag obs">CORRECT</span></td><td>P(UP) 0.50 vs P(DOWN) 0.50 with a single weak contributing factor (contribution 0.038). Declining to give a directional call on that basis was the right call, independent of outcome.</td></tr>
+<tr><td>"DO NOT RELY ON DIRECTIONAL FORECAST"</td><td><span class="tag obs">CORRECT</span></td><td>Appropriate given a 50/50 split and one driver.</td></tr>
+<tr><td>Expected move &minus;97 to +75</td><td><span class="tag obs">CORRECT and well-calibrated</span></td><td>The observable post-window move to 15:14 was &minus;53.28 &mdash; comfortably inside the band. Judged against genuinely traded data, the forecast band <b>worked</b>.</td></tr>
+<tr><td>Transition risk <code>NORMAL</code></td><td><span class="tag obs">CORRECT</span></td><td>ATR-normalised expected magnitude was 0.345 &mdash; genuinely normal. Note <code>expected_move_percentile</code> was 3.8, i.e. an unusually <i>narrow</i> expectation.</td></tr>
+<tr><td>Historical N = 10, similarity 100%</td><td><span class="tag inf">MISLEADING PRESENTATION</span></td><td>"Similarity = 100%" invites a confidence the sample cannot support. N = 10 analogs with one weak factor is thin, and a 1.00 similarity score is a normalised distance, not a guarantee of comparability.</td></tr>
+<tr class="hot"><td>"Bearish price but Put OI concentration is increasing"</td><td><span class="tag unk">MISLEADING</span></td><td><b>The arithmetic is right; the words are wrong.</b> PCR did rise (0.898 &rarr; 0.909 across the pre-windows). But <b>put OI fell at every one of the seven strikes</b> (&minus;145 K to &minus;1.43 M). PCR rose only because <b>call</b> OI fell faster. "Concentration is increasing" states that puts were being accumulated; the data says puts were <b>draining, just more slowly than calls</b>. A reader &mdash; or a downstream gate &mdash; acting on that sentence would be acting on a mechanism that did not exist.</td></tr>
+</table>
+<div class="finding"><b>Overall: PARTIALLY CORRECT.</b> The <i>decision</i> was sound &mdash; refusing a directional call on thin, conflicted evidence was right on the information available, and the expected-move band correctly bracketed everything that was actually observable. The <i>explanation</i> was defective: it described a ratio movement in the language of a flow, and the flow it named was the opposite of what happened. <b>This is a wording and derivation defect that will recur on any day where both legs unwind at different rates &mdash; which on expiry days is most of them.</b> It is the single most actionable finding in this report.</div>
+
+<h2 id="s18">18. Transition classification</h2>
+<table>
+<tr><th>Field</th><th>Existing CAS engine</th><th>This analysis (observed continuous data)</th></tr>
+<tr><td>Pre-window move</td><td>&minus;53.36 (74,719.13 &rarr; 74,694.27)</td><td>Same &mdash; agreed</td></tr>
+<tr><td>Post-window move</td><td><b>+208.32</b> (74,694.27 &rarr; <code>close_1539</code> 74,902.59)</td><td><b>&minus;53.28</b> (74,694.27 &rarr; 74,640.99 at 15:14, the last genuinely traded minute)</td></tr>
+<tr><td>Transition type</td><td><code>REVERSAL_UP</code></td><td><b><code>CONTINUATION_DOWN</code></b> on observed continuous trading, with a settlement-driven reversal appended</td></tr>
+<tr><td>Magnitude</td><td><code>NORMAL</code>, 0.345 ATR, +0.279%</td><td>Agreed as a <i>close-to-close</i> statistic</td></tr>
+<tr><td>Conclusion</td><td><code>reversal</code></td><td>See below</td></tr>
+</table>
+<div class="callout"><b>Requested four-class answer.</b><br>
+<b>Primary: COMPRESSION</b> &mdash; the observable post-window (15:00-15:15) is a 73-point band with declining participation and no directional resolution, after one displacement minute.<br>
+<b>Secondary: POST-WINDOW EXPANSION</b> &mdash; but occurring <i>outside</i> the observable window, at ~15:20, and visible only through option repricing.<br>
+<b>Magnitude:</b> NORMAL on the CAS close-to-close measure (0.345 ATR). On the option-implied intraday path, ~435 points in two minutes would be <b>EXTREME</b> &mdash; the two measures disagree because they are measuring different things.<br>
+<b>Confidence:</b> <b>Moderate.</b> High for the compression reading (directly observed); moderate for the expansion (inferred from parity, corroborated by volume, but not observed in the underlying).</div>
+<div class="finding"><b>Reconciliation with the existing CAS label &mdash; and I do partly disagree.</b> <code>REVERSAL_UP</code> is <b>arithmetically correct</b>: <code>close_1539</code> really is 74,902.59, and the option chain independently confirms that as the true settlement. So as an <i>end-of-day outcome label</i>, the CAS engine is right and <b>nothing about it should be changed</b>.
+<br><br>
+Where I disagree is what the label <i>implies</i>. It reads as "the market reversed during the post-transition window," and <b>no such reversal is observable in continuous trading</b>. Every genuinely traded minute from 14:50 to 15:14 went down. The entire +208 rests on a single settlement print arriving after fourteen minutes of feed silence. <b>The CAS engine is measuring a close-to-close outcome and labelling it as a transition mechanism</b> &mdash; and on days like this one, those are not the same thing. That distinction is a Milestone 12 requirement, not a CAS defect to fix now.</div>
+
+<h2 id="s19">19. Direct answer: why +273?</h2>
+<div class="finding" style="font-size:1.02em"><b>Evidence level: 2 &mdash; MODERATE EVIDENCE</b> for <i>what</i> and <i>when</i>. <b>Level 4 &mdash; CANNOT DETERMINE</b> for <i>why</i>.
+<br><br>
+Of the offered options the answer is <b>H (a combination)</b>, specifically <b>C + D + I</b>: repositioning/unwinding in the 15:15-15:30 window, expiry mechanics, and a session-data effect in how it reaches our database. It is <b>not A</b> (nothing before 15:00 anticipated it) and <b>not B</b> (the 15:00-15:15 transition was bearish and compressive).</div>
+<p><b>PRIMARY OBSERVATION.</b> The SENSEX index feed published <b>nothing new for fourteen consecutive minutes</b> (15:15-15:28): identical OHLC and a frozen volume field. The +273 enters our data as one bar at 15:29. The same shape occurs on <b>every day sampled</b>, with steps from &minus;401 to +273. <span class="tag obs">OBSERVED</span></p>
+<p><b>SECONDARY OBSERVATION.</b> The option chain, which never froze, repriced the underlying from ~74,556 to ~74,990 between <b>15:19 and 15:21</b> &mdash; eleven strikes agreeing to within a 7-point IQR &mdash; and converged exactly to 74,902.59 intrinsic by 15:29. A real move occurred, roughly nine minutes before our index feed showed it, and it was <b>abrupt (two minutes) rather than gradual</b>. <span class="tag inf">INFERRED</span></p>
+<p><b>THIRD OBSERVATION.</b> Option volume tripled-to-septupled in exactly those minutes (+6-13 M/min baseline &rarr; +33.9 M CE / +25.0 M PE at 15:21), and CE open interest fell 16.0 M across the window. Real trading and real unwinding accompanied the repricing. <span class="tag obs">OBSERVED</span></p>
+<div class="warn"><b>WHAT WE CANNOT PROVE.</b> We cannot say <b>what caused</b> the underlying to move. There is no order-flow data, no trustworthy underlying volume after 15:14, no dealer positioning, and no way to separate closing-auction mechanics from directional buying. Specifically we <b>cannot</b> claim: that gamma or dealer hedging drove it (dealer exposure is not inferable from this data, and no dealer position is invented here); that "post-market buy/sell volume" caused it (&sect;14); that option activity <i>predicted</i> the move (the lead is a feed-staleness artifact, &sect;10); or that any 14:59-observable precursor pointed to it. <b>The nearest thing to a precursor found anywhere in the session is the 15:12 volume spike of 259,837 &mdash; and that is suggestive at best, eight minutes ahead, on a single minute.</b></div>
+
+<h2 id="s20">20. Causality-safe event timeline</h2>
+<table>
+<tr><th>Time</th><th>Market state</th><th>Option state</th><th>Status</th></tr>
+<tr><td>14:50</td><td>74,755.44, &minus;33.84 vs VWAP, below VAL. RVOL 70%, buy dominance 0.55.</td><td>PE OI draining, PE prices rising, PE IV rising. PCR 0.904.</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>14:55</td><td>74,726.65, Strong Bearish, &minus;52.35 vs VWAP.</td><td>Continued PE short-covering signature.</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>14:59</td><td><b>74,694.27.</b> RVOL collapses to 18.7%, sell dominance 1.00.</td><td>PCR 0.910. ATM 74,700. Snapshot fresh. Forecast frozen: CONFLICTED, 50/50, N=10.</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:00</td><td><b>Downward displacement &minus;65.16</b>, range 71.17, low 74,624.75 &mdash; ~6x average 1-min move.</td><td>Options track; parity-implied 74,640. No option precursor in the prior 10 minutes.</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:01</td><td>+26.66 recovery to 74,655.77 &mdash; sweep-and-reject candidate.</td><td>PE OI &minus;1.63 M in the window; CE OI &minus;4.09 M.</td><td><span class="tag obs">OBSERVED</span> / <span class="tag cand">candidate</span></td></tr>
+<tr><td>15:05</td><td>74,642.35. VAL steps down 74,750 &rarr; 74,725. Acceptance below.</td><td>ATM has moved to 74,600.</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:12</td><td><b>Volume 259,837 &mdash; the day's largest 1-minute print</b>, on a 33.96 range and &minus;1.71 net. Absorption candidate.</td><td>No distinctive option signature in this minute.</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:14</td><td><b>74,640.99 &mdash; the last genuinely traded minute.</b></td><td>Parity-implied 74,553.</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr class="stale"><td>15:15-15:19</td><td><b>Index feed frozen at 74,629.50.</b> Volume field stuck at 48,157. No market information.</td><td>Chain live. Parity-implied 74,515-74,556. Option volume at baseline +6-13 M/min.</td><td>Market state <span class="tag unk">UNKNOWN</span>; option state <span class="tag obs">OBSERVED</span></td></tr>
+<tr class="hot"><td>15:20-15:21</td><td>Feed still frozen. <b>Underlying repriced ~74,556 &rarr; ~74,990.</b></td><td><b>Volume surge +18.2 M then +33.9 M CE / +25.0 M PE.</b> CE OI &minus;7.73 M at 15:21. 74600 CE 108 &rarr; 407; 74600 PE 191 &rarr; 14.</td><td>Price <span class="tag inf">INFERRED</span>; volume and OI <span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:22-15:28</td><td>Feed frozen. Parity-implied oscillates 74,655-75,042 &mdash; a wide chop, not a trend.</td><td>Volume stays elevated. CE OI drops again at 15:24 (&minus;3.88 M) and 15:26 (&minus;2.33 M).</td><td>Price <span class="tag inf">INFERRED</span></td></tr>
+<tr class="hot"><td>15:29</td><td><b>Feed catches up: single bar to 74,902.59 (+273.09).</b> Volume still 48,157 &mdash; no volume accompanies the print.</td><td>Parity-implied 74,906 &mdash; agreement to 3.6 points.</td><td><span class="tag obs">OBSERVED</span></td></tr>
+<tr><td>15:30-15:39</td><td>Flat at 74,902.59, volume 0.</td><td><b>Full intrinsic convergence</b>: parity equals feed to within 0.1 pt for ten consecutive minutes.</td><td><span class="tag obs">OBSERVED</span></td></tr>
+</table>
+<div class="warn"><b>The single most important row is 15:15-15:19.</b> For those five minutes, and the nine that follow, <b>the market state is genuinely UNKNOWN in our data</b> &mdash; not "flat", not "unchanged", but unrecorded. Any Milestone 12 feature computed over that span from the underlying series will be computing on a straight line that never existed.</div>
+
+<h2 id="s21">21. Milestone 12 feature requirements</h2>
+<h3>A. REQUIRED</h3>
+<table>
+<tr><th>Feature</th><th>Why today proved it necessary</th></tr>
+<tr><td><b>Closing-print / stale-feed classification</b></td><td>The highest-priority item by a wide margin. Detect N consecutive identical OHLC bars with a non-advancing volume field and mark them <code>NO_MARKET_DATA</code> rather than treating them as flat trading. Without this, every downstream statistic in the last 25 minutes of every session is wrong.</td></tr>
+<tr><td><b>Separate "observed move" from "close-to-close move"</b></td><td>Today: &minus;53 observed vs +208 close-to-close. Both are true; conflating them turns a continuation into a reversal.</td></tr>
+<tr><td><b>Option-implied underlying via put-call parity</b></td><td>The <i>only</i> instrument that saw the 15:20 repricing. Cheap, needs no new capture, and today it worked to a 7-point IQR across 11 strikes.</td></tr>
+<tr><td><b>Correct OI-flow derivation and wording</b></td><td>Snapshot-differenced OI, plus explicit separation of "PCR rose" from "put OI grew". Today those pointed in opposite directions and the report said the wrong one.</td></tr>
+<tr><td><b>Post-CAS attribution with an explicit UNKNOWN state</b></td><td>The framework must be able to answer "the market state is unrecorded here" instead of silently interpolating.</td></tr>
+</table>
+<h3>B. HIGH VALUE</h3>
+<table>
+<tr><th>Feature</th><th>Note</th></tr>
+<tr><td>Option volume acceleration</td><td>The 3-7x surge at 15:20-15:22 was a clean, real signal &mdash; and it is trustworthy where underlying volume is not.</td></tr>
+<tr><td>Spot/option divergence monitor</td><td>A widening parity gap is a direct staleness detector as well as a market signal.</td></tr>
+<tr><td>Expiry-day regime flag with intrinsic-convergence tracking</td><td>Confirms settlement independently of the index feed.</td></tr>
+<tr><td>Displacement and acceptance detection</td><td>Both fired cleanly and correctly today (15:00 displacement, 15:01-15:15 acceptance).</td></tr>
+<tr><td>Absorption candidates from volume-vs-range</td><td>14:48 and 15:12 were both identifiable mechanically.</td></tr>
+<tr><td>Compression vs expansion classification</td><td>Captures what the four-class scheme missed today.</td></tr>
+</table>
+<h3>C. NICE TO HAVE</h3>
+<p>Strike-concentration migration (useful but noisy at expiry), IV-regime tracking (unusable in the final minutes at DTE 0), liquidity-sweep candidates (identifiable but never confirmable without order-flow), CE/PE pressure scores (only if built on price and volume rather than OI).</p>
+<h3>D. NOT RELIABLE WITH CURRENT DATA</h3>
+<table>
+<tr><th>Feature</th><th>Why not</th></tr>
+<tr><td><b>Dealer gamma exposure</b></td><td>Requires dealer positioning, which we do not have and must not invent. <b>Explicitly state that it cannot be inferred.</b></td></tr>
+<tr><td><b>Post-15:15 underlying volume attribution</b></td><td>The volume field is frozen, then zero. No amount of processing recovers it.</td></tr>
+<tr><td><b>Minute-resolution OI analysis</b></td><td>Dhan refreshes OI irregularly &mdash; several minutes today showed exactly zero change because no refresh occurred, not because nothing happened.</td></tr>
+<tr><td><b>OI-based positioning inference in the last 15 minutes of an expiry</b></td><td>Contaminated by exercise and assignment bookkeeping &mdash; today PE OI <i>rose</i> at strikes whose puts were being crushed to 0.20.</td></tr>
+<tr><td><b>Option lead/lag as a predictive feature</b></td><td>Today's 9-minute "lead" is a feed-staleness artifact. Presenting it as predictive would be actively misleading.</td></tr>
+<tr><td><b>Fair Value Gaps across a frozen window</b></td><td>No valid highs or lows exist to compute them from.</td></tr>
+</table>
+
+<h2 id="s22">22. Data limitations</h2>
+<table>
+<tr><th>#</th><th>Limitation</th><th>Impact on this analysis</th></tr>
+<tr><td>1</td><td><b>Underlying feed frozen 15:15-15:28</b> (identical OHLC, frozen volume)</td><td>Fatal for any underlying-based analysis of the key window. Systematic across all days sampled.</td></tr>
+<tr><td>2</td><td><b>No trustworthy underlying volume after 15:14</b></td><td>Prevents any volume-causality claim (&sect;14). SENSEX gets no closing volume print at all.</td></tr>
+<tr><td>3</td><td><b>No order-flow, no bid/ask on the index</b></td><td>Sweeps and absorption remain permanently "candidates", never confirmed.</td></tr>
+<tr><td>4</td><td><b>No dealer positioning</b></td><td>Gamma-based explanations cannot be tested. None is offered.</td></tr>
+<tr><td>5</td><td><b>Irregular OI refresh</b></td><td>Several minutes show zero OI change because no refresh occurred. Minute-level OI is unusable.</td></tr>
+<tr><td>6</td><td><b>OI contaminated by exercise/assignment at expiry</b></td><td>Makes 15:15-15:39 OI directionally uninterpretable.</td></tr>
+<tr><td>7</td><td><b>IV unstable at DTE 0</b></td><td>IV excluded from the final-window analysis rather than reported unreliably.</td></tr>
+<tr><td>8</td><td><b>ATM window anchored to a stale spot</b></td><td>Handled by using fixed strike sets throughout; a naive ATM&plusmn;N analysis would report a spurious +9.85 M CE OI jump at 15:30 that is purely the window moving.</td></tr>
+<tr><td>9</td><td><b>Zero IV/Greeks on deep-ITM puts</b></td><td>Known broker-side gap; did not affect today's near-the-money analysis.</td></tr>
+<tr><td>10</td><td><b>Single day, single symbol</b></td><td>Everything here is n = 1. The cross-day check in &sect;2 establishes the <i>feed artifact</i> generalises; nothing else in this report does.</td></tr>
+</table>
+
+<h2 id="s23">23. Final conclusion</h2>
+<div class="finding"><b>The question "why did SENSEX move +273 between 15:15 and 15:30?" contains a false premise, and correcting it is the most valuable result of this exercise.</b> In our data, no such 15-minute move exists. There is a fourteen-minute hole where the index feed published nothing, followed by a single settlement print. The level 74,902.59 is genuine &mdash; the entire option chain converges to it to within 0.1 point, independently. But the <i>path</i> is unrecorded, and the option market places the actual repricing in a two-minute window around <b>15:20-15:21</b>, roughly nine minutes before our feed showed it.</div>
+<p><b>What today establishes for Milestone 12:</b></p>
+<ol>
+<li><b>A stale-feed / closing-print classifier is the single highest-priority feature.</b> Without it, the platform will keep computing structure, volume and transition statistics over straight lines that never traded &mdash; on every symbol, on every day.</li>
+<li><b>Close-to-close outcome and observed intraday transition must be reported as two different things.</b> Today they disagree by 261 points and by direction.</li>
+<li><b>Put-call parity is a free, already-captured second opinion on the underlying</b> that works precisely when the primary feed fails.</li>
+<li><b>The "Put OI concentration is increasing" wording defect is real, systematic, and will recur.</b> It is arguably more consequential than the spike itself, because it will mislead on ordinary days too.</li>
+<li><b>Some things remain unknowable with this data</b> &mdash; dealer gamma, post-15:15 underlying volume, and the actual cause of the move. Milestone 12 should be built to say so explicitly rather than to fill the gap.</li>
+</ol>
+<div class="warn"><b>Nothing here justifies changing the trading strategy, and no such change is recommended.</b> This is one session, one symbol. The 14:59 decision itself was sound on the information available &mdash; it declined a directional call it could not support, and its expected-move band correctly bracketed everything that was actually observable. <b>No threshold was tuned, no rule was created, and none of these features were added to the agent.</b></div>
+
+<h3>Confirmation &mdash; nothing was modified</h3>
+<table>
+<tr><th>Item</th><th>State</th></tr>
+<tr><td><code>strategy_version</code> / <code>configuration_hash</code></td><td><b>11d-paper-v1</b> / <b>9c7c362d7e0c6a14</b> &mdash; unchanged</td></tr>
+<tr><td><code>paper_trading/config.py</code>, decision logic, option selector, SL/target, risk controls</td><td>Not modified</td></tr>
+<tr><td>Production code, live pipeline, Dhan capture, CAS calculations, UI</td><td>Not modified</td></tr>
+<tr><td>Database schema and data</td><td>Not modified. Read-only <code>SELECT</code> queries only &mdash; no backfill, no repair, no imputation, no forward-fill</td></tr>
+<tr><td>Existing CAS classification for 2026-09-10</td><td>Left exactly as stored (<code>REVERSAL_UP</code> / <code>NORMAL</code>)</td></tr>
+<tr><td>Code committed</td><td>None</td></tr>
+</table>
+
+<div class="nochange">NO CHANGES MADE.</div>
+
+<footer>
+Milestone 12 input research &mdash; SENSEX 2026-09-10 expiry-day transition forensics. Read-only analysis performed 2026-09-10 against the live database.
+Every figure was produced by <code>SELECT</code>-only queries and source inspection. Option-implied underlying values are derived from put-call parity on captured mid-quotes and are labelled INFERRED throughout; they are never presented as observed prices.
+No causality is claimed anywhere in this report where the data demonstrates only association.
+</footer>
+
+</body>
+</html>
