@@ -1,0 +1,1597 @@
+{
+ "config_hash": "994667c6d552111e",
+ "days": [
+  "2026-09-15",
+  "2026-09-16",
+  "2026-09-17",
+  "2026-09-18"
+ ],
+ "evaluable": [
+  "2026-09-17",
+  "2026-09-18"
+ ],
+ "limits": {
+  "hr_days": 4,
+  "evaluable_days": 2,
+  "symbol_days": 4,
+  "candidates": 60,
+  "strong": 22,
+  "trades_lots": 1,
+  "trades_units": 6
+ },
+ "funnel": {
+  "ALL": [
+   [
+    "A. detected",
+    60,
+    100.0
+   ],
+   [
+    "C. pass confirmation",
+    16,
+    26.7
+   ],
+   [
+    "D. + pass option response",
+    11,
+    18.3
+   ],
+   [
+    "E. + pass option selection",
+    11,
+    18.3
+   ],
+   [
+    "   + pass time/mode/expiry window",
+    7,
+    11.7
+   ],
+   [
+    "F. + pass risk (exchange lots)",
+    1,
+    1.7
+   ],
+   [
+    "G. hypothetical trades (exchange lots)",
+    1,
+    1.7
+   ],
+   [
+    "G'. hypothetical trades (config units)",
+    6,
+    10.0
+   ],
+   [
+    "H. rejected (exchange lots)",
+    59,
+    98.3
+   ]
+  ],
+  "STRONG": [
+   [
+    "A. detected",
+    22,
+    100.0
+   ],
+   [
+    "C. pass confirmation",
+    16,
+    72.7
+   ],
+   [
+    "D. + pass option response",
+    11,
+    50.0
+   ],
+   [
+    "E. + pass option selection",
+    11,
+    50.0
+   ],
+   [
+    "   + pass time/mode/expiry window",
+    7,
+    31.8
+   ],
+   [
+    "F. + pass risk (exchange lots)",
+    1,
+    4.5
+   ],
+   [
+    "G. hypothetical trades (exchange lots)",
+    1,
+    4.5
+   ],
+   [
+    "G'. hypothetical trades (config units)",
+    6,
+    27.3
+   ],
+   [
+    "H. rejected (exchange lots)",
+    21,
+    95.5
+   ]
+  ],
+  "IN_WINDOW (Mode A, not vetoed)": [
+   [
+    "A. detected",
+    29,
+    100.0
+   ],
+   [
+    "C. pass confirmation",
+    8,
+    27.6
+   ],
+   [
+    "D. + pass option response",
+    7,
+    24.1
+   ],
+   [
+    "E. + pass option selection",
+    7,
+    24.1
+   ],
+   [
+    "   + pass time/mode/expiry window",
+    7,
+    24.1
+   ],
+   [
+    "F. + pass risk (exchange lots)",
+    1,
+    3.4
+   ],
+   [
+    "G. hypothetical trades (exchange lots)",
+    1,
+    3.4
+   ],
+   [
+    "G'. hypothetical trades (config units)",
+    6,
+    20.7
+   ],
+   [
+    "H. rejected (exchange lots)",
+    28,
+    96.6
+   ]
+  ]
+ },
+ "first_gate": {
+  "WINDOW": 31,
+  "RISK": 6,
+  "CONFIRMATION": 21,
+  "OPTION_RESPONSE": 1
+ },
+ "first_gate_profitable": {
+  "CONFIRMATION": 7,
+  "RISK": 1,
+  "WINDOW": 6
+ },
+ "reason_any": {
+  "TIME_WINDOW_CLOSED": 10,
+  "WEAK_MOMENTUM": 38,
+  "OPTION_NOT_RESPONDING": 28,
+  "RISK_TOO_LARGE": 6,
+  "NO_CONFIRMATION": 14,
+  "MODE_B_RESEARCH_ONLY": 21,
+  "EXPIRY_DAY_CLOSE_VETO": 6
+ },
+ "categories": {
+  "GENUINELY_BAD_SIGNAL": {
+   "count": 35,
+   "mfe": 2.185,
+   "mae": -3.371,
+   "pnl": -0.484,
+   "t_mfe": 165.0,
+   "detect": 35.0,
+   "remaining": 0.591,
+   "profitable": 0
+  },
+  "PROFITABLE_OPPORTUNITY": {
+   "count": 8,
+   "mfe": 3.575,
+   "mae": -0.965,
+   "pnl": 0.299,
+   "t_mfe": 112.0,
+   "detect": 35.0,
+   "remaining": 0.667,
+   "profitable": 8
+  },
+  "PROFITABLE_BUT_LATE": {
+   "count": 4,
+   "mfe": 3.5,
+   "mae": -3.57,
+   "pnl": 1.477,
+   "t_mfe": 75.0,
+   "detect": 35.0,
+   "remaining": 0.212,
+   "profitable": 4
+  },
+  "NO_FOLLOW_THROUGH": {
+   "count": 12,
+   "mfe": 0.35,
+   "mae": -7.333,
+   "pnl": -1.151,
+   "t_mfe": 35.0,
+   "detect": 35.0,
+   "remaining": 0.0,
+   "profitable": 2
+  },
+  "TRADED": {
+   "count": 1,
+   "mfe": 0.92,
+   "mae": -5.345,
+   "pnl": -0.172,
+   "t_mfe": 55.0,
+   "detect": 185.0,
+   "remaining": 0.226,
+   "profitable": 0
+  }
+ },
+ "missed": {
+  "n": 8,
+  "dims": {
+   "first_gate": {
+    "CONFIRMATION": 4,
+    "RISK": 1,
+    "WINDOW": 3
+   },
+   "symbol": {
+    "NIFTY": 7,
+    "SENSEX": 1
+   },
+   "direction": {
+    "UP": 4,
+    "DOWN": 4
+   },
+   "event_type": {
+    "MOMENTUM_EVENT": 5,
+    "CONTINUATION_EVENT": 1,
+    "REVERSAL_EVENT": 2
+   },
+   "mode": {
+    "MODE_A": 5,
+    "MODE_B": 2,
+    "PRE": 1
+   },
+   "expiry_day": {
+    "False": 8
+   },
+   "timing": {
+    "DETECTED_EARLY": 8
+   },
+   "strength": {
+    "WEAK": 7,
+    "STRONG": 1
+   }
+  },
+  "rows": [
+   {
+    "date": "2026-09-17",
+    "time": "15:05:15",
+    "symbol": "NIFTY",
+    "direction": "UP",
+    "event_type": "MOMENTUM_EVENT",
+    "strength": "WEAK",
+    "mode": "MODE_A",
+    "window": "15:03-15:06",
+    "expiry_day": false,
+    "passed_gates": false,
+    "reasons": [
+     "WEAK_MOMENTUM",
+     "OPTION_NOT_RESPONDING",
+     "NO_CONFIRMATION"
+    ],
+    "first_gate": "CONFIRMATION",
+    "all_gates": [
+     "CONFIRMATION",
+     "OPTION_RESPONSE"
+    ],
+    "traded_lots": false,
+    "traded_units": false,
+    "category": "PROFITABLE_OPPORTUNITY",
+    "timing": "DETECTED_EARLY",
+    "cf_pnl": 0.07005253940454943,
+    "cf_exit_reason": "EVENT_INVALIDATED",
+    "mfe": 2.3817863397548202,
+    "mae": -0.8406304728546331,
+    "t_mfe": 105.0,
+    "spread": 0.1753,
+    "detect_after_start_s": 35.0,
+    "remaining_at_entry": 0.8826530612245183,
+    "fut_r30": 12.5,
+    "fut_accel": 6.30000000000291,
+    "displacement": 12.5,
+    "ce_ret30": -0.17559262510974788,
+    "pe_ret30": -0.7963118189438414,
+    "ce_acc": 3.7220291716414007,
+    "pe_acc": -4.231588661286278,
+    "sel_spread": 0.2458,
+    "sel_volume30": 87165.0,
+    "sel_oi_change30": 0.0,
+    "option_response": 0.3701092703560139,
+    "response_latency_s": 35,
+    "risk_blocked": false
+   },
+   {
+    "date": "2026-09-17",
+    "time": "15:07:45",
+    "symbol": "NIFTY",
+    "direction": "UP",
+    "event_type": "CONTINUATION_EVENT",
+    "strength": "STRONG",
+    "mode": "MODE_A",
+    "window": "15:06-15:09",
+    "expiry_day": false,
+    "passed_gates": true,
+    "reasons": [
+     "RISK_TOO_LARGE"
+    ],
+    "first_gate": "RISK",
+    "all_gates": [
+     "RISK"
+    ],
+    "traded_lots": false,
+    "traded_units": true,
+    "category": "PROFITABLE_OPPORTUNITY",
+    "timing": "DETECTED_EARLY",
+    "cf_pnl": 0.34828036569438897,
+    "cf_exit_reason": "EVENT_INVALIDATED",
+    "mfe": 2.82977797126687,
+    "mae": -1.0883761427949499,
+    "t_mfe": 290.0,
+    "spread": 0.2616,
+    "detect_after_start_s": 185.0,
+    "remaining_at_entry": 0.5357142857143254,
+    "fut_r30": 5.0,
+    "fut_accel": 5.0,
+    "displacement": 19.599999999998545,
+    "ce_ret30": -0.2564650566360309,
+    "pe_ret30": 1.661865721249723,
+    "ce_acc": 0.08534193670831262,
+    "pe_acc": -0.07330901512014454,
+    "sel_spread": 0.1286,
+    "sel_volume30": 208650.0,
+    "sel_oi_change30": -37830.0,
+    "option_response": 2.4363476733977096,
+    "response_latency_s": null,
+    "risk_blocked": true
+   },
+   {
+    "date": "2026-09-17",
+    "time": "15:19:55",
+    "symbol": "NIFTY",
+    "direction": "UP",
+    "event_type": "MOMENTUM_EVENT",
+    "strength": "WEAK",
+    "mode": "MODE_B",
+    "window": "MODE B 15:15-15:30 (research only)",
+    "expiry_day": false,
+    "passed_gates": false,
+    "reasons": [
+     "MODE_B_RESEARCH_ONLY",
+     "WEAK_MOMENTUM",
+     "OPTION_NOT_RESPONDING",
+     "NO_CONFIRMATION"
+    ],
+    "first_gate": "WINDOW",
+    "all_gates": [
+     "WINDOW",
+     "CONFIRMATION",
+     "OPTION_RESPONSE"
+    ],
+    "traded_lots": false,
+    "traded_units": false,
+    "category": "PROFITABLE_OPPORTUNITY",
+    "timing": "DETECTED_EARLY",
+    "cf_pnl": 0.2504173622704484,
+    "cf_exit_reason": "EVENT_INVALIDATED",
+    "mfe": 1.6277128547579325,
+    "mae": -3.255425709515853,
+    "t_mfe": 10.0,
+    "spread": 0.1253,
+    "detect_after_start_s": 35.0,
+    "remaining_at_entry": 0.9888888888890506,
+    "fut_r30": 9.0,
+    "fut_accel": 7.0,
+    "displacement": 9.0,
+    "ce_ret30": -0.5130309870716191,
+    "pe_ret30": 0.2710027100270977,
+    "ce_acc": -1.7780833831857596,
+    "pe_acc": 2.042754706426093,
+    "sel_spread": 0.2475,
+    "sel_volume30": 347230.0,
+    "sel_oi_change30": -81185.0,
+    "option_response": -0.5130309870716191,
+    "response_latency_s": 5,
+    "risk_blocked": false
+   },
+   {
+    "date": "2026-09-17",
+    "time": "15:23:50",
+    "symbol": "NIFTY",
+    "direction": "UP",
+    "event_type": "MOMENTUM_EVENT",
+    "strength": "WEAK",
+    "mode": "MODE_B",
+    "window": "MODE B 15:15-15:30 (research only)",
+    "expiry_day": false,
+    "passed_gates": false,
+    "reasons": [
+     "MODE_B_RESEARCH_ONLY",
+     "WEAK_MOMENTUM",
+     "OPTION_NOT_RESPONDING"
+    ],
+    "first_gate": "WINDOW",
+    "all_gates": [
+     "WINDOW",
+     "CONFIRMATION",
+     "OPTION_RESPONSE"
+    ],
+    "traded_lots": false,
+    "traded_units": false,
+    "category": "PROFITABLE_OPPORTUNITY",
+    "timing": "DETECTED_EARLY",
+    "cf_pnl": 0.04215851602024567,
+    "cf_exit_reason": "EVENT_INVALIDATED",
+    "mfe": 1.8128161888701568,
+    "mae": -2.1079258010118047,
+    "t_mfe": 50.0,
+    "spread": 0.2533,
+    "detect_after_start_s": 35.0,
+    "remaining_at_entry": 1.010526315789512,
+    "fut_r30": 8.299999999999272,
+    "fut_accel": 7.299999999999272,
+    "displacement": 8.299999999999272,
+    "ce_ret30": -0.5504975651069284,
+    "pe_ret30": 1.6853932584269662,
+    "ce_acc": 2.856879799063231,
+    "pe_acc": -2.352868385883285,
+    "sel_spread": 0.2129,
+    "sel_volume30": 281515.0,
+    "sel_oi_change30": -151515.0,
+    "option_response": -0.5504975651069284,
+    "response_latency_s": 60,
+    "risk_blocked": false
+   },
+   {
+    "date": "2026-09-18",
+    "time": "14:59:05",
+    "symbol": "SENSEX",
+    "direction": "DOWN",
+    "event_type": "MOMENTUM_EVENT",
+    "strength": "WEAK",
+    "mode": "PRE",
+    "window": "PRE 14:55-15:00",
+    "expiry_day": false,
+    "passed_gates": false,
+    "reasons": [
+     "TIME_WINDOW_CLOSED",
+     "WEAK_MOMENTUM",
+     "OPTION_NOT_RESPONDING",
+     "NO_CONFIRMATION"
+    ],
+    "first_gate": "WINDOW",
+    "all_gates": [
+     "WINDOW",
+     "CONFIRMATION",
+     "OPTION_RESPONSE"
+    ],
+    "traded_lots": false,
+    "traded_units": false,
+    "category": "PROFITABLE_OPPORTUNITY",
+    "timing": "DETECTED_EARLY",
+    "cf_pnl": 5.215621422210914,
+    "cf_exit_reason": "TARGET",
+    "mfe": 6.513166263834109,
+    "mae": 0.0890471950133484,
+    "t_mfe": 120.0,
+    "spread": 0.1018,
+    "detect_after_start_s": 35.0,
+    "remaining_at_entry": 0.695,
+    "fut_r30": -26.75,
+    "fut_accel": 26.75,
+    "displacement": -26.75,
+    "ce_ret30": 2.845793561392067,
+    "pe_ret30": -2.571428571428577,
+    "ce_acc": -4.383578735394148,
+    "pe_acc": 4.3669519184970245,
+    "sel_spread": 0.051,
+    "sel_volume30": 36480.0,
+    "sel_oi_change30": 0.0,
+    "option_response": -2.571428571428577,
+    "response_latency_s": null,
+    "risk_blocked": false
+   },
+   {
+    "date": "2026-09-18",
+    "time": "15:00:05",
+    "symbol": "NIFTY",
+    "direction": "DOWN",
+    "event_type": "REVERSAL_EVENT",
+    "strength": "WEAK",
+    "mode": "MODE_A",
+    "window": "15:00-15:03",
+    "expiry_day": false,
+    "passed_gates": false,
+    "reasons": [
+     "WEAK_MOMENTUM"
+    ],
+    "first_gate": "CONFIRMATION",
+    "all_gates": [
+     "CONFIRMATION"
+    ],
+    "traded_lots": false,
+    "traded_units": false,
+    "category": "PROFITABLE_OPPORTUNITY",
+    "timing": "DETECTED_EARLY",
+    "cf_pnl": 1.427469135802465,
+    "cf_exit_reason": "TRAIL_STOP",
+    "mfe": 4.320987654320983,
+    "mae": 0.03858024691358902,
+    "t_mfe": 60.0,
+    "spread": 0.2704,
+    "detect_after_start_s": 35.0,
+    "remaining_at_entry": 0.6057347670250588,
+    "fut_r30": -11.0,
+    "fut_accel": -8.80000000000291,
+    "displacement": -11.0,
+    "ce_ret30": -4.1091781643671235,
+    "pe_ret30": 2.5700334104343354,
+    "ce_acc": -3.63858076250056,
+    "pe_acc": 2.7783866206983276,
+    "sel_spread": 0.1958,
+    "sel_volume30": 87750.0,
+    "sel_oi_change30": -21190.0,
+    "option_response": 2.797906602254424,
+    "response_latency_s": 30,
+    "risk_blocked": false
+   },
+   {
+    "date": "2026-09-18",
+    "time": "15:04:35",
+    "symbol": "NIFTY",
+    "direction": "DOWN",
+    "event_type": "REVERSAL_EVENT",
+    "strength": "WEAK",
+    "mode": "MODE_A",
+    "window": "15:03-15:06",
+    "expiry_day": false,
+    "passed_gates": false,
+    "reasons": [
+     "WEAK_MOMENTUM",
+     "NO_CONFIRMATION"
+    ],
+    "first_gate": "CONFIRMATION",
+    "all_gates": [
+     "CONFIRMATION"
+    ],
+    "traded_lots": false,
+    "traded_units": false,
+    "category": "PROFITABLE_OPPORTUNITY",
+    "timing": "DETECTED_EARLY",
+    "cf_pnl": 0.43451272501552896,
+    "cf_exit_reason": "EVENT_INVALIDATED",
+    "mfe": 8.44196151458721,
+    "mae": -3.3519553072625734,
+    "t_mfe": 265.0,
+    "spread": 0.1864,
+    "detect_after_start_s": 35.0,
+    "remaining_at_entry": 0.5808080808081022,
+    "fut_r30": -7.799999999999272,
+    "fut_accel": 7.799999999999272,
+    "displacement": -7.799999999999272,
+    "ce_ret30": -1.5655577299412953,
+    "pe_ret30": 1.1870155038759636,
+    "ce_acc": -2.21172353010535,
+    "pe_acc": 1.7727190543991571,
+    "sel_spread": 0.1871,
+    "sel_volume30": 366990.0,
+    "sel_oi_change30": 0.0,
+    "option_response": 1.3590391908976016,
+    "response_latency_s": 30,
+    "risk_blocked": false
+   },
+   {
+    "date": "2026-09-18",
+    "time": "15:07:05",
+    "symbol": "NIFTY",
+    "direction": "DOWN",
+    "event_type": "MOMENTUM_EVENT",
+    "strength": "WEAK",
+    "mode": "MODE_A",
+    "window": "15:06-15:09",
+    "expiry_day": false,
+    "passed_gates": false,
+    "reasons": [
+     "WEAK_MOMENTUM"
+    ],
+    "first_gate": "CONFIRMATION",
+    "all_gates": [
+     "CONFIRMATION"
+    ],
+    "traded_lots": false,
+    "traded_units": false,
+    "category": "PROFITABLE_OPPORTUNITY",
+    "timing": "DETECTED_EARLY",
+    "cf_pnl": 0.2469135802469171,
+    "cf_exit_reason": "EVENT_INVALIDATED",
+    "mfe": 8.395061728395058,
+    "mae": 0.06172839506172488,
+    "t_mfe": 205.0,
+    "spread": 0.2472,
+    "detect_after_start_s": 35.0,
+    "remaining_at_entry": 0.6391304347826403,
+    "fut_r30": -11.0,
+    "fut_accel": 5.599999999998545,
+    "displacement": -11.0,
+    "ce_ret30": -2.3715415019762993,
+    "pe_ret30": 2.2249093107617868,
+    "ce_acc": -2.1761610427589084,
+    "pe_acc": 1.2005137020179018,
+    "sel_spread": 0.2472,
+    "sel_volume30": 460655.0,
+    "sel_oi_change30": -201110.0,
+    "option_response": 2.5348542458808616,
+    "response_latency_s": 15,
+    "risk_blocked": false
+   }
+  ]
+ },
+ "buckets": {
+  "missed_active_exit": {
+   "<0%": 0,
+   "0-1%": 6,
+   "1-2%": 1,
+   "2-3%": 0,
+   "3-5%": 0,
+   ">5%": 1
+  },
+  "rejected_active_exit": {
+   "<0%": 43,
+   "0-1%": 8,
+   "1-2%": 6,
+   "2-3%": 0,
+   "3-5%": 1,
+   ">5%": 1
+  },
+  "rejected_mfe": {
+   "<0%": 8,
+   "0-1%": 8,
+   "1-2%": 10,
+   "2-3%": 11,
+   "3-5%": 11,
+   ">5%": 11
+  }
+ },
+ "risk_rows": [
+  {
+   "date": "2026-09-17",
+   "time": "15:00:55",
+   "symbol": "NIFTY",
+   "option": "CE 23300",
+   "ask": 114.25,
+   "lot": 65,
+   "loss_per_lot": 371.31,
+   "capital_per_lot": 7426.25,
+   "binding": "max loss Rs 300 + capital Rs 6,000",
+   "cf_pnl": -1.2291483757682227,
+   "cf_rupees_one_lot": -91.28
+  },
+  {
+   "date": "2026-09-17",
+   "time": "15:05:20",
+   "symbol": "NIFTY",
+   "option": "CE 23250",
+   "ask": 143.95,
+   "lot": 65,
+   "loss_per_lot": 467.84,
+   "capital_per_lot": 9356.75,
+   "binding": "max loss Rs 300 + capital Rs 6,000",
+   "cf_pnl": -0.8732099196646874,
+   "cf_rupees_one_lot": -81.7
+  },
+  {
+   "date": "2026-09-17",
+   "time": "15:07:45",
+   "symbol": "NIFTY",
+   "option": "CE 23300",
+   "ask": 116.75,
+   "lot": 65,
+   "loss_per_lot": 379.44,
+   "capital_per_lot": 7588.75,
+   "binding": "max loss Rs 300 + capital Rs 6,000",
+   "cf_pnl": 0.34828036569438897,
+   "cf_rupees_one_lot": 26.43
+  },
+  {
+   "date": "2026-09-17",
+   "time": "15:13:25",
+   "symbol": "NIFTY",
+   "option": "CE 23300",
+   "ask": 120.55,
+   "lot": 65,
+   "loss_per_lot": 391.79,
+   "capital_per_lot": 7835.75,
+   "binding": "max loss Rs 300 + capital Rs 6,000",
+   "cf_pnl": -0.706273369339422,
+   "cf_rupees_one_lot": -55.34
+  },
+  {
+   "date": "2026-09-18",
+   "time": "15:00:20",
+   "symbol": "NIFTY",
+   "option": "PE 23400",
+   "ask": 102.65,
+   "lot": 65,
+   "loss_per_lot": 333.61,
+   "capital_per_lot": 6672.25,
+   "binding": "max loss Rs 300 + capital Rs 6,000",
+   "cf_pnl": -0.48402710551790895,
+   "cf_rupees_one_lot": -32.3
+  },
+  {
+   "date": "2026-09-18",
+   "time": "15:01:20",
+   "symbol": "NIFTY",
+   "option": "PE 23400",
+   "ask": 106.2,
+   "lot": 65,
+   "loss_per_lot": 345.15,
+   "capital_per_lot": 6903.0,
+   "binding": "max loss Rs 300 + capital Rs 6,000",
+   "cf_pnl": -1.068479844584758,
+   "cf_rupees_one_lot": -73.76
+  }
+ ],
+ "sens_loss": [
+  {
+   "max_loss": 150,
+   "max_capital": 6000.0,
+   "trades": 0,
+   "blocked": 7,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 0,
+   "net": 0,
+   "median": null,
+   "max_loss_seen": null,
+   "max_dd": 0.0,
+   "capital_total": 0,
+   "capital_max": null,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 0
+   }
+  },
+  {
+   "max_loss": 200,
+   "max_capital": 6000.0,
+   "trades": 0,
+   "blocked": 7,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 0,
+   "net": 0,
+   "median": null,
+   "max_loss_seen": null,
+   "max_dd": 0.0,
+   "capital_total": 0,
+   "capital_max": null,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 0
+   }
+  },
+  {
+   "max_loss": 250,
+   "max_capital": 6000.0,
+   "trades": 0,
+   "blocked": 7,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 0,
+   "net": 0,
+   "median": null,
+   "max_loss_seen": null,
+   "max_dd": 0.0,
+   "capital_total": 0,
+   "capital_max": null,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 0
+   }
+  },
+  {
+   "max_loss": 300,
+   "max_capital": 6000.0,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 350,
+   "max_capital": 6000.0,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 400,
+   "max_capital": 6000.0,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 500,
+   "max_capital": 6000.0,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  }
+ ],
+ "sens_cap": [
+  {
+   "max_loss": 300.0,
+   "max_capital": 3000,
+   "trades": 0,
+   "blocked": 7,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 0,
+   "net": 0,
+   "median": null,
+   "max_loss_seen": null,
+   "max_dd": 0.0,
+   "capital_total": 0,
+   "capital_max": null,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 0
+   }
+  },
+  {
+   "max_loss": 300.0,
+   "max_capital": 4000,
+   "trades": 0,
+   "blocked": 7,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 0,
+   "net": 0,
+   "median": null,
+   "max_loss_seen": null,
+   "max_dd": 0.0,
+   "capital_total": 0,
+   "capital_max": null,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 0
+   }
+  },
+  {
+   "max_loss": 300.0,
+   "max_capital": 5000,
+   "trades": 0,
+   "blocked": 7,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 0,
+   "net": 0,
+   "median": null,
+   "max_loss_seen": null,
+   "max_dd": 0.0,
+   "capital_total": 0,
+   "capital_max": null,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 0
+   }
+  },
+  {
+   "max_loss": 300.0,
+   "max_capital": 6000,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 300.0,
+   "max_capital": 7500,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 300.0,
+   "max_capital": 10000,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  }
+ ],
+ "sens_joint": [
+  {
+   "max_loss": 300,
+   "max_capital": 6000,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 300,
+   "max_capital": 7500,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 300,
+   "max_capital": 10000,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 400,
+   "max_capital": 6000,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 400,
+   "max_capital": 7500,
+   "trades": 3,
+   "blocked": 3,
+   "blocked_other": 1,
+   "wins": 0,
+   "losses": 3,
+   "net": -133.25,
+   "median": -32.5,
+   "max_loss_seen": -91.0,
+   "max_dd": 133.25,
+   "capital_total": 19773.0,
+   "capital_max": 7403.5,
+   "per_day": {
+    "2026-09-17": 1,
+    "2026-09-18": 2
+   }
+  },
+  {
+   "max_loss": 400,
+   "max_capital": 10000,
+   "trades": 5,
+   "blocked": 1,
+   "blocked_other": 1,
+   "wins": 1,
+   "losses": 4,
+   "net": -162.5,
+   "median": -32.5,
+   "max_loss_seen": -91.0,
+   "max_dd": 162.5,
+   "capital_total": 35061.0,
+   "capital_max": 7822.75,
+   "per_day": {
+    "2026-09-17": 3,
+    "2026-09-18": 2
+   }
+  },
+  {
+   "max_loss": 500,
+   "max_capital": 6000,
+   "trades": 1,
+   "blocked": 6,
+   "blocked_other": 0,
+   "wins": 0,
+   "losses": 1,
+   "net": -9.75,
+   "median": -9.75,
+   "max_loss_seen": -9.75,
+   "max_dd": 9.75,
+   "capital_total": 5655.0,
+   "capital_max": 5655.0,
+   "per_day": {
+    "2026-09-17": 0,
+    "2026-09-18": 1
+   }
+  },
+  {
+   "max_loss": 500,
+   "max_capital": 7500,
+   "trades": 3,
+   "blocked": 3,
+   "blocked_other": 1,
+   "wins": 0,
+   "losses": 3,
+   "net": -133.25,
+   "median": -32.5,
+   "max_loss_seen": -91.0,
+   "max_dd": 133.25,
+   "capital_total": 19773.0,
+   "capital_max": 7403.5,
+   "per_day": {
+    "2026-09-17": 1,
+    "2026-09-18": 2
+   }
+  },
+  {
+   "max_loss": 500,
+   "max_capital": 10000,
+   "trades": 6,
+   "blocked": 0,
+   "blocked_other": 1,
+   "wins": 1,
+   "losses": 5,
+   "net": -243.75,
+   "median": -43.88,
+   "max_loss_seen": -91.0,
+   "max_dd": 243.75,
+   "capital_total": 44365.75,
+   "capital_max": 9304.75,
+   "per_day": {
+    "2026-09-17": 4,
+    "2026-09-18": 2
+   }
+  }
+ ],
+ "delays": {
+  "0": {
+   "latency_s": 0,
+   "all": {
+    "n": 60,
+    "mfe": 2.264,
+    "mae": -3.661,
+    "pnl_median": -0.414,
+    "pnl_mean": -0.676,
+    "profitable_pct": 25.0,
+    "late_pct": 61.7,
+    "nft_pct": 25.0,
+    "early_pct": 13.3,
+    "round_trip_spread": 0.214
+   },
+   "passed": {
+    "n": 7,
+    "mfe": 1.488,
+    "mae": -2.363,
+    "pnl_median": -0.664,
+    "pnl_mean": -0.771,
+    "profitable_pct": 14.3,
+    "late_pct": 71.4,
+    "nft_pct": 14.3,
+    "early_pct": 14.3,
+    "round_trip_spread": 0.197
+   }
+  },
+  "1": {
+   "latency_s": 5,
+   "all": {
+    "n": 60,
+    "mfe": 2.356,
+    "mae": -3.428,
+    "pnl_median": -0.385,
+    "pnl_mean": -1.613,
+    "profitable_pct": 30.0,
+    "late_pct": 43.3,
+    "nft_pct": 18.3,
+    "early_pct": 38.3,
+    "round_trip_spread": 0.221
+   },
+   "passed": {
+    "n": 7,
+    "mfe": 2.382,
+    "mae": -1.474,
+    "pnl_median": -0.043,
+    "pnl_mean": -0.485,
+    "profitable_pct": 28.6,
+    "late_pct": 42.9,
+    "nft_pct": 0.0,
+    "early_pct": 57.1,
+    "round_trip_spread": 0.187
+   }
+  },
+  "2": {
+   "latency_s": 10,
+   "all": {
+    "n": 60,
+    "mfe": 2.283,
+    "mae": -3.362,
+    "pnl_median": -0.312,
+    "pnl_mean": -1.044,
+    "profitable_pct": 23.3,
+    "late_pct": 35.0,
+    "nft_pct": 20.0,
+    "early_pct": 45.0,
+    "round_trip_spread": 0.218
+   },
+   "passed": {
+    "n": 7,
+    "mfe": 2.662,
+    "mae": -1.597,
+    "pnl_median": -0.706,
+    "pnl_mean": -0.598,
+    "profitable_pct": 14.3,
+    "late_pct": 28.6,
+    "nft_pct": 0.0,
+    "early_pct": 71.4,
+    "round_trip_spread": 0.208
+   }
+  },
+  "3": {
+   "latency_s": 15,
+   "all": {
+    "n": 60,
+    "mfe": 2.633,
+    "mae": -3.125,
+    "pnl_median": -0.281,
+    "pnl_mean": -0.957,
+    "profitable_pct": 36.7,
+    "late_pct": 40.0,
+    "nft_pct": 20.0,
+    "early_pct": 40.0,
+    "round_trip_spread": 0.228
+   },
+   "passed": {
+    "n": 7,
+    "mfe": 2.295,
+    "mae": -1.602,
+    "pnl_median": -1.1,
+    "pnl_mean": -0.83,
+    "profitable_pct": 28.6,
+    "late_pct": 57.1,
+    "nft_pct": 0.0,
+    "early_pct": 42.9,
+    "round_trip_spread": 0.219
+   }
+  }
+ },
+ "onr": {
+  "OPTION_NOT_RESPONDING": {
+   "n": 28,
+   "fut_r30": 13.8,
+   "fut_accel": 1.6,
+   "displacement": 14.4,
+   "ce_ret30": -0.1,
+   "pe_ret30": -0.18,
+   "ce_acc": 0.25,
+   "pe_acc": -0.31,
+   "sel_spread": 0.22,
+   "sel_volume30": 173322.5,
+   "sel_oi_change30": 0.0,
+   "option_response": -0.09,
+   "response_latency_s": 10
+  },
+  "CONFIRMED (passed engine gates)": {
+   "n": 7,
+   "fut_r30": 12.8,
+   "fut_accel": 6.8,
+   "displacement": 13.4,
+   "ce_ret30": 0.9,
+   "pe_ret30": -0.47,
+   "ce_acc": 0.14,
+   "pe_acc": -0.07,
+   "sel_spread": 0.23,
+   "sel_volume30": 369655.0,
+   "sel_oi_change30": 0.0,
+   "option_response": 4.11,
+   "response_latency_s": 20.0
+  },
+  "TRADED (exchange lots)": {
+   "n": 1,
+   "fut_r30": 0.4,
+   "fut_accel": 0.0,
+   "displacement": 18.0,
+   "ce_ret30": 1.11,
+   "pe_ret30": -0.47,
+   "ce_acc": -0.74,
+   "pe_acc": 0.24,
+   "sel_spread": 0.23,
+   "sel_volume30": 971295.0,
+   "sel_oi_change30": 0.0,
+   "option_response": 9.89,
+   "response_latency_s": 5
+  },
+  "TRADED (config units)": {
+   "n": 6,
+   "fut_r30": 12.85,
+   "fut_accel": 6.1,
+   "displacement": 13.2,
+   "ce_ret30": 1.01,
+   "pe_ret30": -1.17,
+   "ce_acc": 0.49,
+   "pe_acc": -0.71,
+   "sel_spread": 0.22,
+   "sel_volume30": 332215.0,
+   "sel_oi_change30": 0.0,
+   "option_response": 3.27,
+   "response_latency_s": 15
+  },
+  "PROFITABLE COUNTERFACTUAL (not traded)": {
+   "n": 14,
+   "fut_r30": 11.75,
+   "fut_accel": 5.3,
+   "displacement": 16.05,
+   "ce_ret30": -0.53,
+   "pe_ret30": 0.73,
+   "ce_acc": -1.98,
+   "pe_acc": 1.49,
+   "sel_spread": 0.23,
+   "sel_volume30": 245082.5,
+   "sel_oi_change30": -10595.0,
+   "option_response": 0.24,
+   "response_latency_s": 15
+  }
+ },
+ "onr_outcomes": {
+  "n": 28,
+  "profitable": 9,
+  "pnl_median": -0.216,
+  "responded_later": 6,
+  "responded_then_faded": 11,
+  "never_responded_within_60s": 11,
+  "early": 14,
+  "only_onr": 1,
+  "only_onr_profitable": 0,
+  "others_pnl_median": -0.514,
+  "others_profitable_pct": 15.6,
+  "onr_profitable_pct": 32.1
+ },
+ "early_late": {
+  "DETECTED_EARLY": {
+   "events": 27,
+   "confirmed": 5,
+   "traded_lots": 0,
+   "traded_units": 5,
+   "profitable": 8,
+   "remaining": 0.709,
+   "mfe": 2.662,
+   "mae": -3.079,
+   "pnl": -0.264,
+   "t_mfe": 120.0
+  },
+  "DETECTED_LATE": {
+   "events": 21,
+   "confirmed": 2,
+   "traded_lots": 1,
+   "traded_units": 1,
+   "profitable": 4,
+   "remaining": 0.297,
+   "mfe": 2.872,
+   "mae": -4.299,
+   "pnl": -0.349,
+   "t_mfe": 135.0
+  },
+  "NO_FOLLOW_THROUGH": {
+   "events": 12,
+   "confirmed": 0,
+   "traded_lots": 0,
+   "traded_units": 0,
+   "profitable": 2,
+   "remaining": 0.0,
+   "mfe": 0.35,
+   "mae": -7.333,
+   "pnl": -1.151,
+   "t_mfe": 35.0
+  }
+ },
+ "cross": {
+  "EARLY + PROFITABLE": {
+   "n": 8,
+   "pnl": 0.299,
+   "mfe": 3.575,
+   "mae": -0.965
+  },
+  "EARLY + LOSS": {
+   "n": 19,
+   "pnl": -0.417,
+   "mfe": 2.185,
+   "mae": -3.277
+  },
+  "LATE + PROFITABLE": {
+   "n": 4,
+   "pnl": 1.477,
+   "mfe": 3.5,
+   "mae": -3.57
+  },
+  "LATE + LOSS": {
+   "n": 17,
+   "pnl": -1.068,
+   "mfe": 1.932,
+   "mae": -4.299
+  },
+  "NO_FOLLOW_THROUGH + PROFITABLE": {
+   "n": 2,
+   "pnl": 3.14,
+   "mfe": 17.279,
+   "mae": -50.875
+  },
+  "NO_FOLLOW_THROUGH + LOSS": {
+   "n": 10,
+   "pnl": -1.745,
+   "mfe": -0.096,
+   "mae": -7.333
+  }
+ },
+ "symbols": {
+  "NIFTY": {
+   "events": 40,
+   "strong": 14,
+   "confirmed": 7,
+   "risk_blocked": 6,
+   "traded_lots": 1,
+   "traded_units": 6,
+   "profitable_cf": 8,
+   "missed": 7,
+   "mfe": 2.107,
+   "mae": -2.863,
+   "spread": 0.217,
+   "detect": 35.0,
+   "pnl": -0.312
+  },
+  "SENSEX": {
+   "events": 20,
+   "strong": 8,
+   "confirmed": 0,
+   "risk_blocked": 0,
+   "traded_lots": 0,
+   "traded_units": 0,
+   "profitable_cf": 6,
+   "missed": 1,
+   "mfe": 2.917,
+   "mae": -4.874,
+   "spread": 0.226,
+   "detect": 35.0,
+   "pnl": -0.357
+  }
+ },
+ "windows": {
+  "PRE 14:55-15:00": {
+   "events": 10,
+   "strong": 3,
+   "confirmed": 0,
+   "profitable": 1,
+   "pnl": -0.167,
+   "mfe": 3.82,
+   "mae": -3.879,
+   "early": 6,
+   "late": 4,
+   "nft": 0
+  },
+  "15:00-15:03": {
+   "events": 8,
+   "strong": 4,
+   "confirmed": 3,
+   "profitable": 2,
+   "pnl": -0.593,
+   "mfe": 2.355,
+   "mae": -1.957,
+   "early": 4,
+   "late": 2,
+   "nft": 2
+  },
+  "15:03-15:06": {
+   "events": 4,
+   "strong": 1,
+   "confirmed": 1,
+   "profitable": 2,
+   "pnl": -0.031,
+   "mfe": 2.274,
+   "mae": -2.235,
+   "early": 3,
+   "late": 1,
+   "nft": 0
+  },
+  "15:06-15:09": {
+   "events": 5,
+   "strong": 1,
+   "confirmed": 1,
+   "profitable": 3,
+   "pnl": 0.247,
+   "mfe": 4.163,
+   "mae": -1.958,
+   "early": 4,
+   "late": 1,
+   "nft": 0
+  },
+  "15:09-15:12": {
+   "events": 6,
+   "strong": 4,
+   "confirmed": 1,
+   "profitable": 0,
+   "pnl": -0.149,
+   "mfe": 0.776,
+   "mae": -4.163,
+   "early": 1,
+   "late": 3,
+   "nft": 2
+  },
+  "15:12-15:15": {
+   "events": 6,
+   "strong": 1,
+   "confirmed": 1,
+   "profitable": 1,
+   "pnl": -0.93,
+   "mfe": 2.338,
+   "mae": -3.63,
+   "early": 3,
+   "late": 2,
+   "nft": 1
+  },
+  "MODE B 15:15-15:30 (research only)": {
+   "events": 21,
+   "strong": 8,
+   "confirmed": 0,
+   "profitable": 5,
+   "pnl": -0.588,
+   "mfe": 1.786,
+   "mae": -4.299,
+   "early": 6,
+   "late": 8,
+   "nft": 7
+  }
+ },
+ "big_mfe": {
+  "n": 33,
+  "t_mfe": 200.0,
+  "after_hold_pct": 66.7,
+  "mae": -2.906,
+  "pnl": -0.259
+ },
+ "lots": {
+  "NIFTY 2026-09-22": [
+   65,
+   "scrip master NIFTY 2026-09-22 (verified by contract)"
+  ],
+  "NIFTY 2026-09-15": [
+   65,
+   "INFERRED from NIFTY 2026-09-22 series (expired contracts not in the 2026-09-18 scrip master)"
+  ],
+  "SENSEX 2026-09-17": [
+   20,
+   "INFERRED from SENSEX 2026-09-24 series (expired contracts not in the 2026-09-18 scrip master)"
+  ],
+  "SENSEX 2026-09-24": [
+   20,
+   "scrip master SENSEX 2026-09-24 (verified by contract)"
+  ]
+ }
+}
