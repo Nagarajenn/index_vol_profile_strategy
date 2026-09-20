@@ -109,12 +109,10 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
     setHover({ i, x: e.clientX - r.left, y: e.clientY - r.top });
   };
   const fmt = (v: number) => `${v.toLocaleString("en-IN", { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}${unit}`;
-  // Only the latest reading is written on the chart (small), with its change against the previous
-  // reading. Everything else stays on hover.
+  // Only the latest price is written on the chart, very small. The change against the previous
+  // reading and everything else stay on hover.
   const withValue = labelLatest && series[0] ? series[0].values.map((v, i) => ({ v, i })).filter((p) => p.v !== null) : [];
   const latest = withValue.length ? withValue[withValue.length - 1] : null;
-  const prevValue = withValue.length > 1 ? withValue[withValue.length - 2] : null;
-  const latestDelta = latest && prevValue ? (latest.v as number) - (prevValue.v as number) : null;
   const tailFrom = tailTicks > 0 ? Math.max(0, labels.length - tailTicks) : labels.length;
   return (
     <Paper variant="outlined" sx={{ p: 1, flex: 1, minWidth: 300, position: "relative" }}>
@@ -141,16 +139,20 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
         {series.map((s) => (
           <path key={s.name} d={path(s.values)} fill="none" stroke={s.color} strokeWidth={1.8} strokeDasharray={s.dashed ? "5 3" : undefined} />
         ))}
-        {latest && (
+        {labelLatest && series[0] && (
           <g>
-            <circle cx={x(latest.i)} cy={y(latest.v as number)} r={2.6} fill={series[0].color} stroke="#fff" strokeWidth={0.8} />
-            <text x={x(latest.i) - 6} y={y(latest.v as number) - 5} fontSize="9" textAnchor="end" fontWeight={700}
-              fill={series[0].color}>
-              {fmt(latest.v as number)}
-              <tspan fill={latestDelta === null ? "#888" : latestDelta > 0 ? CE_COLOR : latestDelta < 0 ? PE_COLOR : "#888"}>
-                {latestDelta === null ? "" : ` ${latestDelta > 0 ? "▲" : latestDelta < 0 ? "▼" : "▬"}${signed(latestDelta, decimals)}`}
-              </tspan>
-            </text>
+            {/* a marker per minute, so the line reads as discrete readings */}
+            {series[0].values.map((v, i) => (v === null ? null : (
+              <circle key={`m${i}`} cx={x(i)} cy={y(v)} r={1.3} fill={series[0].color} opacity={0.75} />
+            )))}
+            {latest && (
+              <>
+                <circle cx={x(latest.i)} cy={y(latest.v as number)} r={2.6} fill={series[0].color} stroke="#fff" strokeWidth={0.8} />
+                {/* value only, very small -- the change stays on hover */}
+                <text x={x(latest.i) - 5} y={y(latest.v as number) - 4} fontSize="7.5" textAnchor="end"
+                  fill={series[0].color}>{fmt(latest.v as number)}</text>
+              </>
+            )}
           </g>
         )}
         {hover && (
