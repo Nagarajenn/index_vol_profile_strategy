@@ -68,9 +68,9 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
 interface Series { name: string; color: string; values: (number | null)[]; dashed?: boolean }
 
 function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, meta, full = false, valueArrows = false,
-  zeroBaseline = true }: {
-  title: string; labels: string[]; series: Series[]; unit: string; splitAt?: string;
-  decimals?: number; meta?: (i: number) => string | null; full?: boolean; valueArrows?: boolean; zeroBaseline?: boolean;
+  zeroBaseline = true, labelLast = 0 }: {
+  title: string; labels: string[]; series: Series[]; unit: string; splitAt?: string; decimals?: number;
+  meta?: (i: number) => string | null; full?: boolean; valueArrows?: boolean; zeroBaseline?: boolean; labelLast?: number;
 }) {
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const W = full ? 1100 : 520, H = full ? 190 : 170, L = 46, R = 8, T = 10, B = 22;
@@ -108,6 +108,22 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
     setHover({ i, x: e.clientX - r.left, y: e.clientY - r.top });
   };
   const fmt = (v: number) => `${v.toLocaleString("en-IN", { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}${unit}`;
+  // The last `labelLast` readings, written on the chart so the recent numbers need no hover.
+  // Points sit only a few pixels apart, so the labels go in a block in a free corner and the
+  // points they refer to are dotted on the line.
+  const recent: { i: number; v: number; d: number | null }[] = [];
+  if (labelLast > 0) {
+    const withValue = series[0] ? series[0].values.map((v, i) => ({ v, i })).filter((p) => p.v !== null) : [];
+    for (const p of withValue.slice(-labelLast)) {
+      const before = withValue.filter((q) => q.i < p.i).pop();
+      recent.push({ i: p.i, v: p.v as number, d: before ? (p.v as number) - (before.v as number) : null });
+    }
+  }
+  const boxW = 104, rowH = 13, boxH = recent.length * rowH + 6;
+  // keep the block away from the line: top-right unless the recent points are already up there
+  const topHalf = recent.length > 0 && y(recent[recent.length - 1].v) < (T + H - B) / 2;
+  // when the block sits at the top it starts below the stale-window caption, never on top of it
+  const boxX = W - R - boxW - 2, boxY = topHalf ? H - B - boxH - 4 : T + 16;
   return (
     <Paper variant="outlined" sx={{ p: 1, flex: 1, minWidth: 300, position: "relative" }}>
       <Typography variant="caption" sx={{ fontWeight: 700 }}>{title}</Typography>
@@ -124,6 +140,25 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
         {series.map((s) => (
           <path key={s.name} d={path(s.values)} fill="none" stroke={s.color} strokeWidth={1.8} strokeDasharray={s.dashed ? "5 3" : undefined} />
         ))}
+        {recent.length > 0 && (
+          <g>
+            {recent.map((p) => (
+              <circle key={`d${p.i}`} cx={x(p.i)} cy={y(p.v)} r={2.4} fill={series[0].color} stroke="#fff" strokeWidth={0.8} />
+            ))}
+            <rect x={boxX} y={boxY} width={boxW} height={boxH} rx={3} fill="rgba(255,255,255,0.92)" stroke="#d0d0d0" strokeWidth={0.8} />
+            {recent.map((p, k) => (
+              <g key={`l${p.i}`}>
+                <text x={boxX + 5} y={boxY + 10 + k * rowH} fontSize="9.5" fill="#666">{labels[p.i]}</text>
+                <text x={boxX + 38} y={boxY + 10 + k * rowH} fontSize="9.5" fontWeight={k === recent.length - 1 ? 700 : 500}
+                  fill={series[0].color}>{fmt(p.v)}</text>
+                <text x={boxX + boxW - 5} y={boxY + 10 + k * rowH} fontSize="9.5" textAnchor="end"
+                  fill={p.d === null ? "#888" : p.d > 0 ? CE_COLOR : p.d < 0 ? PE_COLOR : "#888"}>
+                  {p.d === null ? "" : `${p.d > 0 ? "▲" : p.d < 0 ? "▼" : "▬"}${signed(p.d, decimals)}`}
+                </text>
+              </g>
+            ))}
+          </g>
+        )}
         {hover && (
           <>
             <line x1={x(hover.i)} x2={x(hover.i)} y1={T} y2={H - B} stroke="#888" strokeWidth={1} />
@@ -287,23 +322,13 @@ function LtpChart({ side, points }: { side: "CE" | "PE"; points: LtpPoint[] }) {
   const labels = points.map((p) => p.minute);
   const values = points.map((p) => (side === "CE" ? p.ce_ltp : p.pe_ltp) ?? null);
   const color = side === "CE" ? CE_COLOR : PE_COLOR;
-  const lastIdx = values.map((v, i) => (v === null ? -1 : i)).filter((i) => i >= 0).pop();
-  const last = lastIdx === undefined ? null : values[lastIdx];
-  const prev = lastIdx === undefined ? null : values.slice(0, lastIdx).reverse().find((v) => v !== null) ?? null;
-  const delta = last !== null && prev !== null && prev !== undefined ? last - prev : null;
   return (
     <Box sx={{ flex: 1, minWidth: 300, position: "relative" }}>
       <MiniLineChart
         title={`ATM ${side} last traded price (each minute's ATM contract)`}
-        labels={labels} unit="" splitAt="15:15" decimals={2} valueArrows zeroBaseline={false}
+        labels={labels} unit="" splitAt="15:15" decimals={2} valueArrows zeroBaseline={false} labelLast={4}
         meta={(i) => (points[i]?.atm_strike ? `ATM ${points[i].atm_strike}` : "no ATM resolved")}
         series={[{ name: `${side} LTP`, color, values }]} />
-      {last !== null && (
-        <Typography variant="caption" sx={{ position: "absolute", right: 10, top: 8, fontWeight: 700, color }}>
-          {num(last)} {delta === null ? "" : delta > 0 ? "▲" : delta < 0 ? "▼" : "▬"}
-          {delta ? ` ${signed(delta)}` : ""}
-        </Typography>
-      )}
     </Box>
   );
 }
