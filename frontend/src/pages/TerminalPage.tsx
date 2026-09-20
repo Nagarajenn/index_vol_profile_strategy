@@ -9,6 +9,7 @@ import { VolumeProfileIntelligencePanel } from "../components/volume-profile/Vol
 import { useDashboardData } from "../hooks/useDashboardData";
 import { useLiveTransitionAdvisor } from "../hooks/useLiveTransitionAdvisor";
 import { useSymbolStore } from "../store/useSymbolStore";
+import { ScalpDecisionPanel } from "../components/scalp-decision/ScalpDecisionPanel";
 
 export function TerminalPage() {
   const selectedSymbol = useSymbolStore((s) => s.selectedSymbol);
@@ -37,6 +38,8 @@ export function TerminalPage() {
 
   return (
     <Stack spacing={2} sx={{ width: "100%" }}>
+      {/* 12C: the operational call first -- BUY CE / BUY PE / WAIT, or the risk brake on an open position. */}
+      <ScalpDecisionPanel symbol={selectedSymbol} />
       <DecisionCardPanel data={data} />
       <Box sx={{ height: 3, bgcolor: "divider", borderRadius: 1 }} />
       <Box sx={{ display: "flex", gap: 1.5, flexDirection: { xs: "column", md: "row" }, alignItems: "flex-start" }}>

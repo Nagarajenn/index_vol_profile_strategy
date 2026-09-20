@@ -7,12 +7,16 @@ from app.repositories.levels_snapshot_repository import LevelsSnapshotRepository
 from app.repositories.market_intelligence_repository import MarketIntelligenceRepository
 from app.repositories.market_transition_repository import MarketTransitionRepository
 from app.repositories.option_chain_repository import OptionChainRepository
+from app.repositories.option_risk_repository import OptionRiskRepository
 from app.repositories.paper_trading_repository import PaperTradingRepository
+from app.repositories.scalp_decision_repository import ScalpDecisionRepository
 from app.services.dashboard_service import DashboardService
 from app.services.live_transition_advisor_service import LiveTransitionAdvisorService
 from app.services.market_intelligence_service import MarketIntelligenceService
 from app.services.market_transition_service import MarketTransitionService
+from app.services.option_risk_service import OptionRiskService
 from app.services.paper_trading_service import PaperTradingService
+from app.services.scalp_decision_service import ScalpDecisionService
 from app.services.session_amd_service import SessionAmdService
 from app.services.volume_intelligence_service import VolumeIntelligenceService
 from app.services.volume_profile_intelligence_service import VolumeProfileIntelligenceService
@@ -97,3 +101,24 @@ def get_paper_trading_service(
     repo: PaperTradingRepository = Depends(get_paper_trading_repository),
 ) -> PaperTradingService:
     return PaperTradingService(repo)
+
+
+def get_option_risk_repository(session: AsyncSession = Depends(get_db_session)) -> OptionRiskRepository:
+    return OptionRiskRepository(session)
+
+
+def get_option_risk_service(repo: OptionRiskRepository = Depends(get_option_risk_repository)) -> OptionRiskService:
+    """12B-option-risk-v1: read-only, advisory. Never writes and cannot affect any position."""
+    return OptionRiskService(repo)
+
+
+def get_scalp_decision_repository(session: AsyncSession = Depends(get_db_session)) -> ScalpDecisionRepository:
+    return ScalpDecisionRepository(session)
+
+
+def get_scalp_decision_service(
+    option_repo: OptionRiskRepository = Depends(get_option_risk_repository),
+    levels_repo: ScalpDecisionRepository = Depends(get_scalp_decision_repository),
+) -> ScalpDecisionService:
+    """12C-scalp-decision-v1: read-only, advisory. Never writes and cannot affect any position."""
+    return ScalpDecisionService(option_repo, levels_repo)

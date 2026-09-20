@@ -3,7 +3,9 @@ import { Alert, Box, CircularProgress, Paper, Stack, Typography } from "@mui/mat
 import { DecisionCard } from "../components/paper-trading/DecisionCard";
 import { JournalTable, OutcomePanel, PerformancePanel } from "../components/paper-trading/JournalPanel";
 import { OpenPositionPanel } from "../components/paper-trading/OpenPositionPanel";
+import { OptionRiskClosingPanel } from "../components/paper-trading/OptionRiskClosingPanel";
 import { PaperHeader } from "../components/paper-trading/PaperHeader";
+import { ScalpDecisionPanel } from "../components/scalp-decision/ScalpDecisionPanel";
 import { usePaperToday, usePaperTrades } from "../hooks/usePaperTrading";
 
 function DataHealth({ heartbeat, agentState, dbOk }: { heartbeat: string | null; agentState: string; dbOk: boolean }) {
@@ -56,6 +58,8 @@ export function PaperTradingPage() {
     <Stack spacing={2} sx={{ width: "100%" }}>
       <PaperHeader status={data.status} account={data.account} />
 
+      <ScalpDecisionPanel />
+
       {data.status.kill_switch_active && (
         <Alert severity="warning">
           Paper engine kill switch is ACTIVE. No new paper entries will be taken. Existing records are untouched. Release
@@ -77,6 +81,8 @@ export function PaperTradingPage() {
       </Stack>
 
       {data.open_position && <OpenPositionPanel position={data.open_position} />}
+
+      <OptionRiskClosingPanel />
 
       <Stack direction={{ xs: "column", lg: "row" }} spacing={2}>
         <PerformancePanel account={data.account} />

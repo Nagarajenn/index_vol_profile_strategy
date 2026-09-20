@@ -3,6 +3,7 @@ import { Stack } from "@mui/material";
 import { CasIntelligencePanel } from "../components/market-transition/CasIntelligencePanel";
 import { LiveAdvisorPanel } from "../components/market-transition/LiveAdvisorPanel";
 import { LiveCasTrackerPanel } from "../components/market-transition/LiveCasTrackerPanel";
+import { OptionRiskClosingPanel } from "../components/paper-trading/OptionRiskClosingPanel";
 import { useSymbolStore } from "../store/useSymbolStore";
 
 // The original 2:00-3:01pm Market Transition Intelligence research view
@@ -21,6 +22,8 @@ export function MarketTransitionPage() {
     <Stack spacing={2} sx={{ width: "100%" }}>
       <LiveAdvisorPanel />
       <LiveCasTrackerPanel symbol={selectedSymbol} />
+      {/* The CAS tracker stops at 15:15; this continues 15:15-15:30 from the option chain without faking the stale index. */}
+      <OptionRiskClosingPanel symbol={selectedSymbol} />
       <CasIntelligencePanel symbol={selectedSymbol} />
     </Stack>
   );

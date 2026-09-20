@@ -16,4 +16,4 @@ dependencies = [
 
 [tool.setuptools]
 packages = ["analytics", "analytics.volume_intelligence", "config", "market_transition",
-            "option_chain", "paper_trading", "pipeline"]
+            "option_chain", "option_risk_12b", "paper_trading", "pipeline", "scalp_decision_12c"]
