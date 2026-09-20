@@ -15,6 +15,7 @@ import type { LtpPoint, OptionRiskClosingStateDTO, OptionRiskMinute, PositionRis
 const CE_COLOR = "#2e7d32";
 const PE_COLOR = "#c62828";
 const STRADDLE_COLOR = "#1565c0";
+const TIP_W = 160;        // hover card width, used to keep it beside the cursor and on the chart
 
 function num(x: number | null | undefined, d = 2): string {
   return x === null || x === undefined ? "–" : x.toLocaleString("en-IN", { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -73,7 +74,7 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
   meta?: (i: number) => string | null; full?: boolean; valueArrows?: boolean; zeroBaseline?: boolean;
   labelLatest?: boolean; labelEvery?: boolean; tailTicks?: number;
 }) {
-  const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<{ i: number; x: number; y: number; w: number } | null>(null);
   const W = full ? 1100 : 520, H = full ? 190 : 170, L = 46, R = 8, T = 10, B = tailTicks > 0 ? 34 : 22;
   const vals = series.flatMap((s) => s.values.filter((v): v is number => v !== null));
   if (!vals.length) {
@@ -106,7 +107,7 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
     const r = e.currentTarget.getBoundingClientRect();
     const vx = ((e.clientX - r.left) / r.width) * W;
     const i = Math.max(0, Math.min(labels.length - 1, Math.round(((vx - L) / (W - L - R)) * (labels.length - 1))));
-    setHover({ i, x: e.clientX - r.left, y: e.clientY - r.top });
+    setHover({ i, x: e.clientX - r.left, y: e.clientY - r.top, w: r.width });
   };
   const fmt = (v: number) => `${v.toLocaleString("en-IN", { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}${unit}`;
   // Only the latest price is written on the chart, very small. The change against the previous
@@ -177,8 +178,10 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
       </svg>
       {hover && (
         <Paper elevation={6} sx={{
-          position: "absolute", left: Math.min(hover.x + 12, 240), top: Math.max(hover.y - 8, 0), px: 1, py: 0.5,
-          pointerEvents: "none", zIndex: 5, minWidth: 130,
+          // follow the cursor; flip to its left near the right edge so the card stays on the chart
+          position: "absolute", top: Math.max(hover.y - 8, 0), px: 1, py: 0.5,
+          left: hover.x + TIP_W + 24 > hover.w ? Math.max(hover.x - TIP_W - 12, 4) : hover.x + 12,
+          pointerEvents: "none", zIndex: 5, minWidth: 130, maxWidth: TIP_W,
         }}>
           <Typography variant="caption" sx={{ fontWeight: 700 }}>{labels[hover.i]}</Typography>
           {meta?.(hover.i) && (
