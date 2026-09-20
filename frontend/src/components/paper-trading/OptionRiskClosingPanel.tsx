@@ -68,10 +68,10 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
 interface Series { name: string; color: string; values: (number | null)[]; dashed?: boolean }
 
 function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, meta, full = false, valueArrows = false,
-  zeroBaseline = true, labelLatest = false, tailTicks = 0 }: {
+  zeroBaseline = true, labelLatest = false, labelEvery = false, tailTicks = 0 }: {
   title: string; labels: string[]; series: Series[]; unit: string; splitAt?: string; decimals?: number;
   meta?: (i: number) => string | null; full?: boolean; valueArrows?: boolean; zeroBaseline?: boolean;
-  labelLatest?: boolean; tailTicks?: number;
+  labelLatest?: boolean; labelEvery?: boolean; tailTicks?: number;
 }) {
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
   const W = full ? 1100 : 520, H = full ? 190 : 170, L = 46, R = 8, T = 10, B = tailTicks > 0 ? 34 : 22;
@@ -88,7 +88,7 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
   let lo = zeroBaseline ? Math.min(0, ...vals) : Math.min(...vals);
   let hi = zeroBaseline ? Math.max(0, ...vals) : Math.max(...vals);
   if (hi === lo) { hi += 1; lo -= 1; }
-  if (!zeroBaseline) { const pad = (hi - lo) * 0.08; lo -= pad; hi += pad; }
+  if (!zeroBaseline) { const pad = (hi - lo) * (labelEvery ? 0.18 : 0.08); lo -= pad; hi += pad; }
   const x = (i: number) => L + (i * (W - L - R)) / Math.max(1, labels.length - 1);
   const y = (v: number) => T + ((hi - v) * (H - T - B)) / (hi - lo);
   const split = splitAt ? labels.indexOf(splitAt) : -1;
@@ -145,12 +145,20 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
             {series[0].values.map((v, i) => (v === null ? null : (
               <circle key={`m${i}`} cx={x(i)} cy={y(v)} r={1.3} fill={series[0].color} opacity={0.75} />
             )))}
+            {labelEvery && series[0].values.map((v, i) => (v === null ? null : (
+              // alternating rows: a label is ~2.5 minutes wide, so every other one moves below the line
+              <text key={`v${i}`} x={x(i)} y={i % 2 === 0 ? y(v) - 5 : y(v) + 9} fontSize="7" textAnchor="middle"
+                fill={series[0].color} opacity={0.9}
+                fontWeight={latest && i === latest.i ? 700 : 400}>{fmt(v)}</text>
+            )))}
             {latest && (
               <>
                 <circle cx={x(latest.i)} cy={y(latest.v as number)} r={2.6} fill={series[0].color} stroke="#fff" strokeWidth={0.8} />
-                {/* value only, very small -- the change stays on hover */}
-                <text x={x(latest.i) - 5} y={y(latest.v as number) - 4} fontSize="7.5" textAnchor="end"
-                  fill={series[0].color}>{fmt(latest.v as number)}</text>
+                {!labelEvery && (
+                  // value only, very small -- the change stays on hover
+                  <text x={x(latest.i) - 5} y={y(latest.v as number) - 4} fontSize="7.5" textAnchor="end"
+                    fill={series[0].color}>{fmt(latest.v as number)}</text>
+                )}
               </>
             )}
           </g>
@@ -322,7 +330,8 @@ function LtpChart({ side, points }: { side: "CE" | "PE"; points: LtpPoint[] }) {
     <Box sx={{ flex: 1, minWidth: 300, position: "relative" }}>
       <MiniLineChart
         title={`ATM ${side} last traded price (each minute's ATM contract)`}
-        labels={labels} unit="" splitAt="15:15" decimals={2} valueArrows zeroBaseline={false} labelLatest tailTicks={5}
+        labels={labels} unit="" splitAt="15:15" decimals={2} valueArrows zeroBaseline={false} labelLatest labelEvery
+        full tailTicks={5}
         meta={(i) => (points[i]?.atm_strike ? `ATM ${points[i].atm_strike}` : "no ATM resolved")}
         series={[{ name: `${side} LTP`, color, values }]} />
     </Box>
@@ -336,10 +345,8 @@ function Charts({ rows, ltp }: { rows: OptionRiskMinute[]; ltp: LtpPoint[] }) {
   const strikeAt = (i: number) => (rows[i]?.atm_strike ? `ATM ${rows[i].atm_strike}` : "no ATM resolved");
   return (
     <Stack spacing={1}>
-      <Stack direction={{ xs: "column", lg: "row" }} spacing={1}>
-        <LtpChart side="CE" points={ltp} />
-        <LtpChart side="PE" points={ltp} />
-      </Stack>
+      <LtpChart side="CE" points={ltp} />
+      <LtpChart side="PE" points={ltp} />
     <Stack direction={{ xs: "column", lg: "row" }} spacing={1}>
       <MiniLineChart title="CE vs PE premium % since 15:00 (ATM, chain-linked) + ATM straddle %" labels={labels} unit="%"
         splitAt="15:15" decimals={2} meta={strikeAt}
