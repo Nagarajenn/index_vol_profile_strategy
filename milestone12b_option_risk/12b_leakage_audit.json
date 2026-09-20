@@ -1,0 +1,22 @@
+{
+ "truncation_invariance": {
+  "minutes_checked": 2418,
+  "mismatches": 0,
+  "examples": [],
+  "result": "PASS"
+ },
+ "signals_strictly_before_print": {
+  "n": 159,
+  "violations": 0,
+  "result": "PASS"
+ },
+ "static": {
+  "previous_oi_not_used": true,
+  "official_close_not_in_live_modules": true,
+  "no_clock_in_live_modules": true,
+  "no_order_code": true
+ },
+ "thresholds": "all thresholds are constants in option_risk_12b/config.py (RESEARCH DEFAULTS); none is estimated from outcomes",
+ "outcomes_isolated": "next print / official close / forward option paths are computed only in research.py after the per-minute states",
+ "result": "PASS"
+}

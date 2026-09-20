@@ -1,0 +1,2413 @@
+{
+ "flags": {
+  "MISSING_OPTION_DATA": 134,
+  "_minutes": 1248,
+  "INSUFFICIENT_HISTORY": 2,
+  "STALE_UNDERLYING": 946,
+  "INVALID_GREEKS": 327,
+  "WIDE_SPREAD": 50
+ },
+ "audit": [
+  {
+   "symbol": "NIFTY",
+   "date": "2026-07-17",
+   "first_snapshot_after_1515": "15:29",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 1,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:15",
+    "15:16",
+    "15:17",
+    "15:18",
+    "15:19",
+    "15:20",
+    "15:21",
+    "15:22",
+    "15:23",
+    "15:24",
+    "15:25",
+    "15:26",
+    "15:27",
+    "15:28",
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 1,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-07-21"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-17",
+   "first_snapshot_after_1515": "15:29",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 1,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:15",
+    "15:16",
+    "15:17",
+    "15:18",
+    "15:19",
+    "15:20",
+    "15:21",
+    "15:22",
+    "15:23",
+    "15:24",
+    "15:25",
+    "15:26",
+    "15:27",
+    "15:28",
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 1,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 0.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-07-23"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-07-20",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 99.69697,
+   "greeks_valid_pct": 99.69697,
+   "expiry": "2026-07-21"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-20",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-07-23"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-07-21",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 84.848485,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 81.515152,
+   "greeks_valid_pct": 81.515152,
+   "expiry": "2026-07-21"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-21",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-07-23"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-07-22",
+   "first_snapshot_after_1515": "15:38",
+   "last_snapshot": "15:38",
+   "snapshots_1515_1530": 0,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:15",
+    "15:16",
+    "15:17",
+    "15:18",
+    "15:19",
+    "15:20",
+    "15:21",
+    "15:22",
+    "15:23",
+    "15:24",
+    "15:25",
+    "15:26",
+    "15:27",
+    "15:28",
+    "15:29",
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:39"
+   ],
+   "atm_available_minutes": 0,
+   "ce_available_pct": 0.0,
+   "pe_available_pct": 0.0,
+   "bid_ask_available_pct": 0.0,
+   "oi_available_pct": 0.0,
+   "volume_available_pct": 0.0,
+   "iv_available_pct": 0.0,
+   "greeks_valid_pct": 0.0,
+   "expiry": "2026-07-28"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-22",
+   "first_snapshot_after_1515": "15:38",
+   "last_snapshot": "15:38",
+   "snapshots_1515_1530": 0,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:15",
+    "15:16",
+    "15:17",
+    "15:18",
+    "15:19",
+    "15:20",
+    "15:21",
+    "15:22",
+    "15:23",
+    "15:24",
+    "15:25",
+    "15:26",
+    "15:27",
+    "15:28",
+    "15:29",
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:39"
+   ],
+   "atm_available_minutes": 0,
+   "ce_available_pct": 0.0,
+   "pe_available_pct": 0.0,
+   "bid_ask_available_pct": 0.0,
+   "oi_available_pct": 0.0,
+   "volume_available_pct": 0.0,
+   "iv_available_pct": 0.0,
+   "greeks_valid_pct": 0.0,
+   "expiry": "2026-07-23"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-07-23",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-07-28"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-23",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 93.636364,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 72.121212,
+   "greeks_valid_pct": 72.121212,
+   "expiry": "2026-07-23"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-24",
+   "first_snapshot_after_1515": null,
+   "snapshots_1515_1530": 0,
+   "note": "no option snapshot at or after 15:15 on this date"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-07-27",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 82.121212,
+   "greeks_valid_pct": 82.121212,
+   "expiry": "2026-07-28"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-27",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-07-30"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-07-29",
+   "first_snapshot_after_1515": null,
+   "snapshots_1515_1530": 0,
+   "note": "no option snapshot at or after 15:15 on this date"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-29",
+   "first_snapshot_after_1515": null,
+   "snapshots_1515_1530": 0,
+   "note": "no option snapshot at or after 15:15 on this date"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-07-30",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 85.757576,
+   "greeks_valid_pct": 85.757576,
+   "expiry": "2026-08-04"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-30",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 95.151515,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 73.939394,
+   "greeks_valid_pct": 73.939394,
+   "expiry": "2026-07-30"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-07-31",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 93.939394,
+   "greeks_valid_pct": 93.939394,
+   "expiry": "2026-08-04"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-07-31",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:29",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 0,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38",
+    "15:39"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-06"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-03",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 90.0,
+   "greeks_valid_pct": 90.0,
+   "expiry": "2026-08-04"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-03",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-06"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-04",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 75.454545,
+   "greeks_valid_pct": 75.454545,
+   "expiry": "2026-08-04"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-04",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-06"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-05",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 99.393939,
+   "greeks_valid_pct": 99.393939,
+   "expiry": "2026-08-11"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-05",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 99.393939,
+   "greeks_valid_pct": 99.393939,
+   "expiry": "2026-08-06"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-06",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-11"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-06",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 73.333333,
+   "greeks_valid_pct": 73.333333,
+   "expiry": "2026-08-06"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-07",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-11"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-07",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-13"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-10",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 82.121212,
+   "greeks_valid_pct": 82.121212,
+   "expiry": "2026-08-11"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-10",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-13"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-11",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 77.878788,
+   "greeks_valid_pct": 77.878788,
+   "expiry": "2026-08-11"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-11",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-13"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-12",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 95.757576,
+   "greeks_valid_pct": 95.757576,
+   "expiry": "2026-08-18"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-12",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 88.181818,
+   "greeks_valid_pct": 88.181818,
+   "expiry": "2026-08-13"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-13",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 86.969697,
+   "greeks_valid_pct": 86.969697,
+   "expiry": "2026-08-18"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-13",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 76.363636,
+   "greeks_valid_pct": 76.363636,
+   "expiry": "2026-08-13"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-14",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 83.030303,
+   "greeks_valid_pct": 83.030303,
+   "expiry": "2026-08-18"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-14",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-20"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-17",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 83.636364,
+   "greeks_valid_pct": 83.636364,
+   "expiry": "2026-08-18"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-17",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 99.393939,
+   "greeks_valid_pct": 99.393939,
+   "expiry": "2026-08-20"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-18",
+   "first_snapshot_after_1515": null,
+   "snapshots_1515_1530": 0,
+   "note": "no option snapshot at or after 15:15 on this date"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-18",
+   "first_snapshot_after_1515": null,
+   "snapshots_1515_1530": 0,
+   "note": "no option snapshot at or after 15:15 on this date"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-19",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-25"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-19",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 91.515152,
+   "greeks_valid_pct": 91.515152,
+   "expiry": "2026-08-20"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-20",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 84.545455,
+   "greeks_valid_pct": 84.545455,
+   "expiry": "2026-08-25"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-20",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 81.515152,
+   "greeks_valid_pct": 81.515152,
+   "expiry": "2026-08-20"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-21",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 86.363636,
+   "greeks_valid_pct": 86.363636,
+   "expiry": "2026-08-25"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-21",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-08-27"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-24",
+   "first_snapshot_after_1515": null,
+   "snapshots_1515_1530": 0,
+   "note": "no option snapshot at or after 15:15 on this date"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-24",
+   "first_snapshot_after_1515": null,
+   "snapshots_1515_1530": 0,
+   "note": "no option snapshot at or after 15:15 on this date"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-25",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 97.878788,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 76.363636,
+   "greeks_valid_pct": 76.363636,
+   "expiry": "2026-08-25"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-25",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 77.575758,
+   "greeks_valid_pct": 77.575758,
+   "expiry": "2026-08-27"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-26",
+   "first_snapshot_after_1515": null,
+   "snapshots_1515_1530": 0,
+   "note": "no option snapshot at or after 15:15 on this date"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-26",
+   "first_snapshot_after_1515": null,
+   "snapshots_1515_1530": 0,
+   "note": "no option snapshot at or after 15:15 on this date"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-27",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 90.30303,
+   "greeks_valid_pct": 90.30303,
+   "expiry": "2026-09-01"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-27",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 1,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37",
+    "15:38"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 78.181818,
+   "greeks_valid_pct": 78.181818,
+   "expiry": "2026-08-27"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-28",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 80.909091,
+   "greeks_valid_pct": 80.909091,
+   "expiry": "2026-09-01"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-28",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 96.060606,
+   "greeks_valid_pct": 96.060606,
+   "expiry": "2026-09-03"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-08-31",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 77.878788,
+   "greeks_valid_pct": 77.878788,
+   "expiry": "2026-09-01"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-08-31",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 90.0,
+   "greeks_valid_pct": 90.0,
+   "expiry": "2026-09-03"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-01",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 6,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 73.939394,
+   "greeks_valid_pct": 73.939394,
+   "expiry": "2026-09-01"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-01",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 6,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 98.787879,
+   "greeks_valid_pct": 98.787879,
+   "expiry": "2026-09-03"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-02",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-08"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-02",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 99.69697,
+   "greeks_valid_pct": 99.69697,
+   "expiry": "2026-09-03"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-03",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 4,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-08"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-03",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 4,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 71.212121,
+   "greeks_valid_pct": 71.212121,
+   "expiry": "2026-09-03"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-04",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 98.484848,
+   "greeks_valid_pct": 98.484848,
+   "expiry": "2026-09-08"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-04",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-10"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-07",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 82.121212,
+   "greeks_valid_pct": 82.121212,
+   "expiry": "2026-09-08"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-07",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 2,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35",
+    "15:36",
+    "15:37"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 97.878788,
+   "greeks_valid_pct": 97.878788,
+   "expiry": "2026-09-10"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-08",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 76.363636,
+   "greeks_valid_pct": 76.363636,
+   "expiry": "2026-09-08"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-08",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-10"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-09",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-15"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-09",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 99.393939,
+   "greeks_valid_pct": 99.393939,
+   "expiry": "2026-09-10"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-10",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 16,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 16,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 98.011364,
+   "greeks_valid_pct": 98.011364,
+   "expiry": "2026-09-15"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-10",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 16,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 16,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 71.022727,
+   "greeks_valid_pct": 71.022727,
+   "expiry": "2026-09-10"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-11",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 8,
+   "missing_minutes_1531_1539": [
+    "15:31"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-15"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-11",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 8,
+   "missing_minutes_1531_1539": [
+    "15:31"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-17"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-15",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 99.090909,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 74.242424,
+   "greeks_valid_pct": 74.242424,
+   "expiry": "2026-09-15"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-15",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-17"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-16",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 8,
+   "missing_minutes_1531_1539": [
+    "15:31"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-22"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-16",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 8,
+   "missing_minutes_1531_1539": [
+    "15:31"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-17"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-17",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-22"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-17",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 9,
+   "missing_minutes_1531_1539": [],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 86.060606,
+   "greeks_valid_pct": 86.060606,
+   "expiry": "2026-09-17"
+  },
+  {
+   "symbol": "NIFTY",
+   "date": "2026-09-18",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 4,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-22"
+  },
+  {
+   "symbol": "SENSEX",
+   "date": "2026-09-18",
+   "first_snapshot_after_1515": "15:15",
+   "last_snapshot": "15:39",
+   "snapshots_1515_1530": 15,
+   "expected_minutes_1515_1530": 16,
+   "missing_minutes_1515_1530": [
+    "15:30"
+   ],
+   "snapshots_1531_1539": 4,
+   "missing_minutes_1531_1539": [
+    "15:31",
+    "15:32",
+    "15:33",
+    "15:34",
+    "15:35"
+   ],
+   "atm_available_minutes": 15,
+   "ce_available_pct": 100.0,
+   "pe_available_pct": 100.0,
+   "bid_ask_available_pct": 100.0,
+   "oi_available_pct": 100.0,
+   "volume_available_pct": 100.0,
+   "iv_available_pct": 100.0,
+   "greeks_valid_pct": 100.0,
+   "expiry": "2026-09-24"
+  }
+ ],
+ "greeks": {
+  "total_leg_minutes": 24508,
+  "invalid_or_unavailable": 2190,
+  "invalid_pct": 8.935858,
+  "by_moneyness": {
+   "CE_ITM": {
+    "VALID": 4975,
+    "INVALID": 595,
+    "invalid_pct": 10.682226
+   },
+   "PE_OTM": {
+    "VALID": 5519,
+    "INVALID": 51,
+    "invalid_pct": 0.915619
+   },
+   "CE_ATM": {
+    "VALID": 1061,
+    "INVALID": 53,
+    "invalid_pct": 4.75763
+   },
+   "PE_ATM": {
+    "VALID": 1049,
+    "INVALID": 65,
+    "invalid_pct": 5.834829
+   },
+   "CE_OTM": {
+    "VALID": 5533,
+    "INVALID": 37,
+    "invalid_pct": 0.664273
+   },
+   "PE_ITM": {
+    "VALID": 4181,
+    "INVALID": 1389,
+    "invalid_pct": 24.937163
+   }
+  }
+ },
+ "spreads": {
+  "leg_minutes": 2224,
+  "wide_pct": 2.248201,
+  "expanded_vs_1515_pct": 22.616906
+ }
+}

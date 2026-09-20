@@ -1,0 +1,87 @@
+{
+ "version": "12B-option-risk-v1",
+ "config_hash": "1eadd228220900aa",
+ "parameters": {
+  "window_start": "15:15",
+  "window_end": "15:30",
+  "context_start": "15:00",
+  "lookback_start": "14:55",
+  "ltp_chart_start": "14:30",
+  "load_end": "15:40",
+  "strikes_each_side": 5,
+  "display_strikes_each_side": 2,
+  "symbols": [
+   "NIFTY",
+   "SENSEX"
+  ],
+  "stale_after_minutes": 2,
+  "underlying_move_pts": {
+   "NIFTY": 5.0,
+   "SENSEX": 15.0
+  },
+  "active_min_changed_legs": 4,
+  "wide_spread_pct": 3.0,
+  "spread_expansion_ratio": 1.5,
+  "horizons_min": [
+   1,
+   3,
+   5
+  ],
+  "flat_pct": {
+   "premium": 0.5,
+   "volume": 5.0,
+   "oi": 0.1,
+   "iv": 0.5,
+   "straddle": 0.3,
+   "pcr": 0.5
+  },
+  "accel_min_pct": 0.3,
+  "scale_premium_pct": 3.0,
+  "scale_volume_accel": 1.0,
+  "scale_delta_change": 0.03,
+  "scale_rel_strength_pct": 4.0,
+  "directional_threshold": 0.25,
+  "adverse_premium_pct": -1.0,
+  "favourable_premium_pct": 1.0,
+  "opposite_rise_pct": 1.0,
+  "iv_collapse_pts": -0.5,
+  "families": {
+   "PRICE": [
+    "OWN_PREMIUM_FALLING",
+    "OWN_ACCELERATION_NEGATIVE"
+   ],
+   "RELATIVE": [
+    "OPPOSITE_PREMIUM_RISING",
+    "RELATIVE_STRENGTH_AGAINST"
+   ],
+   "FLOW": [
+    "OWN_VOLUME_WEAKENING",
+    "OPPOSITE_VOLUME_ACCELERATING"
+   ],
+   "POSITIONING": [
+    "OWN_OI_PRICE_ADVERSE"
+   ],
+   "LIQUIDITY": [
+    "OWN_BID_WEAKENING",
+    "OWN_SPREAD_EXPANDING"
+   ],
+   "VOLATILITY": [
+    "IV_COLLAPSE_WITH_WEAK_PREMIUM",
+    "STRADDLE_CONTRADICTS"
+   ]
+  },
+  "core_families": [
+   "PRICE",
+   "RELATIVE"
+  ],
+  "elevated_min_families": 1,
+  "high_min_families": 3,
+  "extreme_min_families": 4,
+  "strong_min_positive": 3,
+  "risk_free_rate": 0.065,
+  "implied_min_strikes": 5,
+  "implied_max_iqr_pct": 0.05,
+  "implied_max_spread_pct": 5.0
+ },
+ "note": "All thresholds are RESEARCH DEFAULTS, advisory only, not validated rules."
+}
