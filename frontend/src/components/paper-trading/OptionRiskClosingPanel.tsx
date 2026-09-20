@@ -68,12 +68,13 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
 interface Series { name: string; color: string; values: (number | null)[]; dashed?: boolean }
 
 function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, meta, full = false, valueArrows = false,
-  zeroBaseline = true, labelLast = 0 }: {
+  zeroBaseline = true, labelLatest = false, tailTicks = 0 }: {
   title: string; labels: string[]; series: Series[]; unit: string; splitAt?: string; decimals?: number;
-  meta?: (i: number) => string | null; full?: boolean; valueArrows?: boolean; zeroBaseline?: boolean; labelLast?: number;
+  meta?: (i: number) => string | null; full?: boolean; valueArrows?: boolean; zeroBaseline?: boolean;
+  labelLatest?: boolean; tailTicks?: number;
 }) {
   const [hover, setHover] = useState<{ i: number; x: number; y: number } | null>(null);
-  const W = full ? 1100 : 520, H = full ? 190 : 170, L = 46, R = 8, T = 10, B = 22;
+  const W = full ? 1100 : 520, H = full ? 190 : 170, L = 46, R = 8, T = 10, B = tailTicks > 0 ? 34 : 22;
   const vals = series.flatMap((s) => s.values.filter((v): v is number => v !== null));
   if (!vals.length) {
     return (
@@ -108,22 +109,13 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
     setHover({ i, x: e.clientX - r.left, y: e.clientY - r.top });
   };
   const fmt = (v: number) => `${v.toLocaleString("en-IN", { maximumFractionDigits: decimals, minimumFractionDigits: decimals })}${unit}`;
-  // The last `labelLast` readings, written on the chart so the recent numbers need no hover.
-  // Points sit only a few pixels apart, so the labels go in a block in a free corner and the
-  // points they refer to are dotted on the line.
-  const recent: { i: number; v: number; d: number | null }[] = [];
-  if (labelLast > 0) {
-    const withValue = series[0] ? series[0].values.map((v, i) => ({ v, i })).filter((p) => p.v !== null) : [];
-    for (const p of withValue.slice(-labelLast)) {
-      const before = withValue.filter((q) => q.i < p.i).pop();
-      recent.push({ i: p.i, v: p.v as number, d: before ? (p.v as number) - (before.v as number) : null });
-    }
-  }
-  const boxW = 104, rowH = 13, boxH = recent.length * rowH + 6;
-  // keep the block away from the line: top-right unless the recent points are already up there
-  const topHalf = recent.length > 0 && y(recent[recent.length - 1].v) < (T + H - B) / 2;
-  // when the block sits at the top it starts below the stale-window caption, never on top of it
-  const boxX = W - R - boxW - 2, boxY = topHalf ? H - B - boxH - 4 : T + 16;
+  // Only the latest reading is written on the chart (small), with its change against the previous
+  // reading. Everything else stays on hover.
+  const withValue = labelLatest && series[0] ? series[0].values.map((v, i) => ({ v, i })).filter((p) => p.v !== null) : [];
+  const latest = withValue.length ? withValue[withValue.length - 1] : null;
+  const prevValue = withValue.length > 1 ? withValue[withValue.length - 2] : null;
+  const latestDelta = latest && prevValue ? (latest.v as number) - (prevValue.v as number) : null;
+  const tailFrom = tailTicks > 0 ? Math.max(0, labels.length - tailTicks) : labels.length;
   return (
     <Paper variant="outlined" sx={{ p: 1, flex: 1, minWidth: 300, position: "relative" }}>
       <Typography variant="caption" sx={{ fontWeight: 700 }}>{title}</Typography>
@@ -133,30 +125,32 @@ function MiniLineChart({ title, labels, series, unit, splitAt, decimals = 1, met
         {zeroBaseline && <line x1={L} x2={W - R} y1={y(0)} y2={y(0)} stroke="#999" strokeDasharray="3 3" />}
         <text x={L - 4} y={y(hi) + 4} fontSize="10" textAnchor="end" fill="currentColor">{hi.toFixed(decimals)}{unit}</text>
         <text x={L - 4} y={y(lo)} fontSize="10" textAnchor="end" fill="currentColor">{lo.toFixed(decimals)}{unit}</text>
-        {labels.map((lb, i) => (i % 5 === 0 ? (
-          <text key={lb} x={x(i)} y={H - 6} fontSize="10" textAnchor="middle" fill="currentColor">{lb}</text>
+        {labels.map((lb, i) => (i % 5 === 0 && i < tailFrom - 2 ? (   // keep clear of the per-minute tail
+          <text key={lb} x={x(i)} y={H - B + 12} fontSize="10" textAnchor="middle" fill="currentColor">{lb}</text>
         ) : null))}
+        {labels.slice(tailFrom).map((lb, k) => {
+          const i = tailFrom + k;   // every minute of the last stretch, written vertically so they fit
+          return (
+            // anchored at the bottom with textAnchor="end", so the rotated label hangs in the
+            // margin below the axis instead of running up into the plot
+            <text key={`t${lb}`} x={x(i)} y={H - B + 2} fontSize="8" textAnchor="end" fill="currentColor"
+              transform={`rotate(-90 ${x(i)} ${H - B + 2})`}>{lb}</text>
+          );
+        })}
         {split >= 0 && <text x={x(split) + 3} y={T + 10} fontSize="9" fill="#e65100">underlying stale / option continuation →</text>}
         {series.map((s) => (
           <path key={s.name} d={path(s.values)} fill="none" stroke={s.color} strokeWidth={1.8} strokeDasharray={s.dashed ? "5 3" : undefined} />
         ))}
-        {recent.length > 0 && (
+        {latest && (
           <g>
-            {recent.map((p) => (
-              <circle key={`d${p.i}`} cx={x(p.i)} cy={y(p.v)} r={2.4} fill={series[0].color} stroke="#fff" strokeWidth={0.8} />
-            ))}
-            <rect x={boxX} y={boxY} width={boxW} height={boxH} rx={3} fill="rgba(255,255,255,0.92)" stroke="#d0d0d0" strokeWidth={0.8} />
-            {recent.map((p, k) => (
-              <g key={`l${p.i}`}>
-                <text x={boxX + 5} y={boxY + 10 + k * rowH} fontSize="9.5" fill="#666">{labels[p.i]}</text>
-                <text x={boxX + 38} y={boxY + 10 + k * rowH} fontSize="9.5" fontWeight={k === recent.length - 1 ? 700 : 500}
-                  fill={series[0].color}>{fmt(p.v)}</text>
-                <text x={boxX + boxW - 5} y={boxY + 10 + k * rowH} fontSize="9.5" textAnchor="end"
-                  fill={p.d === null ? "#888" : p.d > 0 ? CE_COLOR : p.d < 0 ? PE_COLOR : "#888"}>
-                  {p.d === null ? "" : `${p.d > 0 ? "▲" : p.d < 0 ? "▼" : "▬"}${signed(p.d, decimals)}`}
-                </text>
-              </g>
-            ))}
+            <circle cx={x(latest.i)} cy={y(latest.v as number)} r={2.6} fill={series[0].color} stroke="#fff" strokeWidth={0.8} />
+            <text x={x(latest.i) - 6} y={y(latest.v as number) - 5} fontSize="9" textAnchor="end" fontWeight={700}
+              fill={series[0].color}>
+              {fmt(latest.v as number)}
+              <tspan fill={latestDelta === null ? "#888" : latestDelta > 0 ? CE_COLOR : latestDelta < 0 ? PE_COLOR : "#888"}>
+                {latestDelta === null ? "" : ` ${latestDelta > 0 ? "▲" : latestDelta < 0 ? "▼" : "▬"}${signed(latestDelta, decimals)}`}
+              </tspan>
+            </text>
           </g>
         )}
         {hover && (
@@ -326,7 +320,7 @@ function LtpChart({ side, points }: { side: "CE" | "PE"; points: LtpPoint[] }) {
     <Box sx={{ flex: 1, minWidth: 300, position: "relative" }}>
       <MiniLineChart
         title={`ATM ${side} last traded price (each minute's ATM contract)`}
-        labels={labels} unit="" splitAt="15:15" decimals={2} valueArrows zeroBaseline={false} labelLast={4}
+        labels={labels} unit="" splitAt="15:15" decimals={2} valueArrows zeroBaseline={false} labelLatest tailTicks={5}
         meta={(i) => (points[i]?.atm_strike ? `ATM ${points[i].atm_strike}` : "no ATM resolved")}
         series={[{ name: `${side} LTP`, color, values }]} />
     </Box>
