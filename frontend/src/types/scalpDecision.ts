@@ -56,6 +56,61 @@ export interface ClosingRow {
   options?: string;
 }
 
+export interface SimulatedPosition {
+  contract: string;
+  symbol: string;
+  side: string;
+  strike: number | null;
+  expiry: string | null;
+  status: string;
+  signal_minute: string;
+  entry_minute: string;
+  entry_price: number | null;          // ASK paid
+  entry_price_type: string;
+  entry_price_status: string;
+  entry_bid_at_signal?: number | null;
+  entry_ltp_at_signal?: number | null;
+  quantity: number | null;
+  quantity_status: string;
+  quantity_source?: string;
+  current: { minute: string | null; ltp: number | null; bid: number | null; ask: number | null; spread_pct: number | null; data_status: string };
+  since_signal: { entry_ask: number | null; current_bid: number | null; price_change: number | null; pnl: number | null; pnl_pct: number | null; pnl_status: string };
+  pnl: number | null;
+  pnl_per_unit: number | null;
+  pnl_pct: number | null;
+  pnl_status: string;
+  entry_value: number | null;
+  current_value: number | null;
+  stop_loss_price: number | null;
+  stop_loss_pct: number;
+  distance_to_stop: number | null;
+  distance_to_stop_pct: number | null;
+  stop_buffer_left: number | null;
+  stop_breached: boolean | null;
+  stop_breach_minute: string | null;
+  excursions: { status: string; mfe?: number | null; mae?: number | null; mfe_per_unit?: number | null; mae_per_unit?: number | null; mfe_pct?: number | null; mae_pct?: number | null };
+  hold_minutes: number;
+  hold_text: string;
+  risk: { risk_state: string; reasons: string[]; families_against: string[]; stop_buffer_left: number | null };
+  exit_minute: string | null;
+  exit_bid: number | null;
+  exit_reason: string | null;
+  realised_pnl: number | null;
+  realised_pnl_pct: number | null;
+  notice: string;
+}
+
+export interface PositionSimulation {
+  version: string;
+  config_hash: string;
+  symbol: string;
+  as_of: string | null;
+  open_position: SimulatedPosition | null;
+  closed_positions: SimulatedPosition[];
+  counts: { opened: number; closed: number; unavailable: number };
+  advisory_only: boolean;
+}
+
 export interface ScalpDecisionDTO {
   version: string;
   config_hash: string;
@@ -92,4 +147,5 @@ export interface ScalpDecisionDTO {
   closing_state: ClosingRow[];
   levels: Record<string, unknown> | null;
   trace: Record<string, unknown> | null;
+  position_simulation: PositionSimulation | null;
 }

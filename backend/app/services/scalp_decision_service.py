@@ -6,7 +6,9 @@ from app.repositories.option_risk_repository import OptionRiskRepository
 from app.repositories.scalp_decision_repository import ScalpDecisionRepository
 from app.schemas.scalp_decision import ScalpDecisionDTO
 from config.instruments import INSTRUMENTS
-from scalp_decision_12c.engine import decide_at
+from option_risk_12b.engine import prepare
+from position_sim_12c.simulator import simulate
+from scalp_decision_12c.engine import decide_at, decide_prepared
 from scalp_decision_12c.loader import LEVELS_COLUMNS
 
 
@@ -46,20 +48,41 @@ class ScalpDecisionService:
         if levels is not None:
             levels["as_of"] = levels_row.as_of.astimezone(settings.ist).strftime("%H:%M")
         position, source = await self._position(symbol, session_date, position_type, strike)
-        result = decide_at(
-            symbol, session_date,
-            [dict(fetched_at=s.fetched_at.astimezone(settings.ist), spot=s.spot, expiry=s.expiry, payload=s.raw_payload)
-             for s in snaps],
-            [dict(timestamp=c.timestamp.astimezone(settings.ist), open=c.open, high=c.high, low=c.low, close=c.close,
-                  volume=c.volume) for c in candles],
-            levels=levels, position=position, as_of=as_of)
+        snap_dicts = [dict(fetched_at=s.fetched_at.astimezone(settings.ist), spot=s.spot, expiry=s.expiry,
+                           payload=s.raw_payload) for s in snaps]
+        candle_dicts = [dict(timestamp=c.timestamp.astimezone(settings.ist), open=c.open, high=c.high, low=c.low,
+                             close=c.close, volume=c.volume) for c in candles]
+        result = decide_at(symbol, session_date, snap_dicts, candle_dicts, levels=levels, position=position,
+                           as_of=as_of)
+        sim = await self._simulation(symbol, session_date, snap_dicts, candle_dicts, start, cutoff,
+                                     result.get("minute"))
         entry = result.get("entry") or {}
         passthrough = {k: v for k, v in result.items() if k in ScalpDecisionDTO.model_fields
                        and k not in ("decision", "confirmation", "reason", "is_live_session", "position_source")}
-        return ScalpDecisionDTO(is_live_session=live, position_source=source,
+        return ScalpDecisionDTO(is_live_session=live, position_source=source, position_simulation=sim,
                                 decision=entry.get("decision", result.get("decision")),
                                 confirmation=entry.get("confirmation", result.get("confirmation")),
                                 reason=entry.get("reason", result.get("reason")), **passthrough)
+
+    async def _simulation(self, symbol, session_date, snap_dicts, candle_dicts, start, cutoff, as_of):
+        """The hypothetical position view for the window: replays the SAME 12C decisions minute by
+        minute (each one causal, with the levels row published by that minute) and hands them to the
+        simulator. Observability only -- it places nothing and writes nothing."""
+        if not as_of:
+            return None
+        series, cmap = prepare(snap_dicts, candle_dicts)
+        by_minute = {}
+        for row in await self._levels_repo.levels_between(symbol, start, cutoff):
+            m = row.as_of.astimezone(settings.ist).strftime("%H:%M")
+            by_minute[m] = {c: getattr(row, c, None) for c in LEVELS_COLUMNS} | {"as_of": m}
+        rows, lv = [], None
+        for m in sorted(x for x in series if x <= as_of):
+            lv = by_minute.get(m, lv)
+            out = decide_prepared(symbol, session_date, series, cmap, lv, minute=m)
+            if out["status"] == "OK":
+                rows.append(dict(minute=m, decision=out["entry"]["decision"], confirmation=out["entry"]["confirmation"],
+                                 atm=out["option_state"]["atm_strike"], evidence=out["evidence"]))
+        return simulate(symbol, series, rows, as_of=as_of) if rows else None
 
     async def _position(self, symbol, session_date, position_type, strike):
         """An open paper position wins; otherwise the caller may describe the position they hold,

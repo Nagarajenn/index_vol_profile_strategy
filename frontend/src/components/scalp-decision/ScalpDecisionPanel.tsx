@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { useScalpDecision } from "../../hooks/useScalpDecision";
 import { useSymbolStore } from "../../store/useSymbolStore";
-import type { ClosingRow, ScalpDecisionDTO } from "../../types/scalpDecision";
+import type { ClosingRow, ScalpDecisionDTO, SimulatedPosition } from "../../types/scalpDecision";
 
 // 12C-scalp-decision-v1. ADVISORY ONLY: rule-based and explainable. This panel has no
 // control that can place an order or open/close a position; the 11D exit engine and the
@@ -89,6 +89,62 @@ function EvidenceGrid({ data }: { data: ScalpDecisionDTO }) {
           </Tooltip>
         ))}
       </Box>
+    </Box>
+  );
+}
+
+function simRiskColor(r: string | undefined): ChipColor {
+  if (r === "NORMAL") return "success";
+  if (r === "ELEVATED") return "warning";
+  if (r === "HIGH" || r === "STOP_BREACH") return "error";
+  return "default";
+}
+
+/** The hypothetical position that would exist if the signal had been taken when it appeared.
+ * Observability only: nothing here places an order or touches an account. */
+function SimulatedPositionBlock({ sim }: { sim: SimulatedPosition }) {
+  const c = sim.current;
+  const money = (x: number | null | undefined) => (typeof x === "number" ? `₹${num(x, 2)}` : "–");
+  const pnlColor = (sim.pnl_per_unit ?? 0) > 0 ? UP : (sim.pnl_per_unit ?? 0) < 0 ? DOWN : undefined;
+  return (
+    <Box>
+      <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 0.5 }}>
+        IF THIS SIGNAL HAD BEEN TAKEN — hypothetical position (no order, no account)
+      </Typography>
+      <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", rowGap: 1, alignItems: "flex-start" }}>
+        <Stat label="Contract" value={sim.contract} />
+        <Stat label="Signal time" value={sim.signal_minute} />
+        <Stat label="Buy price (ASK)" value={money(sim.entry_price)} />
+        <Stat label="Current LTP" value={money(c.ltp)} />
+        <Stat label="Current BID (exit)" value={money(c.bid)} />
+        <Stat label="Current ASK" value={money(c.ask)} />
+        <Stat label="Quantity" value={sim.quantity ? String(sim.quantity) : "UNKNOWN"} />
+        <Stat label="Entry value" value={money(sim.entry_value)} />
+        <Stat label="Current value" value={money(sim.current_value)} />
+        <Stat label="P&L (on BID)" value={sim.pnl_status === "OK" ? money(sim.pnl) : "unavailable"} color={pnlColor} />
+        <Stat label="P&L %" value={sim.pnl_pct === null ? "–" : `${signed(sim.pnl_pct, 2)}%`} color={pnlColor} />
+        <Stat label={`Stop loss (${sim.stop_loss_pct}%)`} value={money(sim.stop_loss_price)} />
+        <Stat label="Distance to SL" value={sim.distance_to_stop === null ? "–" : `${money(sim.distance_to_stop)} (${num(sim.distance_to_stop_pct, 1)}%)`} />
+        <Stat label="Hold time" value={sim.hold_text} />
+        <Stat label="MFE / MAE" value={`${money(sim.excursions.mfe)} / ${money(sim.excursions.mae)}`} />
+        <Box>
+          <Typography variant="caption" color="text.secondary">Position risk</Typography>
+          <Box>
+            <Chip size="small" color={simRiskColor(sim.risk.risk_state)} label={sim.risk.risk_state.replace("_", " ")} />
+          </Box>
+        </Box>
+      </Stack>
+      <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 0.5 }}>
+        SINCE SIGNAL {sim.signal_minute}: entry ASK {money(sim.since_signal.entry_ask)} → current BID{" "}
+        {money(sim.since_signal.current_bid)} = {signed(sim.since_signal.price_change, 2)} per unit
+        {sim.pnl_status === "OK" ? ` (${money(sim.pnl)}, ${signed(sim.pnl_pct, 2)}%)` : " (monetary value unavailable)"}.
+        {c.data_status !== "OK" ? ` OPTION DATA: ${c.data_status}.` : ""}
+        {sim.quantity_status !== "OK" ? " Quantity unknown, so monetary values are withheld." : ""}
+        {sim.stop_breach_minute ? ` Stop breached at ${sim.stop_breach_minute}.` : ""}
+      </Typography>
+      {sim.risk.reasons.slice(0, 3).map((r) => (
+        <Typography key={r} variant="caption" component="div" color="text.secondary">• {r}</Typography>
+      ))}
     </Box>
   );
 }
@@ -287,6 +343,9 @@ export function ScalpDecisionPanel({ symbol: fixedSymbol }: { symbol?: string })
             )}
           </Stack>
           {data.position_state === "NONE" ? <EntryBlock data={data} /> : <BrakeBlock data={data} />}
+          {data.position_simulation?.open_position && (
+            <SimulatedPositionBlock sim={data.position_simulation.open_position} />
+          )}
           <EvidenceGrid data={data} />
           {data.position_state !== "NONE" && (
             <Box>

@@ -30,3 +30,4 @@ class ScalpDecisionDTO(BaseModel):
     closing_state: list[dict[str, Any]] = []
     levels: dict[str, Any] | None = None
     trace: dict[str, Any] | None = None
+    position_simulation: dict[str, Any] | None = None

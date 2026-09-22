@@ -55,6 +55,9 @@ class _FakeLevelsRepo:
     async def levels_at_or_before(self, symbol, as_of):
         return self.row
 
+    async def levels_between(self, symbol, start, end):
+        return [self.row] if self.row else []
+
 
 def _levels():
     return LevelsSnapshot(symbol="NIFTY", as_of=datetime.combine(D, time(15, 0), tzinfo=settings.ist), mode="live",
@@ -85,6 +88,11 @@ async def test_decision_is_advisory_and_explainable():
     assert dto.position_state == "NONE" and dto.risk_brake is None
     assert dto.reason and dto.summary and dto.summary["evidence_row"]
     assert dto.trace and dto.trace["decision"] == dto.decision
+    # the hypothetical position view rides along, and is advisory only
+    assert dto.position_simulation is not None and dto.position_simulation["advisory_only"] is True
+    op = dto.position_simulation["open_position"]
+    if op:
+        assert op["entry_price_type"] == "ASK" and op["notice"].startswith("Hypothetical")
 
 
 @pytest.mark.asyncio
