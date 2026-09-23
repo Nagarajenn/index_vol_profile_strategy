@@ -6,6 +6,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { CasDayDetailPage } from "./pages/CasDayDetailPage";
 import { MarketTransitionPage } from "./pages/MarketTransitionPage";
 import { PaperTradingPage } from "./pages/PaperTradingPage";
+import { ScalpDecisionPage } from "./pages/ScalpDecisionPage";
 import { TerminalPage } from "./pages/TerminalPage";
 import { appTheme } from "./theme/theme";
 
@@ -20,6 +21,7 @@ function App() {
           <AppShell>
             <Routes>
               <Route path="/" element={<TerminalPage />} />
+              <Route path="/scalping-decision" element={<ScalpDecisionPage />} />
               <Route path="/paper-trading" element={<PaperTradingPage />} />
               <Route path="/market-transition-intelligence" element={<MarketTransitionPage />} />
               <Route path="/market-transition-intelligence/cas-day/:symbol/:date" element={<CasDayDetailPage />} />
