@@ -11,7 +11,7 @@ to sim12c_* tables and nothing else.
 """
 
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -26,6 +26,7 @@ from scalp_decision_12c.config import DEFAULT as DEC_CFG          # noqa: E402
 from scalp_decision_12c.engine import decide_prepared             # noqa: E402
 
 SESSION_END = "15:30"
+SESSION_OVER = time(15, 40)      # the live loop stops capturing at 15:40
 
 
 def decisions_for(conn, symbol, d):
@@ -62,7 +63,10 @@ def main(d: date):
         if not rows:
             print(f"{symbol}: no decisions for {d}")
             continue
-        finished = d < date.today()
+        # "finished" means the session is over, not merely that the date has rolled: the daily
+        # post-close run happens on the SAME day, and it must still close out and store the
+        # position left open at 15:30 rather than leave it unrecorded until tomorrow.
+        finished = d < date.today() or (d == date.today() and datetime.now().time() >= SESSION_OVER)
         as_of = SESSION_END if finished else datetime.now().strftime("%H:%M")
         sim = simulate(symbol, series, rows, SIM_CFG, as_of=as_of)
         if finished:
