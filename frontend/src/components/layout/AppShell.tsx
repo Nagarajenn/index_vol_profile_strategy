@@ -48,6 +48,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Box component={NavLink} to="/paper-trading" sx={navLinkSx}>
               Paper Trading
             </Box>
+            {/* Deliberately styled unlike the others: this is the only page that can touch real money. */}
+            <Box component={NavLink} to="/live-trading" sx={{ ...navLinkSx, color: "#b71c1c", fontWeight: 800 }}>
+              Live Trading
+            </Box>
             <Box component={NavLink} to="/market-transition-intelligence" sx={navLinkSx}>
               Market Transition Intelligence
             </Box>
