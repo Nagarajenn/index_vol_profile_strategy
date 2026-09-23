@@ -246,11 +246,84 @@ before anything is automated.
 
 ---
 
-## 11. Open questions for your sign-off
+## 11. Sign-off status (updated 2026-09-23, after market hours discussion)
 
-1. **§7.1** — force-flat at 15:10: yes or no?
-2. **§7.2** — the three entry qualifiers (STRONG only, ≥2-minute episode, nothing before 09:45): yes
-   or no?
-3. **Per-trade rupee cap** for guard #10 — 1 lot of SENSEX at ₹250 is ₹5,000; at ₹400 it is ₹8,000.
-   What is the maximum you want a single entry to be allowed to cost?
-4. **Which symbol first** — NIFTY, SENSEX, or both from day one?
+### Settled
+
+| Item | Decision |
+|---|---|
+| Force-flat at 15:10 (§7.1) | **YES.** The one agent-initiated exit. No live position survives the session. |
+| Entry qualifiers (§7.2) | Defined below; measured effect recorded. Awaiting yes/no. |
+| Symbol rotation | Mon/Tue **NIFTY**, Wed/Thu **SENSEX**, Fri either. Enforced as a guard: a signal for the wrong symbol on a given weekday is refused and journalled. |
+| Per-entry cost cap | ₹6,000 — **blocked, see 11.2** |
+| Starting capital | ₹10,000 |
+
+### 11.1 The three entry qualifiers, defined
+
+They decide **which two** of the day's many BUY episodes get the two trade slots. None of them
+changes a 12C threshold; 12C keeps producing exactly what it produces today.
+
+1. **STRONG confirmation only.** 12C grades every BUY as WEAK / MODERATE / STRONG from how many
+   independent evidence categories agree. Only STRONG is eligible.
+2. **The BUY must persist ≥2 consecutive minutes.** A BUY that appears for one minute and vanishes
+   is a flicker; two consecutive minutes of the same side is an episode. Entry is taken on the
+   *second* minute, so a one-minute blip can never trigger an order.
+3. **No entry before 09:45.** The opening 30 minutes hold the widest spreads, the most churn, and
+   the simulation's worst single loss (−₹479 at 09:54 on 2026-09-23).
+
+**Measured on 2026-09-23 (both symbols, rules unchanged):**
+
+| | NIFTY | SENSEX |
+|---|---|---|
+| BUY episodes, raw | 16 | 17 |
+| After STRONG + 09:45 | 10 | 12 |
+| After the ≥2-minute rule | 8 | 6 |
+| First two slots WITHOUT qualifiers | 09:19 BUY_CE, 09:32 BUY_PE | 09:20 BUY_CE, 09:22 BUY_CE |
+| First two slots WITH qualifiers | 09:50 BUY_PE, 09:55 BUY_PE | 09:51 BUY_PE, 10:12 BUY_PE |
+
+Without them, the day's two trades are spent inside the first 17 minutes — SENSEX takes the same
+side twice, two minutes apart, which is one opinion billed as two trades. This is the concrete
+argument for the qualifiers, and the whole of it.
+
+### 11.2 BLOCKER: a ₹6,000 cap makes NIFTY untradeable
+
+Index option quantity is **quantised to the lot** — NIFTY 65, SENSEX 20. There is no fractional lot,
+so "adjust quantity based on cost" can only round **up** to whole lots, never down. One lot is the floor.
+
+Measured against every ATM quote on 2026-09-23:
+
+| Symbol | Lot | 1-lot ATM cost (min / median / max) | Fits ₹6,000 |
+|---|---|---|---|
+| NIFTY | 65 | ₹6,750 / ₹7,797 / ₹8,609 | **0% of the day** |
+| SENSEX | 20 | ₹4,192 / ₹4,740 / ₹5,595 | 100% of the day |
+
+A ₹6,000 cap would therefore refuse **every NIFTY entry**, silently killing Mon/Tue in the rotation.
+Three ways forward, trader's choice:
+
+- **(a) Raise the per-entry cap to ₹9,000.** Both symbols tradeable. One NIFTY lot is then ~78% of a
+  ₹10,000 account in a single position — concentrated, and the reason the loss-halt matters.
+- **(b) Keep ₹6,000 and trade SENSEX only.** Rotation becomes SENSEX-only until capital grows. Safest;
+  gives up half the week.
+- **(c) Keep ₹6,000 and let NIFTY use a cheaper OTM strike.** This changes which contract expresses the
+  signal — 12C reasons about the ATM leg — so it is a **strategy change**, not a sizing change, and it
+  would need its own measurement before I would build it.
+
+Until this is answered, the per-entry cap is left unset in the plan; the code will not have a default.
+
+### 11.3 FLAG: the rotation puts two of four fixed days on an expiry day
+
+Verified from the scrip master: **NIFTY weekly expiry is Tuesday**, **SENSEX weekly expiry is Thursday**.
+The chosen rotation therefore trades NIFTY on its expiry day (Tue) and SENSEX on its expiry day (Thu).
+On expiry day a long option's time value decays to zero within the session and moves are at their most
+violent — it is the single worst day to be long premium with a manual exit.
+
+**Tomorrow, Thursday 2026-09-24, is SENSEX expiry** — under the rotation, day one of live trading would
+be an expiry day. Recommendation: start on a non-expiry day (Wednesday or Friday) and add expiry days
+only after a few sessions. Trader's call; the force-flat at 15:10 stands either way, and it matters most
+on exactly these days.
+
+### 11.4 Still open
+
+1. §11.2 — per-entry cap: (a) ₹9,000, (b) SENSEX-only at ₹6,000, or (c) OTM NIFTY?
+2. §11.1 — the three qualifiers: yes or no?
+3. §11.3 — still start tomorrow on SENSEX expiry, or wait for a non-expiry day?
