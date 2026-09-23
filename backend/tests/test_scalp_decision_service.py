@@ -1,5 +1,5 @@
 import sys
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -49,14 +49,18 @@ class _FakeOptionRepo:
 
 
 class _FakeLevelsRepo:
-    def __init__(self, row=None):
+    def __init__(self, row=None, stored=()):
         self.row = row
+        self.stored = list(stored)
 
     async def levels_at_or_before(self, symbol, as_of):
         return self.row
 
     async def levels_between(self, symbol, start, end):
         return [self.row] if self.row else []
+
+    async def simulated_positions(self, symbol, session_date=None, limit=200):
+        return self.stored
 
 
 def _levels():
@@ -113,3 +117,38 @@ async def test_open_paper_position_takes_precedence_over_a_typed_one():
     svc = ScalpDecisionService(_FakeOptionRepo(_rising(), [pos]), _FakeLevelsRepo(_levels()))
     dto = await svc.get_decision("NIFTY", D, "PE", ATM + 100)
     assert dto.position_state == "BUY_CE" and dto.position_source == "PAPER_POSITION"
+
+
+def _stored_row(minute="15:05"):
+    return dict(symbol="NIFTY", session_date=str(D), signal_minute=minute, entry_minute=minute, side="CE",
+                strike=ATM, exit_minute="15:06", realised_pnl=100.0, exit_reason="WAIT", closing_decision="WAIT")
+
+
+@pytest.mark.asyncio
+async def test_history_of_a_finished_session_comes_from_stored_rows():
+    svc = ScalpDecisionService(_FakeOptionRepo(_rising()), _FakeLevelsRepo(_levels(), [_stored_row()]))
+    h = await svc.get_history("NIFTY", D)
+    assert h.source == "STORED"
+    assert h.summary["positions"] == 1
+
+
+@pytest.mark.asyncio
+async def test_stored_rows_never_freeze_a_live_session():
+    """Mid-session the stored rows are only whatever had closed when the store script last ran.
+    Letting them short-circuit froze the table at that minute while the session kept going."""
+    now = datetime.now(settings.ist)
+    if now.hour == 0 and now.minute < 40:
+        pytest.skip("needs a 30-minute window inside today to place synthetic snapshots")
+    today = now.date()
+
+    class _TodayOptionRepo(_FakeOptionRepo):
+        async def latest_session_date(self, symbol):
+            return today
+
+    snaps = [_snap(m, ATM + 2.0 * m) for m in range(30)]
+    for i, s_ in enumerate(snaps):                       # place them in the 30 minutes ending now
+        s_.fetched_at = (now - timedelta(minutes=len(snaps) - 1 - i)).replace(second=0, microsecond=0)
+    svc = ScalpDecisionService(_TodayOptionRepo(snaps), _FakeLevelsRepo(_levels(), [_stored_row()]))
+    h = await svc.get_history("NIFTY", today)
+    assert h.source == "LIVE_REPLAY"     # not short-circuited by the stale stored row
+    assert h.summary["positions"] >= 1

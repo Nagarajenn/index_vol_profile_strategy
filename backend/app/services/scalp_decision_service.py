@@ -83,10 +83,14 @@ class ScalpDecisionService:
         if session_date is None:
             latest = await self._option_repo.latest_session_date(symbol)
             session_date = (now.date() if latest and latest >= now.date() else latest) or now.date()
-        rows = await self._levels_repo.simulated_positions(symbol, session_date, limit)
+        live = session_date == now.date()
+        # Stored rows are authoritative only for a FINISHED session. During the day they are a
+        # partial snapshot -- whatever had closed when the store script last ran -- so letting them
+        # short-circuit would freeze the table at that minute while the session keeps going.
+        rows = [] if live else await self._levels_repo.simulated_positions(symbol, session_date, limit)
         source = "STORED"
         if not rows:
-            key = (symbol, session_date, now.strftime("%H:%M") if session_date == now.date() else "final")
+            key = (symbol, session_date, now.strftime("%H:%M") if live else "final")
             if key not in _REPLAY_CACHE:
                 if len(_REPLAY_CACHE) >= _REPLAY_CACHE_MAX:
                     _REPLAY_CACHE.clear()
@@ -94,6 +98,10 @@ class ScalpDecisionService:
                 # is being polled at the same time
                 _REPLAY_CACHE[key] = await self._replay_session(symbol, session_date, now)
             rows, source = _REPLAY_CACHE[key], "LIVE_REPLAY"
+            rows = sorted(rows, key=lambda r: (r.get("signal_minute") or ""), reverse=True)[:limit]
+        if not rows and live:                     # replay produced nothing: fall back to whatever is stored
+            rows = await self._levels_repo.simulated_positions(symbol, session_date, limit)
+            source = "STORED" if rows else source
         pnl = [r["realised_pnl"] for r in rows if r.get("realised_pnl") is not None]
         by_reason: dict[str, int] = {}
         for r in rows:
