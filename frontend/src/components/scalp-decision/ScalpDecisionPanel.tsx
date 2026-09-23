@@ -4,9 +4,9 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 
-import { useScalpDecision } from "../../hooks/useScalpDecision";
+import { useScalpDecision, useScalpHistory } from "../../hooks/useScalpDecision";
 import { useSymbolStore } from "../../store/useSymbolStore";
-import type { ClosingRow, ScalpDecisionDTO, SimulatedPosition } from "../../types/scalpDecision";
+import type { ClosingRow, ScalpDecisionDTO, SimPositionHistoryDTO, SimulatedPosition } from "../../types/scalpDecision";
 
 // 12C-scalp-decision-v1. ADVISORY ONLY: rule-based and explainable. This panel has no
 // control that can place an order or open/close a position; the 11D exit engine and the
@@ -242,6 +242,69 @@ function BrakeBlock({ data }: { data: ScalpDecisionDTO }) {
   );
 }
 
+/** Every hypothetical position that has already closed today, with the decision that closed it.
+ * SIMULATION ONLY: none of these was an order and none touched an account. */
+function HistoryBlock({ h }: { h: SimPositionHistoryDTO }) {
+  const money = (x: number | null | undefined) => (typeof x === "number" ? `₹${num(x, 2)}` : "–");
+  const s = h.summary;
+  if (!h.positions.length) {
+    return (
+      <Box>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>CLOSED HYPOTHETICAL POSITIONS</Typography>
+        <Typography variant="body2" color="text.secondary">None closed yet this session.</Typography>
+      </Box>
+    );
+  }
+  return (
+    <Box sx={{ overflowX: "auto" }}>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap", rowGap: 1, mb: 0.5 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+          CLOSED HYPOTHETICAL POSITIONS — {h.session_date} (simulation only, never an order)
+        </Typography>
+        <Chip size="small" variant="outlined" label={h.source === "STORED" ? "stored" : "live replay"} />
+        <Typography variant="caption" color="text.secondary">
+          {s.positions} closed · {s.wins}W / {s.losses}L · gross{" "}
+          <b style={{ color: (s.gross ?? 0) >= 0 ? UP : DOWN }}>{money(s.gross)}</b> · best {money(s.best)} · worst{" "}
+          {money(s.worst)} · closed by {Object.entries(s.closed_by).map(([k, v]) => `${k.replace("_", " ")} ${v}`).join(", ")}
+        </Typography>
+      </Stack>
+      <Table size="small" sx={{ "& td, & th": { px: 0.75, py: 0.25, whiteSpace: "nowrap", fontSize: 12 } }}>
+        <TableHead>
+          <TableRow>
+            {["Signal", "Contract", "Conf.", "Entry ASK", "Exit", "Exit BID", "Hold", "P&L", "P&L %", "MFE / MAE",
+              "Closed by", "Closing decision", "Risk at exit"].map((x) => <TableCell key={x}>{x}</TableCell>)}
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {h.positions.map((p) => (
+            <TableRow key={`${p.signal_minute}-${p.side}-${p.strike}`}>
+              <TableCell>{p.signal_minute}</TableCell>
+              <TableCell sx={{ color: p.side === "CE" ? UP : DOWN, fontWeight: 600 }}>{p.contract}</TableCell>
+              <TableCell>{p.entry_confirmation ?? "–"}</TableCell>
+              <TableCell>{money(p.entry_price)}</TableCell>
+              <TableCell>{p.exit_minute ?? "–"}</TableCell>
+              <TableCell>{money(p.exit_bid)}</TableCell>
+              <TableCell>{p.hold_minutes === null ? "–" : `${p.hold_minutes}m`}</TableCell>
+              <TableCell sx={{ color: (p.realised_pnl ?? 0) > 0 ? UP : (p.realised_pnl ?? 0) < 0 ? DOWN : undefined, fontWeight: 600 }}>
+                {money(p.realised_pnl)}
+              </TableCell>
+              <TableCell>{p.realised_pnl_pct === null ? "–" : `${signed(p.realised_pnl_pct, 2)}%`}</TableCell>
+              <TableCell>{money(p.mfe)} / {money(p.mae)}</TableCell>
+              <TableCell>
+                <Chip size="small" variant="outlined" label={(p.exit_reason ?? "–").replace("_", " ")} />
+              </TableCell>
+              <TableCell title={p.closing_reason ?? ""}>
+                {p.closing_decision ? `${p.closing_decision.replace("_", " ")}${p.closing_confirmation ? ` (${p.closing_confirmation})` : ""}` : "–"}
+              </TableCell>
+              <TableCell>{p.risk_state_at_exit ?? "–"}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Box>
+  );
+}
+
 function ClosingBlock({ rows }: { rows: ClosingRow[] }) {
   if (!rows.length) return null;
   return (
@@ -292,6 +355,7 @@ export function ScalpDecisionPanel({ symbol: fixedSymbol }: { symbol?: string })
   const symbol = fixedSymbol ?? chosen ?? storeSymbol;
   const position = posType !== "NONE" && Number(strike) > 0 ? { type: posType, strike: Number(strike) } : undefined;
   const { data, isLoading, isError, error } = useScalpDecision(symbol, date || undefined, position);
+  const { data: history } = useScalpHistory(symbol, date || undefined, data?.is_live_session ?? false);
 
   return (
     <Paper sx={{ p: 2, borderLeft: "5px solid", borderColor: data?.decision === "BUY_CE" ? "success.main"
@@ -347,6 +411,7 @@ export function ScalpDecisionPanel({ symbol: fixedSymbol }: { symbol?: string })
             <SimulatedPositionBlock sim={data.position_simulation.open_position} />
           )}
           <EvidenceGrid data={data} />
+          {history && <HistoryBlock h={history} />}
           {data.position_state !== "NONE" && (
             <Box>
               <Typography variant="caption" color="text.secondary">

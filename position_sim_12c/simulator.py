@@ -49,13 +49,19 @@ def _open_position(symbol, row, series, cfg):
                 status=OPEN if entry_ask is not None else UNAVAILABLE,
                 stop_loss_price=M.stop_loss(entry_ask, cfg), stop_loss_pct=cfg.stop_loss_pct,
                 stop_breach_minute=None, exit_minute=None, exit_bid=None, exit_reason=None,
+                closing_decision=None, closing_confirmation=None, closing_reason=None,
                 realised_pnl_per_unit=None, realised_pnl=None, realised_pnl_pct=None)
 
 
-def _close_position(pos, series, minute, reason):
+def _close_position(pos, series, minute, reason, row=None):
+    """`row` is the decision minute that triggered the close, so the record always says WHICH
+    decision closed the position -- not just that it closed."""
     q = M.quote(series, minute, pos["side"], pos["strike"])
     pos["exit_minute"] = minute
     pos["exit_reason"] = reason
+    pos["closing_decision"] = (row or {}).get("decision")
+    pos["closing_confirmation"] = (row or {}).get("confirmation")
+    pos["closing_reason"] = (row or {}).get("reason")
     pos["status"] = CLOSED
     if q["status"] == M.OK and pos["entry_price"] is not None:
         pos["exit_bid"] = q["bid"]
@@ -83,6 +89,7 @@ def snapshot(pos: dict, series: dict, evidence: dict | None, now_minute: str, cf
                                        "entry_minute", "confirmation", "entry_price", "entry_price_type",
                                        "entry_price_status", "quantity", "quantity_status", "quantity_source",
                                        "status", "stop_loss_pct", "exit_minute", "exit_bid", "exit_reason",
+                                       "closing_decision", "closing_confirmation", "closing_reason",
                                        "entry_bid_at_signal", "entry_ltp_at_signal",
                                        "realised_pnl", "realised_pnl_per_unit", "realised_pnl_pct",
                                        "stop_breach_minute")},
@@ -114,14 +121,14 @@ def simulate(symbol: str, series: dict, rows: list[dict], cfg=DEFAULT, as_of: st
             if mk.get("stop_breached") and pos["stop_breach_minute"] is None:
                 pos["stop_breach_minute"] = m          # always flagged; closing is configurable
                 if cfg.close_on_stop_breach:
-                    positions.append(_close_position(pos, series, m, "STOP_BREACH"))
+                    positions.append(_close_position(pos, series, m, "STOP_BREACH", r))
                     stopped_side, pos = pos["side"], None
         if pos is not None and pos["status"] == OPEN:
             if d == "WAIT":
-                positions.append(_close_position(pos, series, m, "WAIT"))
+                positions.append(_close_position(pos, series, m, "WAIT", r))
                 pos = None
             elif d.startswith("BUY") and d[-2:] != pos["side"]:
-                positions.append(_close_position(pos, series, m, "SIGNAL_FLIP"))
+                positions.append(_close_position(pos, series, m, "SIGNAL_FLIP", r))
                 pos = None
         if pos is None and d.startswith("BUY") and d[-2:] != stopped_side:
             pos = _open_position(symbol, r, series, cfg)

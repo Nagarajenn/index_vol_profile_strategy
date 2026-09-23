@@ -182,6 +182,19 @@ def test_wait_closes_the_position():
     assert s["open_position"] is None and s["closed_positions"][0]["exit_reason"] == "WAIT"
 
 
+def test_history_records_which_decision_closed_the_position():
+    s, _ = sim(["BUY_PE"] * 5 + ["BUY_CE"] * 5)
+    closed = s["closed_positions"][0]
+    assert closed["exit_reason"] == "SIGNAL_FLIP" and closed["closing_decision"] == "BUY_CE"
+    assert closed["closing_confirmation"] == "MODERATE"
+    from position_sim_12c.history import COLUMNS, to_row
+    row = to_row(closed, D, "decision-hash")
+    assert set(row) == set(COLUMNS)
+    assert row["closing_decision"] == "BUY_CE" and row["exit_reason"] == "SIGNAL_FLIP"
+    assert row["entry_price_type"] == "ASK" and row["sim_version"] == VERSION
+    assert row["decision_config_hash"] == "decision-hash" and row["risk_state_at_exit"] is not None
+
+
 # ---------------------------------------------------------------- 13 / 14
 def test_mfe_and_mae_only_use_observations_from_entry_onward():
     ce = [200.0, 200.0, 100.0, 100.0, 130.0, 90.0, 100.0, 100.0, 100.0, 100.0]
@@ -234,7 +247,8 @@ def test_stale_option_data_is_detected():
                          quantity_status="OK", quantity_source="test", status="OPEN", stop_loss_pct=10.0,
                          exit_bid=None, exit_reason=None, realised_pnl=None, realised_pnl_per_unit=None,
                          realised_pnl_pct=None, stop_breach_minute=None, version=VERSION,
-                         entry_bid_at_signal=99.75, entry_ltp_at_signal=100.0),
+                         entry_bid_at_signal=99.75, entry_ltp_at_signal=100.0, closing_decision=None,
+                         closing_confirmation=None, closing_reason=None),
                     series, None, "09:29")
     assert card["current"]["data_status"] == "STALE"
     assert any("stale" in r.lower() for r in card["risk"]["reasons"])

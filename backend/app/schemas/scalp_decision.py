@@ -31,3 +31,16 @@ class ScalpDecisionDTO(BaseModel):
     levels: dict[str, Any] | None = None
     trace: dict[str, Any] | None = None
     position_simulation: dict[str, Any] | None = None
+
+
+class SimPositionHistoryDTO(BaseModel):
+    """Closed hypothetical 12C positions. SIMULATION ONLY -- not orders, not paper-account trades.
+
+    `source` is STORED when the rows come from sim12c_positions, or LIVE_REPLAY when the session
+    has not been stored yet and the window was replayed on the fly."""
+    symbol: str
+    session_date: str | None
+    source: str
+    positions: list[dict[str, Any]]
+    summary: dict[str, Any]
+    advisory_only: bool = True

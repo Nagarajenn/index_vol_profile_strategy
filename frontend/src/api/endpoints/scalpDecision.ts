@@ -1,5 +1,5 @@
 import { apiClient } from "../client";
-import type { ScalpDecisionDTO } from "../../types/scalpDecision";
+import type { ScalpDecisionDTO, SimPositionHistoryDTO } from "../../types/scalpDecision";
 
 // Read-only (GET). 12C is advisory: it cannot open, close or modify a position.
 export async function fetchScalpDecision(
@@ -10,6 +10,14 @@ export async function fetchScalpDecision(
       ...(sessionDate ? { session_date: sessionDate } : {}),
       ...(position ? { position: position.type, strike: position.strike } : {}),
     },
+  });
+  return data;
+}
+
+// Read-only (GET). Closed hypothetical positions; never an order.
+export async function fetchScalpHistory(symbol: string, sessionDate?: string): Promise<SimPositionHistoryDTO> {
+  const { data } = await apiClient.get<SimPositionHistoryDTO>(`/scalp-decision-12c/${symbol}/history`, {
+    params: sessionDate ? { session_date: sessionDate } : undefined,
   });
   return data;
 }

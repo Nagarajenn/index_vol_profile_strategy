@@ -149,3 +149,51 @@ export interface ScalpDecisionDTO {
   trace: Record<string, unknown> | null;
   position_simulation: PositionSimulation | null;
 }
+
+// Closed hypothetical positions. SIMULATION ONLY -- not orders, not paper-account trades.
+export interface SimPositionRow {
+  symbol: string;
+  session_date: string;
+  signal_minute: string;
+  entry_minute: string;
+  entry_confirmation: string | null;
+  side: string;
+  strike: number | null;
+  contract: string | null;
+  entry_price: number | null;
+  entry_ltp: number | null;
+  quantity: number | null;
+  entry_value: number | null;
+  stop_loss_price: number | null;
+  stop_breach_minute: string | null;
+  exit_minute: string | null;
+  exit_bid: number | null;
+  exit_reason: string | null;
+  closing_decision: string | null;
+  closing_confirmation: string | null;
+  closing_reason: string | null;
+  risk_state_at_exit: string | null;
+  realised_pnl: number | null;
+  realised_pnl_pct: number | null;
+  mfe: number | null;
+  mae: number | null;
+  hold_minutes: number | null;
+}
+
+export interface SimPositionHistoryDTO {
+  symbol: string;
+  session_date: string | null;
+  source: string;                 // STORED | LIVE_REPLAY
+  positions: SimPositionRow[];
+  summary: {
+    positions: number;
+    priced: number;
+    wins: number;
+    losses: number;
+    gross: number | null;
+    best: number | null;
+    worst: number | null;
+    closed_by: Record<string, number>;
+  };
+  advisory_only: boolean;
+}
