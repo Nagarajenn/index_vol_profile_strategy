@@ -1,0 +1,3608 @@
+{
+  "config": {
+    "version": "12E-option-audit-v1",
+    "config_hash": "9d8fb5671d76d03c",
+    "parameters": {
+      "und_flat_pct": 0.02,
+      "trend_lookback_min": 10,
+      "trend_pct": 0.1,
+      "range_pct": 0.05,
+      "reversal_ratio": 0.5,
+      "min_und_move_for_ratio": 0.05,
+      "weak_response_efficiency": 0.5,
+      "strong_response_efficiency": 1.2,
+      "iv_move_pct": 1.0,
+      "atm_band_pct": 0.1,
+      "near_band_pct": 0.35,
+      "moderate_band_pct": 1.0,
+      "delta_buckets": [
+        [
+          0.0,
+          0.2
+        ],
+        [
+          0.2,
+          0.4
+        ],
+        [
+          0.4,
+          0.6
+        ],
+        [
+          0.6,
+          0.8
+        ],
+        [
+          0.8,
+          1.0
+        ]
+      ],
+      "spread_dominant_share": 0.6,
+      "late_entry_pre_move_share": 0.6,
+      "min_sample": 20,
+      "horizons": [
+        1,
+        3,
+        5,
+        10
+      ],
+      "pre_horizons": [
+        1,
+        3,
+        5
+      ]
+    },
+    "note": "PROVISIONAL measurement bands for diagnosis. Not fitted, not validated, not rules."
+  },
+  "today": {
+    "label": "TODAY 2026-09-24",
+    "version": "12E-option-audit-v1",
+    "config_hash": "9d8fb5671d76d03c",
+    "signals": 39,
+    "buy_ce": 12,
+    "buy_pe": 27,
+    "sessions": 2,
+    "overall": {
+      "n": 39,
+      "sufficient": true,
+      "note": null,
+      "wins": 12,
+      "losses": 27,
+      "win_rate": 30.8,
+      "mean_pnl_per_unit": 0.62,
+      "median_pnl_per_unit": -2.1,
+      "mean_mid_to_mid": 0.95,
+      "mean_execution_friction": 0.33,
+      "mean_underlying_move_pct": -0.012,
+      "mean_response_ratio_5m": 187.851,
+      "median_response_ratio_5m": 170.86,
+      "mean_response_efficiency_5m": 1.06,
+      "median_response_efficiency_5m": 1.118,
+      "mean_entry_spread_pct": 0.225,
+      "mean_iv_change_pct": -0.473,
+      "mean_abs_delta": 0.509
+    },
+    "by_side": {
+      "PE": {
+        "n": 27,
+        "sufficient": true,
+        "note": null,
+        "wins": 10,
+        "losses": 17,
+        "win_rate": 37.0,
+        "mean_pnl_per_unit": 2.49,
+        "median_pnl_per_unit": -0.5,
+        "mean_mid_to_mid": 2.83,
+        "mean_execution_friction": 0.34,
+        "mean_underlying_move_pct": -0.012,
+        "mean_response_ratio_5m": 180.74,
+        "median_response_ratio_5m": 170.86,
+        "mean_response_efficiency_5m": 1.043,
+        "median_response_efficiency_5m": 1.118,
+        "mean_entry_spread_pct": 0.227,
+        "mean_iv_change_pct": -0.734,
+        "mean_abs_delta": 0.501
+      },
+      "CE": {
+        "n": 12,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 2,
+        "losses": 10,
+        "win_rate": 16.7,
+        "mean_pnl_per_unit": -3.59,
+        "median_pnl_per_unit": -3.77,
+        "mean_mid_to_mid": -3.29,
+        "mean_execution_friction": 0.29,
+        "mean_underlying_move_pct": -0.014,
+        "mean_response_ratio_5m": 193.185,
+        "median_response_ratio_5m": 185.025,
+        "mean_response_efficiency_5m": 1.072,
+        "median_response_efficiency_5m": 1.01,
+        "mean_entry_spread_pct": 0.221,
+        "mean_iv_change_pct": 0.116,
+        "mean_abs_delta": 0.525
+      }
+    },
+    "direction_accuracy": {
+      "1m": {
+        "measurable": 16,
+        "correct": 10,
+        "pct": 62.5,
+        "unmeasurable": 23
+      },
+      "3m": {
+        "measurable": 20,
+        "correct": 12,
+        "pct": 60.0,
+        "unmeasurable": 19
+      },
+      "5m": {
+        "measurable": 24,
+        "correct": 14,
+        "pct": 58.3,
+        "unmeasurable": 15
+      },
+      "10m": {
+        "measurable": 30,
+        "correct": 15,
+        "pct": 50.0,
+        "unmeasurable": 9
+      }
+    },
+    "direction_accuracy_pe": {
+      "1m": {
+        "measurable": 11,
+        "correct": 7,
+        "pct": 63.6,
+        "unmeasurable": 16
+      },
+      "3m": {
+        "measurable": 12,
+        "correct": 9,
+        "pct": 75.0,
+        "unmeasurable": 15
+      },
+      "5m": {
+        "measurable": 14,
+        "correct": 12,
+        "pct": 85.7,
+        "unmeasurable": 13
+      },
+      "10m": {
+        "measurable": 19,
+        "correct": 13,
+        "pct": 68.4,
+        "unmeasurable": 8
+      }
+    },
+    "direction_accuracy_ce": {
+      "1m": {
+        "measurable": 5,
+        "correct": 3,
+        "pct": 60.0,
+        "unmeasurable": 7
+      },
+      "3m": {
+        "measurable": 8,
+        "correct": 3,
+        "pct": 37.5,
+        "unmeasurable": 4
+      },
+      "5m": {
+        "measurable": 10,
+        "correct": 2,
+        "pct": 20.0,
+        "unmeasurable": 2
+      },
+      "10m": {
+        "measurable": 11,
+        "correct": 2,
+        "pct": 18.2,
+        "unmeasurable": 1
+      }
+    },
+    "quadrants": {
+      "1m": {
+        "counts": {
+          "UNMEASURABLE": 23,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 10,
+          "UNDERLYING_WRONG_OPTION_LOSS": 6
+        },
+        "measurable": 16,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 62.5,
+          "UNDERLYING_WRONG_OPTION_LOSS": 37.5
+        }
+      },
+      "3m": {
+        "counts": {
+          "UNDERLYING_CORRECT_OPTION_LOSS": 1,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 11,
+          "UNMEASURABLE": 19,
+          "UNDERLYING_WRONG_OPTION_LOSS": 8
+        },
+        "measurable": 20,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_LOSS": 5.0,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 55.0,
+          "UNDERLYING_WRONG_OPTION_LOSS": 40.0
+        }
+      },
+      "5m": {
+        "counts": {
+          "UNMEASURABLE": 15,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 13,
+          "UNDERLYING_WRONG_OPTION_LOSS": 9,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 1
+        },
+        "measurable": 24,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 54.2,
+          "UNDERLYING_WRONG_OPTION_LOSS": 37.5,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 4.2,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 4.2
+        }
+      },
+      "10m": {
+        "counts": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 15,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 14,
+          "UNMEASURABLE": 9,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 1
+        },
+        "measurable": 30,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 50.0,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 46.7,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 3.3
+        }
+      }
+    },
+    "quadrants_pe": {
+      "1m": {
+        "counts": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 7,
+          "UNDERLYING_WRONG_OPTION_LOSS": 4,
+          "UNMEASURABLE": 16
+        },
+        "measurable": 11,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 63.6,
+          "UNDERLYING_WRONG_OPTION_LOSS": 36.4
+        }
+      },
+      "3m": {
+        "counts": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 9,
+          "UNMEASURABLE": 15,
+          "UNDERLYING_WRONG_OPTION_LOSS": 3
+        },
+        "measurable": 12,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 75.0,
+          "UNDERLYING_WRONG_OPTION_LOSS": 25.0
+        }
+      },
+      "5m": {
+        "counts": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 11,
+          "UNMEASURABLE": 13,
+          "UNDERLYING_WRONG_OPTION_LOSS": 2,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 1
+        },
+        "measurable": 14,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 78.6,
+          "UNDERLYING_WRONG_OPTION_LOSS": 14.3,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 7.1
+        }
+      },
+      "10m": {
+        "counts": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 12,
+          "UNDERLYING_WRONG_OPTION_LOSS": 6,
+          "UNMEASURABLE": 8,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 1
+        },
+        "measurable": 19,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 63.2,
+          "UNDERLYING_WRONG_OPTION_LOSS": 31.6,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 5.3
+        }
+      }
+    },
+    "quadrants_ce": {
+      "1m": {
+        "counts": {
+          "UNMEASURABLE": 7,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 3,
+          "UNDERLYING_WRONG_OPTION_LOSS": 2
+        },
+        "measurable": 5,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 60.0,
+          "UNDERLYING_WRONG_OPTION_LOSS": 40.0
+        }
+      },
+      "3m": {
+        "counts": {
+          "UNDERLYING_CORRECT_OPTION_LOSS": 1,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 2,
+          "UNDERLYING_WRONG_OPTION_LOSS": 5,
+          "UNMEASURABLE": 4
+        },
+        "measurable": 8,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_LOSS": 12.5,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 25.0,
+          "UNDERLYING_WRONG_OPTION_LOSS": 62.5
+        }
+      },
+      "5m": {
+        "counts": {
+          "UNMEASURABLE": 2,
+          "UNDERLYING_WRONG_OPTION_LOSS": 7,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 2,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1
+        },
+        "measurable": 10,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 70.0,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 20.0,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 10.0
+        }
+      },
+      "10m": {
+        "counts": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 9,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 2,
+          "UNMEASURABLE": 1
+        },
+        "measurable": 11,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 81.8,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 18.2
+        }
+      }
+    },
+    "response": {
+      "1m": {
+        "n": 1,
+        "measurable_efficiency": 1,
+        "mean_elasticity": 71.05,
+        "median_elasticity": 71.05,
+        "mean_efficiency": 0.638,
+        "median_efficiency": 0.638,
+        "weak_pct": 0.0,
+        "mean_response_gap": 0.168,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "3m": {
+        "n": 3,
+        "measurable_efficiency": 3,
+        "mean_elasticity": 256.69,
+        "median_elasticity": 207.37,
+        "mean_efficiency": 1.702,
+        "median_efficiency": 1.793,
+        "weak_pct": 0.0,
+        "mean_response_gap": 0.67,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "5m": {
+        "n": 7,
+        "measurable_efficiency": 7,
+        "mean_elasticity": 187.85,
+        "median_elasticity": 170.86,
+        "mean_efficiency": 1.06,
+        "median_efficiency": 1.118,
+        "weak_pct": 0.0,
+        "mean_response_gap": 0.464,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "10m": {
+        "n": 17,
+        "measurable_efficiency": 17,
+        "mean_elasticity": 147.44,
+        "median_elasticity": 137.67,
+        "mean_efficiency": 0.916,
+        "median_efficiency": 0.844,
+        "weak_pct": 0.0,
+        "mean_response_gap": 0.433,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      }
+    },
+    "response_pe": {
+      "1m": {
+        "n": 0,
+        "measurable_efficiency": 0,
+        "mean_elasticity": null,
+        "median_elasticity": null,
+        "mean_efficiency": null,
+        "median_efficiency": null,
+        "weak_pct": null,
+        "mean_response_gap": 0.409,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "3m": {
+        "n": 3,
+        "measurable_efficiency": 3,
+        "mean_elasticity": 256.69,
+        "median_elasticity": 207.37,
+        "mean_efficiency": 1.702,
+        "median_efficiency": 1.793,
+        "weak_pct": 0.0,
+        "mean_response_gap": 1.217,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "5m": {
+        "n": 3,
+        "measurable_efficiency": 3,
+        "mean_elasticity": 180.74,
+        "median_elasticity": 170.86,
+        "mean_efficiency": 1.043,
+        "median_efficiency": 1.118,
+        "weak_pct": 0.0,
+        "mean_response_gap": 0.365,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "10m": {
+        "n": 11,
+        "measurable_efficiency": 11,
+        "mean_elasticity": 161.17,
+        "median_elasticity": 153.17,
+        "mean_efficiency": 0.977,
+        "median_efficiency": 1.008,
+        "weak_pct": 0.0,
+        "mean_response_gap": 0.207,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      }
+    },
+    "response_ce": {
+      "1m": {
+        "n": 1,
+        "measurable_efficiency": 1,
+        "mean_elasticity": 71.05,
+        "median_elasticity": 71.05,
+        "mean_efficiency": 0.638,
+        "median_efficiency": 0.638,
+        "weak_pct": 0.0,
+        "mean_response_gap": -0.372,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "3m": {
+        "n": 0,
+        "measurable_efficiency": 0,
+        "mean_elasticity": null,
+        "median_elasticity": null,
+        "mean_efficiency": null,
+        "median_efficiency": null,
+        "weak_pct": null,
+        "mean_response_gap": -0.562,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "5m": {
+        "n": 4,
+        "measurable_efficiency": 4,
+        "mean_elasticity": 193.19,
+        "median_elasticity": 185.03,
+        "mean_efficiency": 1.072,
+        "median_efficiency": 1.01,
+        "weak_pct": 0.0,
+        "mean_response_gap": 0.688,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "10m": {
+        "n": 6,
+        "measurable_efficiency": 6,
+        "mean_elasticity": 122.27,
+        "median_elasticity": 91.14,
+        "mean_efficiency": 0.804,
+        "median_efficiency": 0.796,
+        "weak_pct": 0.0,
+        "mean_response_gap": 0.904,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      }
+    },
+    "spread_economics": {
+      "n": 39,
+      "mean_executable_per_unit": 0.621,
+      "mean_mid_to_mid_per_unit": 0.947,
+      "mean_execution_friction_per_unit": 0.327,
+      "friction_share_of_result": 52.7,
+      "mean_entry_spread": 0.328,
+      "mean_exit_spread": 0.326,
+      "losers": 27,
+      "losers_that_were_positive_mid_to_mid": 2,
+      "pct_of_losers_caused_by_friction": 7.4
+    },
+    "spread_economics_pe": {
+      "n": 27,
+      "mean_executable_per_unit": 2.491,
+      "mean_mid_to_mid_per_unit": 2.832,
+      "mean_execution_friction_per_unit": 0.342,
+      "friction_share_of_result": 13.7,
+      "mean_entry_spread": 0.339,
+      "mean_exit_spread": 0.344,
+      "losers": 17,
+      "losers_that_were_positive_mid_to_mid": 2,
+      "pct_of_losers_caused_by_friction": 11.8
+    },
+    "theta_context": {
+      "n_with_theta": 39,
+      "mean_theta_estimate_per_unit": -1.864,
+      "mean_execution_friction_per_unit": 0.327,
+      "mean_result_per_unit": 0.621,
+      "note": "Theta is published per day; the estimate scales it by hold minutes / 375. Compare its size against friction before attributing anything to decay."
+    },
+    "by_market_state": {
+      "RANGE": {
+        "n": 35,
+        "sufficient": true,
+        "note": null,
+        "wins": 10,
+        "losses": 25,
+        "win_rate": 28.6,
+        "mean_pnl_per_unit": -0.98,
+        "median_pnl_per_unit": -2.1,
+        "mean_mid_to_mid": -0.66,
+        "mean_execution_friction": 0.32,
+        "mean_underlying_move_pct": -0.008,
+        "mean_response_ratio_5m": 188.72,
+        "median_response_ratio_5m": 170.86,
+        "mean_response_efficiency_5m": 1.0,
+        "median_response_efficiency_5m": 0.807,
+        "mean_entry_spread_pct": 0.222,
+        "mean_iv_change_pct": -0.569,
+        "mean_abs_delta": 0.509
+      },
+      "UNKNOWN": {
+        "n": 3,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 2,
+        "losses": 1,
+        "win_rate": 66.7,
+        "mean_pnl_per_unit": 21.53,
+        "median_pnl_per_unit": 10.0,
+        "mean_mid_to_mid": 21.93,
+        "mean_execution_friction": 0.39,
+        "mean_underlying_move_pct": -0.079,
+        "mean_response_ratio_5m": 185.68,
+        "median_response_ratio_5m": 185.68,
+        "mean_response_efficiency_5m": 1.208,
+        "median_response_efficiency_5m": 1.208,
+        "mean_entry_spread_pct": 0.245,
+        "mean_iv_change_pct": 0.646,
+        "mean_abs_delta": 0.51
+      },
+      "TRENDING_DOWN": {
+        "n": 1,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -6.05,
+        "median_pnl_per_unit": -6.05,
+        "mean_mid_to_mid": -5.75,
+        "mean_execution_friction": 0.3,
+        "mean_underlying_move_pct": 0.044,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.277,
+        "mean_iv_change_pct": -0.477,
+        "mean_abs_delta": 0.502
+      }
+    },
+    "pe_by_market_state": {
+      "RANGE": {
+        "n": 24,
+        "sufficient": true,
+        "note": null,
+        "wins": 8,
+        "losses": 16,
+        "win_rate": 33.3,
+        "mean_pnl_per_unit": 0.2,
+        "median_pnl_per_unit": -0.53,
+        "mean_mid_to_mid": 0.53,
+        "mean_execution_friction": 0.34,
+        "mean_underlying_move_pct": -0.005,
+        "mean_response_ratio_5m": 170.86,
+        "median_response_ratio_5m": 170.86,
+        "mean_response_efficiency_5m": 0.714,
+        "median_response_efficiency_5m": 0.714,
+        "mean_entry_spread_pct": 0.221,
+        "mean_iv_change_pct": -1.001,
+        "mean_abs_delta": 0.503
+      },
+      "UNKNOWN": {
+        "n": 2,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 2,
+        "losses": 0,
+        "win_rate": 100.0,
+        "mean_pnl_per_unit": 34.27,
+        "median_pnl_per_unit": 34.27,
+        "mean_mid_to_mid": 34.71,
+        "mean_execution_friction": 0.44,
+        "mean_underlying_move_pct": -0.114,
+        "mean_response_ratio_5m": 185.68,
+        "median_response_ratio_5m": 185.68,
+        "mean_response_efficiency_5m": 1.208,
+        "median_response_efficiency_5m": 1.208,
+        "mean_entry_spread_pct": 0.266,
+        "mean_iv_change_pct": 2.337,
+        "mean_abs_delta": 0.474
+      },
+      "TRENDING_DOWN": {
+        "n": 1,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -6.05,
+        "median_pnl_per_unit": -6.05,
+        "mean_mid_to_mid": -5.75,
+        "mean_execution_friction": 0.3,
+        "mean_underlying_move_pct": 0.044,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.277,
+        "mean_iv_change_pct": -0.477,
+        "mean_abs_delta": 0.502
+      }
+    },
+    "ce_by_market_state": {
+      "RANGE": {
+        "n": 11,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 2,
+        "losses": 9,
+        "win_rate": 18.2,
+        "mean_pnl_per_unit": -3.55,
+        "median_pnl_per_unit": -3.75,
+        "mean_mid_to_mid": -3.26,
+        "mean_execution_friction": 0.29,
+        "mean_underlying_move_pct": -0.014,
+        "mean_response_ratio_5m": 193.185,
+        "median_response_ratio_5m": 185.025,
+        "mean_response_efficiency_5m": 1.072,
+        "median_response_efficiency_5m": 1.01,
+        "mean_entry_spread_pct": 0.222,
+        "mean_iv_change_pct": 0.375,
+        "mean_abs_delta": 0.52
+      },
+      "UNKNOWN": {
+        "n": 1,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -3.95,
+        "median_pnl_per_unit": -3.95,
+        "mean_mid_to_mid": -3.65,
+        "mean_execution_friction": 0.3,
+        "mean_underlying_move_pct": -0.008,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.205,
+        "mean_iv_change_pct": -2.736,
+        "mean_abs_delta": 0.581
+      }
+    },
+    "by_strike_band": {
+      "ATM": {
+        "n": 29,
+        "sufficient": true,
+        "note": null,
+        "wins": 12,
+        "losses": 17,
+        "win_rate": 41.4,
+        "mean_pnl_per_unit": 1.78,
+        "median_pnl_per_unit": -0.65,
+        "mean_mid_to_mid": 2.12,
+        "mean_execution_friction": 0.34,
+        "mean_underlying_move_pct": -0.023,
+        "mean_response_ratio_5m": 187.851,
+        "median_response_ratio_5m": 170.86,
+        "mean_response_efficiency_5m": 1.06,
+        "median_response_efficiency_5m": 1.118,
+        "mean_entry_spread_pct": 0.228,
+        "mean_iv_change_pct": -0.561,
+        "mean_abs_delta": 0.51
+      },
+      "ITM": {
+        "n": 10,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 10,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -2.75,
+        "median_pnl_per_unit": -2.97,
+        "mean_mid_to_mid": -2.46,
+        "mean_execution_friction": 0.29,
+        "mean_underlying_move_pct": 0.018,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.217,
+        "mean_iv_change_pct": -0.216,
+        "mean_abs_delta": 0.504
+      }
+    },
+    "by_iv_state": {
+      "IV_NEUTRAL": {
+        "n": 16,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 3,
+        "losses": 13,
+        "win_rate": 18.8,
+        "mean_pnl_per_unit": -2.28,
+        "median_pnl_per_unit": -1.58,
+        "mean_mid_to_mid": -1.98,
+        "mean_execution_friction": 0.3,
+        "mean_underlying_move_pct": -0.006,
+        "mean_response_ratio_5m": 139.655,
+        "median_response_ratio_5m": 96.905,
+        "mean_response_efficiency_5m": 0.968,
+        "median_response_efficiency_5m": 0.963,
+        "mean_entry_spread_pct": 0.225,
+        "mean_iv_change_pct": 0.202,
+        "mean_abs_delta": 0.51
+      },
+      "IV_HEADWIND": {
+        "n": 12,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 3,
+        "losses": 9,
+        "win_rate": 25.0,
+        "mean_pnl_per_unit": 0.48,
+        "median_pnl_per_unit": -3.33,
+        "mean_mid_to_mid": 0.81,
+        "mean_execution_friction": 0.34,
+        "mean_underlying_move_pct": -0.026,
+        "mean_response_ratio_5m": 245.875,
+        "median_response_ratio_5m": 245.875,
+        "mean_response_efficiency_5m": 1.124,
+        "median_response_efficiency_5m": 1.124,
+        "mean_entry_spread_pct": 0.231,
+        "mean_iv_change_pct": -4.49,
+        "mean_abs_delta": 0.505
+      },
+      "IV_TAILWIND": {
+        "n": 11,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 6,
+        "losses": 5,
+        "win_rate": 54.5,
+        "mean_pnl_per_unit": 5.0,
+        "median_pnl_per_unit": 0.15,
+        "mean_mid_to_mid": 5.35,
+        "mean_execution_friction": 0.35,
+        "mean_underlying_move_pct": -0.007,
+        "mean_response_ratio_5m": 264.59,
+        "median_response_ratio_5m": 264.59,
+        "mean_response_efficiency_5m": 1.298,
+        "median_response_efficiency_5m": 1.298,
+        "mean_entry_spread_pct": 0.219,
+        "mean_iv_change_pct": 2.928,
+        "mean_abs_delta": 0.51
+      }
+    },
+    "by_exit_reason": {
+      "POSITION_SIGNAL": {
+        "n": 25,
+        "sufficient": true,
+        "note": null,
+        "wins": 7,
+        "losses": 18,
+        "win_rate": 28.0,
+        "mean_pnl_per_unit": 0.06,
+        "median_pnl_per_unit": -0.65,
+        "mean_mid_to_mid": 0.38,
+        "mean_execution_friction": 0.31,
+        "mean_underlying_move_pct": -0.012,
+        "mean_response_ratio_5m": 160.61,
+        "median_response_ratio_5m": 138.815,
+        "mean_response_efficiency_5m": 0.945,
+        "median_response_efficiency_5m": 0.926,
+        "mean_entry_spread_pct": 0.219,
+        "mean_iv_change_pct": -1.406,
+        "mean_abs_delta": 0.505
+      },
+      "SIGNAL_FLIP": {
+        "n": 14,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 5,
+        "losses": 9,
+        "win_rate": 35.7,
+        "mean_pnl_per_unit": 1.61,
+        "median_pnl_per_unit": -3.27,
+        "mean_mid_to_mid": 1.97,
+        "mean_execution_friction": 0.35,
+        "mean_underlying_move_pct": -0.014,
+        "mean_response_ratio_5m": 224.173,
+        "median_response_ratio_5m": 264.59,
+        "mean_response_efficiency_5m": 1.213,
+        "median_response_efficiency_5m": 1.298,
+        "mean_entry_spread_pct": 0.235,
+        "mean_iv_change_pct": 1.193,
+        "mean_abs_delta": 0.514
+      }
+    },
+    "by_loss_reason": {
+      "IV_HEADWIND": {
+        "n": 6,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 6,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -3.73,
+        "median_pnl_per_unit": -3.85,
+        "mean_mid_to_mid": -3.45,
+        "mean_execution_friction": 0.29,
+        "mean_underlying_move_pct": -0.008,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.218,
+        "mean_iv_change_pct": -4.146,
+        "mean_abs_delta": 0.513
+      },
+      "SIGNAL_FLIP": {
+        "n": 6,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 6,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -6.12,
+        "median_pnl_per_unit": -5.93,
+        "mean_mid_to_mid": -5.7,
+        "mean_execution_friction": 0.41,
+        "mean_underlying_move_pct": -0.002,
+        "mean_response_ratio_5m": 203.965,
+        "median_response_ratio_5m": 203.965,
+        "mean_response_efficiency_5m": 1.171,
+        "median_response_efficiency_5m": 1.171,
+        "mean_entry_spread_pct": 0.244,
+        "mean_iv_change_pct": 1.582,
+        "mean_abs_delta": 0.531
+      },
+      "UNDERLYING_DID_NOT_CONTINUE": {
+        "n": 5,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 5,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -7.77,
+        "median_pnl_per_unit": -7.55,
+        "mean_mid_to_mid": -7.49,
+        "mean_execution_friction": 0.28,
+        "mean_underlying_move_pct": 0.0,
+        "mean_response_ratio_5m": 182.405,
+        "median_response_ratio_5m": 182.405,
+        "mean_response_efficiency_5m": 0.973,
+        "median_response_efficiency_5m": 0.973,
+        "mean_entry_spread_pct": 0.222,
+        "mean_iv_change_pct": -0.98,
+        "mean_abs_delta": 0.514
+      },
+      "LATE_ENTRY": {
+        "n": 3,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 3,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -0.65,
+        "median_pnl_per_unit": -0.5,
+        "mean_mid_to_mid": -0.41,
+        "mean_execution_friction": 0.24,
+        "mean_underlying_move_pct": 0.001,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.155,
+        "mean_iv_change_pct": 0.311,
+        "mean_abs_delta": 0.506
+      },
+      "MOMENTUM_REVERSAL": {
+        "n": 3,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 3,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -4.58,
+        "median_pnl_per_unit": -4.2,
+        "mean_mid_to_mid": -4.29,
+        "mean_execution_friction": 0.29,
+        "mean_underlying_move_pct": 0.015,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.26,
+        "mean_iv_change_pct": 0.571,
+        "mean_abs_delta": 0.511
+      },
+      "MIXED": {
+        "n": 2,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 2,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -1.33,
+        "median_pnl_per_unit": -1.33,
+        "mean_mid_to_mid": -1.04,
+        "mean_execution_friction": 0.29,
+        "mean_underlying_move_pct": 0.009,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.229,
+        "mean_iv_change_pct": -0.332,
+        "mean_abs_delta": 0.498
+      },
+      "SPREAD_FRICTION": {
+        "n": 2,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 2,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -0.2,
+        "median_pnl_per_unit": -0.2,
+        "mean_mid_to_mid": 0.23,
+        "mean_execution_friction": 0.43,
+        "mean_underlying_move_pct": -0.023,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.257,
+        "mean_iv_change_pct": -2.934,
+        "mean_abs_delta": 0.493
+      }
+    },
+    "loss_reason_counts": {
+      "IV_HEADWIND": 6,
+      "LATE_ENTRY": 3,
+      "MOMENTUM_REVERSAL": 3,
+      "SIGNAL_FLIP": 6,
+      "UNDERLYING_DID_NOT_CONTINUE": 5,
+      "MIXED": 2,
+      "SPREAD_FRICTION": 2
+    },
+    "pe_loss_reason_counts": {
+      "LATE_ENTRY": 2,
+      "MOMENTUM_REVERSAL": 2,
+      "UNDERLYING_DID_NOT_CONTINUE": 3,
+      "IV_HEADWIND": 4,
+      "MIXED": 2,
+      "SIGNAL_FLIP": 2,
+      "SPREAD_FRICTION": 2
+    },
+    "delta_buckets": {
+      "0.0-0.2": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      },
+      "0.2-0.4": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      },
+      "0.4-0.6": {
+        "n": 39,
+        "sufficient": true,
+        "note": null,
+        "wins": 12,
+        "losses": 27,
+        "win_rate": 30.8,
+        "mean_pnl_per_unit": 0.62,
+        "median_pnl_per_unit": -2.1,
+        "mean_mid_to_mid": 0.95,
+        "mean_execution_friction": 0.33,
+        "mean_underlying_move_pct": -0.012,
+        "mean_response_ratio_5m": 187.851,
+        "median_response_ratio_5m": 170.86,
+        "mean_response_efficiency_5m": 1.06,
+        "median_response_efficiency_5m": 1.118,
+        "mean_entry_spread_pct": 0.225,
+        "mean_iv_change_pct": -0.473,
+        "mean_abs_delta": 0.509
+      },
+      "0.6-0.8": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      },
+      "0.8-1.0": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      }
+    },
+    "iv_buckets": {
+      "low (<10.89)": {
+        "n": 13,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 3,
+        "losses": 10,
+        "win_rate": 23.1,
+        "mean_pnl_per_unit": -1.37,
+        "median_pnl_per_unit": -2.1,
+        "mean_mid_to_mid": -1.12,
+        "mean_execution_friction": 0.25,
+        "mean_underlying_move_pct": -0.008,
+        "mean_response_ratio_5m": 84.42,
+        "median_response_ratio_5m": 84.42,
+        "mean_response_efficiency_5m": 0.77,
+        "median_response_efficiency_5m": 0.77,
+        "mean_entry_spread_pct": 0.224,
+        "mean_iv_change_pct": -0.143,
+        "mean_abs_delta": 0.514
+      },
+      "mid (10.89-16.37)": {
+        "n": 13,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 4,
+        "losses": 9,
+        "win_rate": 30.8,
+        "mean_pnl_per_unit": -1.03,
+        "median_pnl_per_unit": -3.05,
+        "mean_mid_to_mid": -0.7,
+        "mean_execution_friction": 0.33,
+        "mean_underlying_move_pct": -0.002,
+        "mean_response_ratio_5m": 186.88,
+        "median_response_ratio_5m": 170.86,
+        "mean_response_efficiency_5m": 1.015,
+        "median_response_efficiency_5m": 1.118,
+        "mean_entry_spread_pct": 0.225,
+        "mean_iv_change_pct": 0.389,
+        "mean_abs_delta": 0.508
+      },
+      "high (>=16.37)": {
+        "n": 13,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 5,
+        "losses": 8,
+        "win_rate": 38.5,
+        "mean_pnl_per_unit": 4.26,
+        "median_pnl_per_unit": -0.35,
+        "mean_mid_to_mid": 4.66,
+        "mean_execution_friction": 0.4,
+        "mean_underlying_move_pct": -0.027,
+        "mean_response_ratio_5m": 292.74,
+        "median_response_ratio_5m": 292.74,
+        "mean_response_efficiency_5m": 1.416,
+        "median_response_efficiency_5m": 1.416,
+        "mean_entry_spread_pct": 0.226,
+        "mean_iv_change_pct": -1.665,
+        "mean_abs_delta": 0.504
+      }
+    },
+    "by_hour": {
+      "09:15-10:00": {
+        "n": 5,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 3,
+        "losses": 2,
+        "win_rate": 60.0,
+        "mean_pnl_per_unit": 13.32,
+        "median_pnl_per_unit": 2.4,
+        "mean_mid_to_mid": 13.7,
+        "mean_execution_friction": 0.38,
+        "mean_underlying_move_pct": -0.048,
+        "mean_response_ratio_5m": 185.68,
+        "median_response_ratio_5m": 185.68,
+        "mean_response_efficiency_5m": 1.208,
+        "median_response_efficiency_5m": 1.208,
+        "mean_entry_spread_pct": 0.224,
+        "mean_iv_change_pct": 0.599,
+        "mean_abs_delta": 0.509
+      },
+      "10:00-11:00": {
+        "n": 10,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 3,
+        "losses": 7,
+        "win_rate": 30.0,
+        "mean_pnl_per_unit": 1.98,
+        "median_pnl_per_unit": -0.85,
+        "mean_mid_to_mid": 2.3,
+        "mean_execution_friction": 0.32,
+        "mean_underlying_move_pct": -0.005,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.212,
+        "mean_iv_change_pct": 0.589,
+        "mean_abs_delta": 0.518
+      },
+      "11:00-12:00": {
+        "n": 16,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 1,
+        "losses": 15,
+        "win_rate": 6.2,
+        "mean_pnl_per_unit": -5.08,
+        "median_pnl_per_unit": -4.3,
+        "mean_mid_to_mid": -4.74,
+        "mean_execution_friction": 0.34,
+        "mean_underlying_move_pct": -0.002,
+        "mean_response_ratio_5m": 193.185,
+        "median_response_ratio_5m": 185.025,
+        "mean_response_efficiency_5m": 1.072,
+        "median_response_efficiency_5m": 1.01,
+        "mean_entry_spread_pct": 0.241,
+        "mean_iv_change_pct": -0.788,
+        "mean_abs_delta": 0.511
+      },
+      "12:00-13:00": {
+        "n": 8,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 5,
+        "losses": 3,
+        "win_rate": 62.5,
+        "mean_pnl_per_unit": 2.39,
+        "median_pnl_per_unit": 1.1,
+        "mean_mid_to_mid": 2.67,
+        "mean_execution_friction": 0.28,
+        "mean_underlying_move_pct": -0.021,
+        "mean_response_ratio_5m": 170.86,
+        "median_response_ratio_5m": 170.86,
+        "mean_response_efficiency_5m": 0.714,
+        "median_response_efficiency_5m": 0.714,
+        "mean_entry_spread_pct": 0.209,
+        "mean_iv_change_pct": -1.84,
+        "mean_abs_delta": 0.491
+      },
+      "13:00-14:00": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      },
+      "14:00-15:00": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      },
+      "15:00+": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      }
+    },
+    "pre_signal": {
+      "mean_und_pre_1m": -0.0114,
+      "mean_und_pre_3m": -0.0075,
+      "mean_und_pre_5m": 0.0027,
+      "mean_opt_pre_5m": 3.1551,
+      "mean_premium_position_in_range": 81.7
+    },
+    "density": {
+      "per_symbol_day": {
+        "NIFTY 2026-09-24": {
+          "signals": 19,
+          "first": "09:33",
+          "last": "12:44",
+          "median_gap_minutes": 10.5,
+          "signals_per_hour": 5.97,
+          "gaps_under_3min": 1
+        },
+        "SENSEX 2026-09-24": {
+          "signals": 20,
+          "first": "09:35",
+          "last": "12:42",
+          "median_gap_minutes": 9,
+          "signals_per_hour": 6.42,
+          "gaps_under_3min": 0
+        }
+      },
+      "overall": {
+        "median_gap_minutes": 9,
+        "mean_gap_minutes": 10.22,
+        "mean_signals_per_hour": 6.19,
+        "gaps_under_3min": 1,
+        "total_gaps": 37
+      }
+    },
+    "runs": {
+      "same_direction_runs": 17,
+      "mean_run_length": 2.29,
+      "max_run_length": 7,
+      "run_length_histogram": {
+        "1": 6,
+        "2": 7,
+        "3": 1,
+        "4": 1,
+        "5": 1,
+        "7": 1
+      },
+      "direction_changes": 15,
+      "transitions": 37,
+      "flip_rate_pct": 40.5
+    },
+    "flips": {
+      "flips": 15,
+      "market_confirmed": 15,
+      "not_confirmed": 0,
+      "unknown": 0,
+      "confirmed_pct": 100.0,
+      "median_gap_minutes": 9,
+      "mean_closed_pnl_per_unit": -4.76,
+      "sample": [
+        {
+          "at": "09:39",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 6,
+          "underlying_move_pct": -0.047,
+          "market_confirmed": true,
+          "closed_pnl": -3.95
+        },
+        {
+          "at": "10:00",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 6,
+          "underlying_move_pct": 0.033,
+          "market_confirmed": true,
+          "closed_pnl": -0.4
+        },
+        {
+          "at": "10:19",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 11,
+          "underlying_move_pct": -0.101,
+          "market_confirmed": true,
+          "closed_pnl": -3.5
+        },
+        {
+          "at": "10:37",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 16,
+          "underlying_move_pct": 0.083,
+          "market_confirmed": true,
+          "closed_pnl": -0.5
+        },
+        {
+          "at": "11:10",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 9,
+          "underlying_move_pct": -0.081,
+          "market_confirmed": true,
+          "closed_pnl": -3.8
+        },
+        {
+          "at": "11:20",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 10,
+          "underlying_move_pct": 0.077,
+          "market_confirmed": true,
+          "closed_pnl": -3.7
+        },
+        {
+          "at": "11:25",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 5,
+          "underlying_move_pct": -0.1,
+          "market_confirmed": true,
+          "closed_pnl": -4.4
+        },
+        {
+          "at": "10:03",
+          "market": "SENSEX",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 11,
+          "underlying_move_pct": 0.04,
+          "market_confirmed": true,
+          "closed_pnl": 2.4
+        },
+        {
+          "at": "10:11",
+          "market": "SENSEX",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 8,
+          "underlying_move_pct": -0.029,
+          "market_confirmed": true,
+          "closed_pnl": -3.75
+        },
+        {
+          "at": "10:51",
+          "market": "SENSEX",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 10,
+          "underlying_move_pct": 0.079,
+          "market_confirmed": true,
+          "closed_pnl": -3.05
+        },
+        {
+          "at": "11:04",
+          "market": "SENSEX",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 3,
+          "underlying_move_pct": -0.025,
+          "market_confirmed": true,
+          "closed_pnl": -8.1
+        },
+        {
+          "at": "11:19",
+          "market": "SENSEX",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 9,
+          "underlying_move_pct": 0.087,
+          "market_confirmed": true,
+          "closed_pnl": -9.95
+        },
+        {
+          "at": "11:24",
+          "market": "SENSEX",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 5,
+          "underlying_move_pct": -0.052,
+          "market_confirmed": true,
+          "closed_pnl": -13.55
+        },
+        {
+          "at": "11:47",
+          "market": "SENSEX",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 3,
+          "underlying_move_pct": 0.022,
+          "market_confirmed": true,
+          "closed_pnl": -7.1
+        },
+        {
+          "at": "11:56",
+          "market": "SENSEX",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 9,
+          "underlying_move_pct": -0.089,
+          "market_confirmed": true,
+          "closed_pnl": -8.05
+        }
+      ]
+    },
+    "data_quality": {
+      "missing_greeks": 0,
+      "missing_iv": 0,
+      "missing_entry_quote": 0,
+      "missing_exit_quote": 0,
+      "greeks_status": {
+        "VALID": 39
+      }
+    },
+    "min_sample": 20,
+    "caveat": "Diagnosis only, on paper simulation. No strategy rule was read for anything but its output and none was changed. Groups below the minimum sample are not interpretable."
+  },
+  "historical": {
+    "label": "HISTORICAL",
+    "version": "12E-option-audit-v1",
+    "config_hash": "9d8fb5671d76d03c",
+    "signals": 488,
+    "buy_ce": 247,
+    "buy_pe": 241,
+    "sessions": 16,
+    "overall": {
+      "n": 488,
+      "sufficient": true,
+      "note": null,
+      "wins": 148,
+      "losses": 338,
+      "win_rate": 30.5,
+      "mean_pnl_per_unit": 0.09,
+      "median_pnl_per_unit": -2.85,
+      "mean_mid_to_mid": 0.55,
+      "mean_execution_friction": 0.46,
+      "mean_underlying_move_pct": -0.003,
+      "mean_response_ratio_5m": 134.332,
+      "median_response_ratio_5m": 109.36,
+      "mean_response_efficiency_5m": 0.991,
+      "median_response_efficiency_5m": 0.937,
+      "mean_entry_spread_pct": 0.225,
+      "mean_iv_change_pct": -0.234,
+      "mean_abs_delta": 0.509
+    },
+    "by_side": {
+      "PE": {
+        "n": 241,
+        "sufficient": true,
+        "note": null,
+        "wins": 73,
+        "losses": 167,
+        "win_rate": 30.4,
+        "mean_pnl_per_unit": 0.43,
+        "median_pnl_per_unit": -2.83,
+        "mean_mid_to_mid": 0.88,
+        "mean_execution_friction": 0.46,
+        "mean_underlying_move_pct": -0.007,
+        "mean_response_ratio_5m": 135.504,
+        "median_response_ratio_5m": 109.45,
+        "mean_response_efficiency_5m": 1.01,
+        "median_response_efficiency_5m": 0.974,
+        "mean_entry_spread_pct": 0.222,
+        "mean_iv_change_pct": -0.144,
+        "mean_abs_delta": 0.486
+      },
+      "CE": {
+        "n": 247,
+        "sufficient": true,
+        "note": null,
+        "wins": 75,
+        "losses": 171,
+        "win_rate": 30.5,
+        "mean_pnl_per_unit": -0.24,
+        "median_pnl_per_unit": -2.88,
+        "mean_mid_to_mid": 0.23,
+        "mean_execution_friction": 0.47,
+        "mean_underlying_move_pct": 0.001,
+        "mean_response_ratio_5m": 133.159,
+        "median_response_ratio_5m": 108.87,
+        "mean_response_efficiency_5m": 0.973,
+        "median_response_efficiency_5m": 0.92,
+        "mean_entry_spread_pct": 0.229,
+        "mean_iv_change_pct": -0.321,
+        "mean_abs_delta": 0.531
+      }
+    },
+    "direction_accuracy": {
+      "1m": {
+        "measurable": 145,
+        "correct": 76,
+        "pct": 52.4,
+        "unmeasurable": 343
+      },
+      "3m": {
+        "measurable": 248,
+        "correct": 122,
+        "pct": 49.2,
+        "unmeasurable": 240
+      },
+      "5m": {
+        "measurable": 289,
+        "correct": 146,
+        "pct": 50.5,
+        "unmeasurable": 199
+      },
+      "10m": {
+        "measurable": 350,
+        "correct": 178,
+        "pct": 50.9,
+        "unmeasurable": 138
+      }
+    },
+    "direction_accuracy_pe": {
+      "1m": {
+        "measurable": 76,
+        "correct": 39,
+        "pct": 51.3,
+        "unmeasurable": 165
+      },
+      "3m": {
+        "measurable": 127,
+        "correct": 62,
+        "pct": 48.8,
+        "unmeasurable": 114
+      },
+      "5m": {
+        "measurable": 150,
+        "correct": 78,
+        "pct": 52.0,
+        "unmeasurable": 91
+      },
+      "10m": {
+        "measurable": 177,
+        "correct": 89,
+        "pct": 50.3,
+        "unmeasurable": 64
+      }
+    },
+    "direction_accuracy_ce": {
+      "1m": {
+        "measurable": 69,
+        "correct": 37,
+        "pct": 53.6,
+        "unmeasurable": 178
+      },
+      "3m": {
+        "measurable": 121,
+        "correct": 60,
+        "pct": 49.6,
+        "unmeasurable": 126
+      },
+      "5m": {
+        "measurable": 139,
+        "correct": 68,
+        "pct": 48.9,
+        "unmeasurable": 108
+      },
+      "10m": {
+        "measurable": 173,
+        "correct": 89,
+        "pct": 51.4,
+        "unmeasurable": 74
+      }
+    },
+    "quadrants": {
+      "1m": {
+        "counts": {
+          "UNMEASURABLE": 343,
+          "UNDERLYING_WRONG_OPTION_LOSS": 68,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 73,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 3
+        },
+        "measurable": 145,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 46.9,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 50.3,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 0.7,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 2.1
+        }
+      },
+      "3m": {
+        "counts": {
+          "UNMEASURABLE": 240,
+          "UNDERLYING_WRONG_OPTION_LOSS": 124,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 115,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 7,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 2
+        },
+        "measurable": 248,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 50.0,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 46.4,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 2.8,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 0.8
+        }
+      },
+      "5m": {
+        "counts": {
+          "UNMEASURABLE": 199,
+          "UNDERLYING_WRONG_OPTION_LOSS": 138,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 135,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 11,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 5
+        },
+        "measurable": 289,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 47.8,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 46.7,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 3.8,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1.7
+        }
+      },
+      "10m": {
+        "counts": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 161,
+          "UNDERLYING_WRONG_OPTION_LOSS": 170,
+          "UNMEASURABLE": 138,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 17,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 2
+        },
+        "measurable": 350,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 46.0,
+          "UNDERLYING_WRONG_OPTION_LOSS": 48.6,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 4.9,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 0.6
+        }
+      }
+    },
+    "quadrants_pe": {
+      "1m": {
+        "counts": {
+          "UNMEASURABLE": 165,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 37,
+          "UNDERLYING_WRONG_OPTION_LOSS": 37,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 2
+        },
+        "measurable": 76,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 48.7,
+          "UNDERLYING_WRONG_OPTION_LOSS": 48.7,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 2.6
+        }
+      },
+      "3m": {
+        "counts": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 64,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 59,
+          "UNMEASURABLE": 114,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 3,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1
+        },
+        "measurable": 127,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 50.4,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 46.5,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 2.4,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 0.8
+        }
+      },
+      "5m": {
+        "counts": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 70,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 72,
+          "UNMEASURABLE": 91,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 6,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 2
+        },
+        "measurable": 150,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 46.7,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 48.0,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 4.0,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1.3
+        }
+      },
+      "10m": {
+        "counts": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 87,
+          "UNMEASURABLE": 64,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 77,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 12,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1
+        },
+        "measurable": 177,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 49.2,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 43.5,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 6.8,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 0.6
+        }
+      }
+    },
+    "quadrants_ce": {
+      "1m": {
+        "counts": {
+          "UNMEASURABLE": 178,
+          "UNDERLYING_WRONG_OPTION_LOSS": 31,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 36,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 1
+        },
+        "measurable": 69,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 44.9,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 52.2,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1.4,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 1.4
+        }
+      },
+      "3m": {
+        "counts": {
+          "UNMEASURABLE": 126,
+          "UNDERLYING_WRONG_OPTION_LOSS": 60,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 56,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 4,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1
+        },
+        "measurable": 121,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 49.6,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 46.3,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 3.3,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 0.8
+        }
+      },
+      "5m": {
+        "counts": {
+          "UNMEASURABLE": 108,
+          "UNDERLYING_WRONG_OPTION_LOSS": 68,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 63,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 5,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 3
+        },
+        "measurable": 139,
+        "pct": {
+          "UNDERLYING_WRONG_OPTION_LOSS": 48.9,
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 45.3,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 3.6,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 2.2
+        }
+      },
+      "10m": {
+        "counts": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 84,
+          "UNDERLYING_WRONG_OPTION_LOSS": 83,
+          "UNMEASURABLE": 74,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 5,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 1
+        },
+        "measurable": 173,
+        "pct": {
+          "UNDERLYING_CORRECT_OPTION_PROFITABLE": 48.6,
+          "UNDERLYING_WRONG_OPTION_LOSS": 48.0,
+          "UNDERLYING_CORRECT_OPTION_LOSS": 2.9,
+          "UNDERLYING_WRONG_OPTION_PROFITABLE": 0.6
+        }
+      }
+    },
+    "response": {
+      "1m": {
+        "n": 21,
+        "measurable_efficiency": 21,
+        "mean_elasticity": 104.34,
+        "median_elasticity": 95.08,
+        "mean_efficiency": 0.859,
+        "median_efficiency": 0.894,
+        "weak_pct": 19.0,
+        "mean_response_gap": -0.149,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "3m": {
+        "n": 84,
+        "measurable_efficiency": 84,
+        "mean_elasticity": 112.65,
+        "median_elasticity": 89.96,
+        "mean_efficiency": 0.85,
+        "median_efficiency": 0.873,
+        "weak_pct": 7.1,
+        "mean_response_gap": -0.187,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "5m": {
+        "n": 106,
+        "measurable_efficiency": 106,
+        "mean_elasticity": 134.33,
+        "median_elasticity": 109.36,
+        "mean_efficiency": 0.991,
+        "median_efficiency": 0.937,
+        "weak_pct": 5.7,
+        "mean_response_gap": -0.201,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "10m": {
+        "n": 168,
+        "measurable_efficiency": 168,
+        "mean_elasticity": 131.0,
+        "median_elasticity": 106.35,
+        "mean_efficiency": 0.962,
+        "median_efficiency": 0.91,
+        "weak_pct": 7.1,
+        "mean_response_gap": -0.59,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      }
+    },
+    "response_pe": {
+      "1m": {
+        "n": 9,
+        "measurable_efficiency": 9,
+        "mean_elasticity": 115.4,
+        "median_elasticity": 112.04,
+        "mean_efficiency": 0.868,
+        "median_efficiency": 0.992,
+        "weak_pct": 22.2,
+        "mean_response_gap": -0.121,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "3m": {
+        "n": 39,
+        "measurable_efficiency": 39,
+        "mean_elasticity": 118.84,
+        "median_elasticity": 96.21,
+        "mean_efficiency": 0.89,
+        "median_efficiency": 0.904,
+        "weak_pct": 7.7,
+        "mean_response_gap": -0.193,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "5m": {
+        "n": 53,
+        "measurable_efficiency": 53,
+        "mean_elasticity": 135.5,
+        "median_elasticity": 109.45,
+        "mean_efficiency": 1.01,
+        "median_efficiency": 0.974,
+        "weak_pct": 5.7,
+        "mean_response_gap": -0.488,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "10m": {
+        "n": 92,
+        "measurable_efficiency": 92,
+        "mean_elasticity": 132.43,
+        "median_elasticity": 112.95,
+        "mean_efficiency": 0.964,
+        "median_efficiency": 0.984,
+        "weak_pct": 6.5,
+        "mean_response_gap": -0.747,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      }
+    },
+    "response_ce": {
+      "1m": {
+        "n": 12,
+        "measurable_efficiency": 12,
+        "mean_elasticity": 96.05,
+        "median_elasticity": 94.92,
+        "mean_efficiency": 0.852,
+        "median_efficiency": 0.827,
+        "weak_pct": 16.7,
+        "mean_response_gap": -0.176,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "3m": {
+        "n": 45,
+        "measurable_efficiency": 45,
+        "mean_elasticity": 107.28,
+        "median_elasticity": 86.27,
+        "mean_efficiency": 0.815,
+        "median_efficiency": 0.801,
+        "weak_pct": 6.7,
+        "mean_response_gap": -0.181,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "5m": {
+        "n": 53,
+        "measurable_efficiency": 53,
+        "mean_elasticity": 133.16,
+        "median_elasticity": 108.87,
+        "mean_efficiency": 0.973,
+        "median_efficiency": 0.92,
+        "weak_pct": 5.7,
+        "mean_response_gap": 0.082,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      },
+      "10m": {
+        "n": 76,
+        "measurable_efficiency": 76,
+        "mean_elasticity": 129.27,
+        "median_elasticity": 102.58,
+        "mean_efficiency": 0.96,
+        "median_efficiency": 0.83,
+        "weak_pct": 7.9,
+        "mean_response_gap": -0.436,
+        "note": "RESPONSE_GAP compares the measured mid move against a FIRST-ORDER THEORETICAL ESTIMATE (delta x spot change). Benchmark only."
+      }
+    },
+    "spread_economics": {
+      "n": 488,
+      "mean_executable_per_unit": 0.09,
+      "mean_mid_to_mid_per_unit": 0.554,
+      "mean_execution_friction_per_unit": 0.463,
+      "friction_share_of_result": 512.9,
+      "mean_entry_spread": 0.466,
+      "mean_exit_spread": 0.463,
+      "losers": 338,
+      "losers_that_were_positive_mid_to_mid": 8,
+      "pct_of_losers_caused_by_friction": 2.4
+    },
+    "spread_economics_pe": {
+      "n": 241,
+      "mean_executable_per_unit": 0.425,
+      "mean_mid_to_mid_per_unit": 0.88,
+      "mean_execution_friction_per_unit": 0.455,
+      "friction_share_of_result": 107.1,
+      "mean_entry_spread": 0.456,
+      "mean_exit_spread": 0.458,
+      "losers": 167,
+      "losers_that_were_positive_mid_to_mid": 2,
+      "pct_of_losers_caused_by_friction": 1.2
+    },
+    "theta_context": {
+      "n_with_theta": 486,
+      "mean_theta_estimate_per_unit": -0.855,
+      "mean_execution_friction_per_unit": 0.463,
+      "mean_result_per_unit": 0.09,
+      "note": "Theta is published per day; the estimate scales it by hold minutes / 375. Compare its size against friction before attributing anything to decay."
+    },
+    "by_market_state": {
+      "RANGE": {
+        "n": 433,
+        "sufficient": true,
+        "note": null,
+        "wins": 125,
+        "losses": 307,
+        "win_rate": 28.9,
+        "mean_pnl_per_unit": -0.37,
+        "median_pnl_per_unit": -2.85,
+        "mean_mid_to_mid": 0.08,
+        "mean_execution_friction": 0.46,
+        "mean_underlying_move_pct": -0.0,
+        "mean_response_ratio_5m": 136.193,
+        "median_response_ratio_5m": 109.27,
+        "mean_response_efficiency_5m": 0.985,
+        "median_response_efficiency_5m": 0.947,
+        "mean_entry_spread_pct": 0.225,
+        "mean_iv_change_pct": -0.343,
+        "mean_abs_delta": 0.51
+      },
+      "UNKNOWN": {
+        "n": 23,
+        "sufficient": true,
+        "note": null,
+        "wins": 10,
+        "losses": 13,
+        "win_rate": 43.5,
+        "mean_pnl_per_unit": -1.05,
+        "median_pnl_per_unit": -2.35,
+        "mean_mid_to_mid": -0.54,
+        "mean_execution_friction": 0.51,
+        "mean_underlying_move_pct": -0.035,
+        "mean_response_ratio_5m": 119.26,
+        "median_response_ratio_5m": 110.48,
+        "mean_response_efficiency_5m": 1.001,
+        "median_response_efficiency_5m": 0.934,
+        "mean_entry_spread_pct": 0.249,
+        "mean_iv_change_pct": 0.717,
+        "mean_abs_delta": 0.501
+      },
+      "TRENDING_DOWN": {
+        "n": 16,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 7,
+        "losses": 8,
+        "win_rate": 46.7,
+        "mean_pnl_per_unit": 12.65,
+        "median_pnl_per_unit": -3.25,
+        "mean_mid_to_mid": 13.2,
+        "mean_execution_friction": 0.55,
+        "mean_underlying_move_pct": -0.025,
+        "mean_response_ratio_5m": 114.614,
+        "median_response_ratio_5m": 120.29,
+        "mean_response_efficiency_5m": 0.901,
+        "median_response_efficiency_5m": 1.065,
+        "mean_entry_spread_pct": 0.216,
+        "mean_iv_change_pct": 0.237,
+        "mean_abs_delta": 0.477
+      },
+      "TRENDING_UP": {
+        "n": 14,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 5,
+        "losses": 9,
+        "win_rate": 35.7,
+        "mean_pnl_per_unit": 0.34,
+        "median_pnl_per_unit": -4.9,
+        "mean_mid_to_mid": 0.8,
+        "mean_execution_friction": 0.46,
+        "mean_underlying_move_pct": -0.003,
+        "mean_response_ratio_5m": 150.572,
+        "median_response_ratio_5m": 95.07,
+        "mean_response_efficiency_5m": 1.124,
+        "median_response_efficiency_5m": 0.9,
+        "mean_entry_spread_pct": 0.217,
+        "mean_iv_change_pct": 1.007,
+        "mean_abs_delta": 0.515
+      },
+      "REVERSING": {
+        "n": 2,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 1,
+        "losses": 1,
+        "win_rate": 50.0,
+        "mean_pnl_per_unit": 16.93,
+        "median_pnl_per_unit": 16.93,
+        "mean_mid_to_mid": 17.78,
+        "mean_execution_friction": 0.85,
+        "mean_underlying_move_pct": -0.055,
+        "mean_response_ratio_5m": 84.17,
+        "median_response_ratio_5m": 84.17,
+        "mean_response_efficiency_5m": 0.794,
+        "median_response_efficiency_5m": 0.794,
+        "mean_entry_spread_pct": 0.231,
+        "mean_iv_change_pct": 0.201,
+        "mean_abs_delta": 0.509
+      }
+    },
+    "pe_by_market_state": {
+      "RANGE": {
+        "n": 211,
+        "sufficient": true,
+        "note": null,
+        "wins": 59,
+        "losses": 152,
+        "win_rate": 28.0,
+        "mean_pnl_per_unit": -0.84,
+        "median_pnl_per_unit": -2.85,
+        "mean_mid_to_mid": -0.39,
+        "mean_execution_friction": 0.45,
+        "mean_underlying_move_pct": -0.003,
+        "mean_response_ratio_5m": 140.627,
+        "median_response_ratio_5m": 109.27,
+        "mean_response_efficiency_5m": 1.016,
+        "median_response_efficiency_5m": 0.973,
+        "mean_entry_spread_pct": 0.221,
+        "mean_iv_change_pct": -0.169,
+        "mean_abs_delta": 0.487
+      },
+      "TRENDING_DOWN": {
+        "n": 16,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 7,
+        "losses": 8,
+        "win_rate": 46.7,
+        "mean_pnl_per_unit": 12.65,
+        "median_pnl_per_unit": -3.25,
+        "mean_mid_to_mid": 13.2,
+        "mean_execution_friction": 0.55,
+        "mean_underlying_move_pct": -0.025,
+        "mean_response_ratio_5m": 114.614,
+        "median_response_ratio_5m": 120.29,
+        "mean_response_efficiency_5m": 0.901,
+        "median_response_efficiency_5m": 1.065,
+        "mean_entry_spread_pct": 0.216,
+        "mean_iv_change_pct": 0.237,
+        "mean_abs_delta": 0.477
+      },
+      "UNKNOWN": {
+        "n": 12,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 6,
+        "losses": 6,
+        "win_rate": 50.0,
+        "mean_pnl_per_unit": 5.18,
+        "median_pnl_per_unit": -0.35,
+        "mean_mid_to_mid": 5.64,
+        "mean_execution_friction": 0.46,
+        "mean_underlying_move_pct": -0.037,
+        "mean_response_ratio_5m": 132.578,
+        "median_response_ratio_5m": 122.37,
+        "mean_response_efficiency_5m": 1.139,
+        "median_response_efficiency_5m": 1.193,
+        "mean_entry_spread_pct": 0.257,
+        "mean_iv_change_pct": -0.15,
+        "mean_abs_delta": 0.478
+      },
+      "TRENDING_UP": {
+        "n": 1,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -7.55,
+        "median_pnl_per_unit": -7.55,
+        "mean_mid_to_mid": -6.88,
+        "mean_execution_friction": 0.67,
+        "mean_underlying_move_pct": 0.024,
+        "mean_response_ratio_5m": 95.89,
+        "median_response_ratio_5m": 95.89,
+        "mean_response_efficiency_5m": 0.884,
+        "median_response_efficiency_5m": 0.884,
+        "mean_entry_spread_pct": 0.138,
+        "mean_iv_change_pct": 0.351,
+        "mean_abs_delta": 0.477
+      },
+      "REVERSING": {
+        "n": 1,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 1,
+        "losses": 0,
+        "win_rate": 100.0,
+        "mean_pnl_per_unit": 34.35,
+        "median_pnl_per_unit": 34.35,
+        "mean_mid_to_mid": 35.1,
+        "mean_execution_friction": 0.75,
+        "mean_underlying_move_pct": -0.093,
+        "mean_response_ratio_5m": 84.17,
+        "median_response_ratio_5m": 84.17,
+        "mean_response_efficiency_5m": 0.794,
+        "median_response_efficiency_5m": 0.794,
+        "mean_entry_spread_pct": 0.187,
+        "mean_iv_change_pct": -1.174,
+        "mean_abs_delta": 0.495
+      }
+    },
+    "ce_by_market_state": {
+      "RANGE": {
+        "n": 222,
+        "sufficient": true,
+        "note": null,
+        "wins": 66,
+        "losses": 155,
+        "win_rate": 29.9,
+        "mean_pnl_per_unit": 0.07,
+        "median_pnl_per_unit": -2.8,
+        "mean_mid_to_mid": 0.54,
+        "mean_execution_friction": 0.47,
+        "mean_underlying_move_pct": 0.003,
+        "mean_response_ratio_5m": 131.864,
+        "median_response_ratio_5m": 112.13,
+        "mean_response_efficiency_5m": 0.955,
+        "median_response_efficiency_5m": 0.932,
+        "mean_entry_spread_pct": 0.228,
+        "mean_iv_change_pct": -0.51,
+        "mean_abs_delta": 0.532
+      },
+      "TRENDING_UP": {
+        "n": 13,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 5,
+        "losses": 8,
+        "win_rate": 38.5,
+        "mean_pnl_per_unit": 0.95,
+        "median_pnl_per_unit": -4.15,
+        "mean_mid_to_mid": 1.39,
+        "mean_execution_friction": 0.44,
+        "mean_underlying_move_pct": -0.005,
+        "mean_response_ratio_5m": 158.384,
+        "median_response_ratio_5m": 94.25,
+        "mean_response_efficiency_5m": 1.159,
+        "median_response_efficiency_5m": 0.916,
+        "mean_entry_spread_pct": 0.223,
+        "mean_iv_change_pct": 1.057,
+        "mean_abs_delta": 0.518
+      },
+      "UNKNOWN": {
+        "n": 11,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 4,
+        "losses": 7,
+        "win_rate": 36.4,
+        "mean_pnl_per_unit": -7.85,
+        "median_pnl_per_unit": -4.25,
+        "mean_mid_to_mid": -7.27,
+        "mean_execution_friction": 0.57,
+        "mean_underlying_move_pct": -0.033,
+        "mean_response_ratio_5m": 102.612,
+        "median_response_ratio_5m": 105.33,
+        "mean_response_efficiency_5m": 0.829,
+        "median_response_efficiency_5m": 0.857,
+        "mean_entry_spread_pct": 0.241,
+        "mean_iv_change_pct": 1.663,
+        "mean_abs_delta": 0.525
+      },
+      "REVERSING": {
+        "n": 1,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 1,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -0.5,
+        "median_pnl_per_unit": -0.5,
+        "mean_mid_to_mid": 0.45,
+        "mean_execution_friction": 0.95,
+        "mean_underlying_move_pct": -0.016,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.274,
+        "mean_iv_change_pct": 1.576,
+        "mean_abs_delta": 0.523
+      }
+    },
+    "by_strike_band": {
+      "ATM": {
+        "n": 386,
+        "sufficient": true,
+        "note": null,
+        "wins": 118,
+        "losses": 268,
+        "win_rate": 30.6,
+        "mean_pnl_per_unit": 0.46,
+        "median_pnl_per_unit": -2.8,
+        "mean_mid_to_mid": 0.92,
+        "mean_execution_friction": 0.46,
+        "mean_underlying_move_pct": -0.006,
+        "mean_response_ratio_5m": 140.828,
+        "median_response_ratio_5m": 121.45,
+        "mean_response_efficiency_5m": 0.989,
+        "median_response_efficiency_5m": 0.947,
+        "mean_entry_spread_pct": 0.229,
+        "mean_iv_change_pct": -0.336,
+        "mean_abs_delta": 0.508
+      },
+      "ITM": {
+        "n": 55,
+        "sufficient": true,
+        "note": null,
+        "wins": 15,
+        "losses": 39,
+        "win_rate": 27.8,
+        "mean_pnl_per_unit": -1.42,
+        "median_pnl_per_unit": -3.3,
+        "mean_mid_to_mid": -1.0,
+        "mean_execution_friction": 0.42,
+        "mean_underlying_move_pct": 0.009,
+        "mean_response_ratio_5m": 109.129,
+        "median_response_ratio_5m": 85.82,
+        "mean_response_efficiency_5m": 0.929,
+        "median_response_efficiency_5m": 0.825,
+        "mean_entry_spread_pct": 0.202,
+        "mean_iv_change_pct": 0.926,
+        "mean_abs_delta": 0.52
+      },
+      "NEAR_ATM": {
+        "n": 47,
+        "sufficient": true,
+        "note": null,
+        "wins": 15,
+        "losses": 31,
+        "win_rate": 32.6,
+        "mean_pnl_per_unit": -1.22,
+        "median_pnl_per_unit": -1.62,
+        "mean_mid_to_mid": -0.71,
+        "mean_execution_friction": 0.5,
+        "mean_underlying_move_pct": 0.009,
+        "mean_response_ratio_5m": 98.338,
+        "median_response_ratio_5m": 77.71,
+        "mean_response_efficiency_5m": 1.106,
+        "median_response_efficiency_5m": 0.993,
+        "mean_entry_spread_pct": 0.223,
+        "mean_iv_change_pct": -0.735,
+        "mean_abs_delta": 0.505
+      }
+    },
+    "by_iv_state": {
+      "IV_HEADWIND": {
+        "n": 202,
+        "sufficient": true,
+        "note": null,
+        "wins": 56,
+        "losses": 146,
+        "win_rate": 27.7,
+        "mean_pnl_per_unit": -2.15,
+        "median_pnl_per_unit": -3.55,
+        "mean_mid_to_mid": -1.67,
+        "mean_execution_friction": 0.48,
+        "mean_underlying_move_pct": 0.004,
+        "mean_response_ratio_5m": 127.428,
+        "median_response_ratio_5m": 103.38,
+        "mean_response_efficiency_5m": 0.961,
+        "median_response_efficiency_5m": 0.956,
+        "mean_entry_spread_pct": 0.222,
+        "mean_iv_change_pct": -2.988,
+        "mean_abs_delta": 0.506
+      },
+      "IV_NEUTRAL": {
+        "n": 165,
+        "sufficient": true,
+        "note": null,
+        "wins": 35,
+        "losses": 130,
+        "win_rate": 21.2,
+        "mean_pnl_per_unit": -3.65,
+        "median_pnl_per_unit": -3.25,
+        "mean_mid_to_mid": -3.19,
+        "mean_execution_friction": 0.47,
+        "mean_underlying_move_pct": -0.003,
+        "mean_response_ratio_5m": 122.971,
+        "median_response_ratio_5m": 90.88,
+        "mean_response_efficiency_5m": 0.926,
+        "median_response_efficiency_5m": 0.911,
+        "mean_entry_spread_pct": 0.227,
+        "mean_iv_change_pct": -0.084,
+        "mean_abs_delta": 0.504
+      },
+      "IV_TAILWIND": {
+        "n": 119,
+        "sufficient": true,
+        "note": null,
+        "wins": 57,
+        "losses": 62,
+        "win_rate": 47.9,
+        "mean_pnl_per_unit": 9.08,
+        "median_pnl_per_unit": -0.5,
+        "mean_mid_to_mid": 9.52,
+        "mean_execution_friction": 0.44,
+        "mean_underlying_move_pct": -0.015,
+        "mean_response_ratio_5m": 150.79,
+        "median_response_ratio_5m": 134.525,
+        "mean_response_efficiency_5m": 1.078,
+        "median_response_efficiency_5m": 1.012,
+        "mean_entry_spread_pct": 0.229,
+        "mean_iv_change_pct": 4.234,
+        "mean_abs_delta": 0.52
+      },
+      "IV_UNKNOWN": {
+        "n": 2,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.245,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": 0.496
+      }
+    },
+    "by_exit_reason": {
+      "SIGNAL_FLIP": {
+        "n": 238,
+        "sufficient": true,
+        "note": null,
+        "wins": 56,
+        "losses": 182,
+        "win_rate": 23.5,
+        "mean_pnl_per_unit": -2.99,
+        "median_pnl_per_unit": -3.67,
+        "mean_mid_to_mid": -2.53,
+        "mean_execution_friction": 0.47,
+        "mean_underlying_move_pct": -0.006,
+        "mean_response_ratio_5m": 119.78,
+        "median_response_ratio_5m": 102.52,
+        "mean_response_efficiency_5m": 0.964,
+        "median_response_efficiency_5m": 0.919,
+        "mean_entry_spread_pct": 0.219,
+        "mean_iv_change_pct": -0.007,
+        "mean_abs_delta": 0.504
+      },
+      "POSITION_SIGNAL": {
+        "n": 227,
+        "sufficient": true,
+        "note": null,
+        "wins": 90,
+        "losses": 137,
+        "win_rate": 39.6,
+        "mean_pnl_per_unit": 4.07,
+        "median_pnl_per_unit": -1.6,
+        "mean_mid_to_mid": 4.55,
+        "mean_execution_friction": 0.48,
+        "mean_underlying_move_pct": 0.001,
+        "mean_response_ratio_5m": 141.365,
+        "median_response_ratio_5m": 128.06,
+        "mean_response_efficiency_5m": 1.053,
+        "median_response_efficiency_5m": 1.041,
+        "mean_entry_spread_pct": 0.23,
+        "mean_iv_change_pct": -0.164,
+        "mean_abs_delta": 0.513
+      },
+      "STOP_LOSS": {
+        "n": 16,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 16,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -11.09,
+        "median_pnl_per_unit": -8.07,
+        "mean_mid_to_mid": -10.88,
+        "mean_execution_friction": 0.21,
+        "mean_underlying_move_pct": -0.001,
+        "mean_response_ratio_5m": 234.811,
+        "median_response_ratio_5m": 253.91,
+        "mean_response_efficiency_5m": 1.063,
+        "median_response_efficiency_5m": 0.973,
+        "mean_entry_spread_pct": 0.256,
+        "mean_iv_change_pct": -4.999,
+        "mean_abs_delta": 0.522
+      },
+      "SESSION_END": {
+        "n": 5,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 2,
+        "losses": 3,
+        "win_rate": 40.0,
+        "mean_pnl_per_unit": 2.22,
+        "median_pnl_per_unit": -0.4,
+        "mean_mid_to_mid": 2.6,
+        "mean_execution_friction": 0.38,
+        "mean_underlying_move_pct": -0.051,
+        "mean_response_ratio_5m": 24.32,
+        "median_response_ratio_5m": 24.32,
+        "mean_response_efficiency_5m": 0.16,
+        "median_response_efficiency_5m": 0.16,
+        "mean_entry_spread_pct": 0.236,
+        "mean_iv_change_pct": 1.079,
+        "mean_abs_delta": 0.505
+      },
+      "STILL_OPEN": {
+        "n": 2,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.245,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": 0.496
+      }
+    },
+    "by_loss_reason": {
+      "SIGNAL_FLIP": {
+        "n": 106,
+        "sufficient": true,
+        "note": null,
+        "wins": 0,
+        "losses": 106,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -8.9,
+        "median_pnl_per_unit": -6.03,
+        "mean_mid_to_mid": -8.46,
+        "mean_execution_friction": 0.45,
+        "mean_underlying_move_pct": -0.005,
+        "mean_response_ratio_5m": 121.391,
+        "median_response_ratio_5m": 93.48,
+        "mean_response_efficiency_5m": 0.923,
+        "median_response_efficiency_5m": 0.893,
+        "mean_entry_spread_pct": 0.217,
+        "mean_iv_change_pct": 0.1,
+        "mean_abs_delta": 0.508
+      },
+      "IV_HEADWIND": {
+        "n": 69,
+        "sufficient": true,
+        "note": null,
+        "wins": 0,
+        "losses": 69,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -6.39,
+        "median_pnl_per_unit": -3.8,
+        "mean_mid_to_mid": -5.88,
+        "mean_execution_friction": 0.51,
+        "mean_underlying_move_pct": -0.002,
+        "mean_response_ratio_5m": 77.74,
+        "median_response_ratio_5m": 77.74,
+        "mean_response_efficiency_5m": 0.865,
+        "median_response_efficiency_5m": 0.865,
+        "mean_entry_spread_pct": 0.221,
+        "mean_iv_change_pct": -3.019,
+        "mean_abs_delta": 0.506
+      },
+      "UNDERLYING_DID_NOT_CONTINUE": {
+        "n": 49,
+        "sufficient": true,
+        "note": null,
+        "wins": 0,
+        "losses": 49,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -7.41,
+        "median_pnl_per_unit": -4.8,
+        "mean_mid_to_mid": -6.99,
+        "mean_execution_friction": 0.42,
+        "mean_underlying_move_pct": 0.004,
+        "mean_response_ratio_5m": 112.142,
+        "median_response_ratio_5m": 111.49,
+        "mean_response_efficiency_5m": 0.868,
+        "median_response_efficiency_5m": 0.849,
+        "mean_entry_spread_pct": 0.228,
+        "mean_iv_change_pct": -0.19,
+        "mean_abs_delta": 0.511
+      },
+      "MOMENTUM_REVERSAL": {
+        "n": 37,
+        "sufficient": true,
+        "note": null,
+        "wins": 0,
+        "losses": 37,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -8.77,
+        "median_pnl_per_unit": -7.55,
+        "mean_mid_to_mid": -8.25,
+        "mean_execution_friction": 0.53,
+        "mean_underlying_move_pct": 0.005,
+        "mean_response_ratio_5m": 127.13,
+        "median_response_ratio_5m": 95.89,
+        "mean_response_efficiency_5m": 1.005,
+        "median_response_efficiency_5m": 0.947,
+        "mean_entry_spread_pct": 0.211,
+        "mean_iv_change_pct": 0.45,
+        "mean_abs_delta": 0.508
+      },
+      "MIXED": {
+        "n": 33,
+        "sufficient": true,
+        "note": null,
+        "wins": 0,
+        "losses": 33,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -4.36,
+        "median_pnl_per_unit": -2.6,
+        "mean_mid_to_mid": -3.95,
+        "mean_execution_friction": 0.41,
+        "mean_underlying_move_pct": -0.006,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.232,
+        "mean_iv_change_pct": 0.105,
+        "mean_abs_delta": 0.511
+      },
+      "LATE_ENTRY": {
+        "n": 17,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 17,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -3.02,
+        "median_pnl_per_unit": -1.55,
+        "mean_mid_to_mid": -2.63,
+        "mean_execution_friction": 0.39,
+        "mean_underlying_move_pct": 0.001,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.222,
+        "mean_iv_change_pct": 0.122,
+        "mean_abs_delta": 0.501
+      },
+      "STOP_LOSS": {
+        "n": 16,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 16,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -11.09,
+        "median_pnl_per_unit": -8.07,
+        "mean_mid_to_mid": -10.88,
+        "mean_execution_friction": 0.21,
+        "mean_underlying_move_pct": -0.001,
+        "mean_response_ratio_5m": 234.811,
+        "median_response_ratio_5m": 253.91,
+        "mean_response_efficiency_5m": 1.063,
+        "median_response_efficiency_5m": 0.973,
+        "mean_entry_spread_pct": 0.256,
+        "mean_iv_change_pct": -4.999,
+        "mean_abs_delta": 0.522
+      },
+      "SPREAD_FRICTION": {
+        "n": 11,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 11,
+        "win_rate": 0.0,
+        "mean_pnl_per_unit": -0.35,
+        "median_pnl_per_unit": -0.3,
+        "mean_mid_to_mid": 0.08,
+        "mean_execution_friction": 0.43,
+        "mean_underlying_move_pct": 0.011,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": 0.215,
+        "mean_iv_change_pct": -1.312,
+        "mean_abs_delta": 0.506
+      }
+    },
+    "loss_reason_counts": {
+      "MIXED": 33,
+      "SIGNAL_FLIP": 106,
+      "MOMENTUM_REVERSAL": 37,
+      "IV_HEADWIND": 69,
+      "UNDERLYING_DID_NOT_CONTINUE": 49,
+      "SPREAD_FRICTION": 11,
+      "STOP_LOSS": 16,
+      "LATE_ENTRY": 17
+    },
+    "pe_loss_reason_counts": {
+      "SIGNAL_FLIP": 49,
+      "IV_HEADWIND": 34,
+      "MOMENTUM_REVERSAL": 21,
+      "UNDERLYING_DID_NOT_CONTINUE": 28,
+      "MIXED": 12,
+      "STOP_LOSS": 10,
+      "LATE_ENTRY": 11,
+      "SPREAD_FRICTION": 2
+    },
+    "delta_buckets": {
+      "0.0-0.2": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      },
+      "0.2-0.4": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      },
+      "0.4-0.6": {
+        "n": 481,
+        "sufficient": true,
+        "note": null,
+        "wins": 145,
+        "losses": 334,
+        "win_rate": 30.3,
+        "mean_pnl_per_unit": 0.05,
+        "median_pnl_per_unit": -2.85,
+        "mean_mid_to_mid": 0.52,
+        "mean_execution_friction": 0.47,
+        "mean_underlying_move_pct": -0.003,
+        "mean_response_ratio_5m": 131.956,
+        "median_response_ratio_5m": 109.07,
+        "mean_response_efficiency_5m": 0.993,
+        "median_response_efficiency_5m": 0.937,
+        "mean_entry_spread_pct": 0.226,
+        "mean_iv_change_pct": -0.336,
+        "mean_abs_delta": 0.507
+      },
+      "0.6-0.8": {
+        "n": 7,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 3,
+        "losses": 4,
+        "win_rate": 42.9,
+        "mean_pnl_per_unit": 2.51,
+        "median_pnl_per_unit": -3.9,
+        "mean_mid_to_mid": 2.67,
+        "mean_execution_friction": 0.15,
+        "mean_underlying_move_pct": 0.033,
+        "mean_response_ratio_5m": 257.865,
+        "median_response_ratio_5m": 257.865,
+        "mean_response_efficiency_5m": 0.892,
+        "median_response_efficiency_5m": 0.892,
+        "mean_entry_spread_pct": 0.204,
+        "mean_iv_change_pct": 6.77,
+        "mean_abs_delta": 0.619
+      },
+      "0.8-1.0": {
+        "n": 0,
+        "sufficient": false,
+        "note": "INSUFFICIENT SAMPLE",
+        "wins": 0,
+        "losses": 0,
+        "win_rate": null,
+        "mean_pnl_per_unit": null,
+        "median_pnl_per_unit": null,
+        "mean_mid_to_mid": null,
+        "mean_execution_friction": null,
+        "mean_underlying_move_pct": null,
+        "mean_response_ratio_5m": null,
+        "median_response_ratio_5m": null,
+        "mean_response_efficiency_5m": null,
+        "median_response_efficiency_5m": null,
+        "mean_entry_spread_pct": null,
+        "mean_iv_change_pct": null,
+        "mean_abs_delta": null
+      }
+    },
+    "iv_buckets": {
+      "low (<11.07)": {
+        "n": 162,
+        "sufficient": true,
+        "note": null,
+        "wins": 50,
+        "losses": 111,
+        "win_rate": 31.1,
+        "mean_pnl_per_unit": 0.46,
+        "median_pnl_per_unit": -2.55,
+        "mean_mid_to_mid": 0.84,
+        "mean_execution_friction": 0.38,
+        "mean_underlying_move_pct": 0.007,
+        "mean_response_ratio_5m": 125.288,
+        "median_response_ratio_5m": 109.385,
+        "mean_response_efficiency_5m": 1.004,
+        "median_response_efficiency_5m": 0.928,
+        "mean_entry_spread_pct": 0.226,
+        "mean_iv_change_pct": -0.122,
+        "mean_abs_delta": 0.528
+      },
+      "mid (11.07-13.52)": {
+        "n": 163,
+        "sufficient": true,
+        "note": null,
+        "wins": 49,
+        "losses": 113,
+        "win_rate": 30.2,
+        "mean_pnl_per_unit": -0.76,
+        "median_pnl_per_unit": -2.8,
+        "mean_mid_to_mid": -0.21,
+        "mean_execution_friction": 0.55,
+        "mean_underlying_move_pct": -0.004,
+        "mean_response_ratio_5m": 112.321,
+        "median_response_ratio_5m": 92.11,
+        "mean_response_efficiency_5m": 0.938,
+        "median_response_efficiency_5m": 0.911,
+        "mean_entry_spread_pct": 0.221,
+        "mean_iv_change_pct": -0.488,
+        "mean_abs_delta": 0.498
+      },
+      "high (>=13.52)": {
+        "n": 163,
+        "sufficient": true,
+        "note": null,
+        "wins": 49,
+        "losses": 114,
+        "win_rate": 30.1,
+        "mean_pnl_per_unit": 0.57,
+        "median_pnl_per_unit": -3.5,
+        "mean_mid_to_mid": 1.03,
+        "mean_execution_friction": 0.46,
+        "mean_underlying_move_pct": -0.012,
+        "mean_response_ratio_5m": 156.677,
+        "median_response_ratio_5m": 120.29,
+        "mean_response_efficiency_5m": 1.026,
+        "median_response_efficiency_5m": 0.97,
+        "mean_entry_spread_pct": 0.229,
+        "mean_iv_change_pct": -0.092,
+        "mean_abs_delta": 0.501
+      }
+    },
+    "by_hour": {
+      "09:15-10:00": {
+        "n": 65,
+        "sufficient": true,
+        "note": null,
+        "wins": 23,
+        "losses": 42,
+        "win_rate": 35.4,
+        "mean_pnl_per_unit": 4.48,
+        "median_pnl_per_unit": -2.75,
+        "mean_mid_to_mid": 5.01,
+        "mean_execution_friction": 0.53,
+        "mean_underlying_move_pct": -0.013,
+        "mean_response_ratio_5m": 132.329,
+        "median_response_ratio_5m": 122.37,
+        "mean_response_efficiency_5m": 1.023,
+        "median_response_efficiency_5m": 1.041,
+        "mean_entry_spread_pct": 0.233,
+        "mean_iv_change_pct": 0.198,
+        "mean_abs_delta": 0.505
+      },
+      "10:00-11:00": {
+        "n": 72,
+        "sufficient": true,
+        "note": null,
+        "wins": 28,
+        "losses": 44,
+        "win_rate": 38.9,
+        "mean_pnl_per_unit": 0.05,
+        "median_pnl_per_unit": -1.7,
+        "mean_mid_to_mid": 0.53,
+        "mean_execution_friction": 0.49,
+        "mean_underlying_move_pct": -0.007,
+        "mean_response_ratio_5m": 137.629,
+        "median_response_ratio_5m": 112.62,
+        "mean_response_efficiency_5m": 1.006,
+        "median_response_efficiency_5m": 0.964,
+        "mean_entry_spread_pct": 0.221,
+        "mean_iv_change_pct": -0.127,
+        "mean_abs_delta": 0.499
+      },
+      "11:00-12:00": {
+        "n": 71,
+        "sufficient": true,
+        "note": null,
+        "wins": 23,
+        "losses": 48,
+        "win_rate": 32.4,
+        "mean_pnl_per_unit": 0.12,
+        "median_pnl_per_unit": -2.75,
+        "mean_mid_to_mid": 0.59,
+        "mean_execution_friction": 0.47,
+        "mean_underlying_move_pct": 0.007,
+        "mean_response_ratio_5m": 113.965,
+        "median_response_ratio_5m": 86.36,
+        "mean_response_efficiency_5m": 0.917,
+        "median_response_efficiency_5m": 0.887,
+        "mean_entry_spread_pct": 0.225,
+        "mean_iv_change_pct": -0.192,
+        "mean_abs_delta": 0.511
+      },
+      "12:00-13:00": {
+        "n": 85,
+        "sufficient": true,
+        "note": null,
+        "wins": 15,
+        "losses": 70,
+        "win_rate": 17.6,
+        "mean_pnl_per_unit": -3.4,
+        "median_pnl_per_unit": -3.4,
+        "mean_mid_to_mid": -2.95,
+        "mean_execution_friction": 0.46,
+        "mean_underlying_move_pct": -0.005,
+        "mean_response_ratio_5m": 174.844,
+        "median_response_ratio_5m": 156.09,
+        "mean_response_efficiency_5m": 1.17,
+        "median_response_efficiency_5m": 1.2,
+        "mean_entry_spread_pct": 0.219,
+        "mean_iv_change_pct": -0.777,
+        "mean_abs_delta": 0.514
+      },
+      "13:00-14:00": {
+        "n": 72,
+        "sufficient": true,
+        "note": null,
+        "wins": 30,
+        "losses": 42,
+        "win_rate": 41.7,
+        "mean_pnl_per_unit": 3.09,
+        "median_pnl_per_unit": -1.85,
+        "mean_mid_to_mid": 3.53,
+        "mean_execution_friction": 0.44,
+        "mean_underlying_move_pct": 0.008,
+        "mean_response_ratio_5m": 109.635,
+        "median_response_ratio_5m": 90.665,
+        "mean_response_efficiency_5m": 0.955,
+        "median_response_efficiency_5m": 0.873,
+        "mean_entry_spread_pct": 0.227,
+        "mean_iv_change_pct": 0.145,
+        "mean_abs_delta": 0.506
+      },
+      "14:00-15:00": {
+        "n": 79,
+        "sufficient": true,
+        "note": null,
+        "wins": 21,
+        "losses": 58,
+        "win_rate": 26.6,
+        "mean_pnl_per_unit": -0.26,
+        "median_pnl_per_unit": -3.25,
+        "mean_mid_to_mid": 0.19,
+        "mean_execution_friction": 0.45,
+        "mean_underlying_move_pct": -0.004,
+        "mean_response_ratio_5m": 148.381,
+        "median_response_ratio_5m": 111.765,
+        "mean_response_efficiency_5m": 1.0,
+        "median_response_efficiency_5m": 0.87,
+        "mean_entry_spread_pct": 0.232,
+        "mean_iv_change_pct": -0.371,
+        "mean_abs_delta": 0.517
+      },
+      "15:00+": {
+        "n": 44,
+        "sufficient": true,
+        "note": null,
+        "wins": 8,
+        "losses": 34,
+        "win_rate": 19.0,
+        "mean_pnl_per_unit": -4.1,
+        "median_pnl_per_unit": -3.85,
+        "mean_mid_to_mid": -3.69,
+        "mean_execution_friction": 0.41,
+        "mean_underlying_move_pct": -0.008,
+        "mean_response_ratio_5m": 145.473,
+        "median_response_ratio_5m": 58.57,
+        "mean_response_efficiency_5m": 0.798,
+        "median_response_efficiency_5m": 0.654,
+        "mean_entry_spread_pct": 0.22,
+        "mean_iv_change_pct": -0.448,
+        "mean_abs_delta": 0.506
+      }
+    },
+    "pre_signal": {
+      "mean_und_pre_1m": -0.001,
+      "mean_und_pre_3m": -0.001,
+      "mean_und_pre_5m": -0.0018,
+      "mean_opt_pre_5m": 2.6485,
+      "mean_premium_position_in_range": 76.4
+    },
+    "density": {
+      "per_symbol_day": {
+        "NIFTY 2026-09-11": {
+          "signals": 35,
+          "first": "09:27",
+          "last": "15:25",
+          "median_gap_minutes": 9.0,
+          "signals_per_hour": 5.87,
+          "gaps_under_3min": 0
+        },
+        "SENSEX 2026-09-11": {
+          "signals": 30,
+          "first": "09:18",
+          "last": "15:29",
+          "median_gap_minutes": 11,
+          "signals_per_hour": 4.85,
+          "gaps_under_3min": 0
+        },
+        "NIFTY 2026-09-15": {
+          "signals": 35,
+          "first": "09:23",
+          "last": "15:19",
+          "median_gap_minutes": 8.0,
+          "signals_per_hour": 5.9,
+          "gaps_under_3min": 0
+        },
+        "SENSEX 2026-09-15": {
+          "signals": 31,
+          "first": "09:23",
+          "last": "15:10",
+          "median_gap_minutes": 10.5,
+          "signals_per_hour": 5.36,
+          "gaps_under_3min": 0
+        },
+        "NIFTY 2026-09-16": {
+          "signals": 40,
+          "first": "09:20",
+          "last": "15:13",
+          "median_gap_minutes": 8,
+          "signals_per_hour": 6.8,
+          "gaps_under_3min": 1
+        },
+        "SENSEX 2026-09-16": {
+          "signals": 41,
+          "first": "09:18",
+          "last": "15:19",
+          "median_gap_minutes": 8.0,
+          "signals_per_hour": 6.81,
+          "gaps_under_3min": 0
+        },
+        "NIFTY 2026-09-17": {
+          "signals": 3,
+          "first": "14:42",
+          "last": "15:10",
+          "median_gap_minutes": 14.0,
+          "signals_per_hour": 6.43,
+          "gaps_under_3min": 0
+        },
+        "SENSEX 2026-09-17": {
+          "signals": 4,
+          "first": "14:41",
+          "last": "15:08",
+          "median_gap_minutes": 10,
+          "signals_per_hour": 8.89,
+          "gaps_under_3min": 0
+        },
+        "NIFTY 2026-09-18": {
+          "signals": 40,
+          "first": "09:21",
+          "last": "15:27",
+          "median_gap_minutes": 7,
+          "signals_per_hour": 6.56,
+          "gaps_under_3min": 0
+        },
+        "SENSEX 2026-09-18": {
+          "signals": 32,
+          "first": "09:21",
+          "last": "15:29",
+          "median_gap_minutes": 12,
+          "signals_per_hour": 5.22,
+          "gaps_under_3min": 0
+        },
+        "NIFTY 2026-09-21": {
+          "signals": 38,
+          "first": "09:20",
+          "last": "15:26",
+          "median_gap_minutes": 9,
+          "signals_per_hour": 6.23,
+          "gaps_under_3min": 1
+        },
+        "SENSEX 2026-09-21": {
+          "signals": 28,
+          "first": "09:20",
+          "last": "15:27",
+          "median_gap_minutes": 13,
+          "signals_per_hour": 4.58,
+          "gaps_under_3min": 0
+        },
+        "NIFTY 2026-09-22": {
+          "signals": 33,
+          "first": "09:18",
+          "last": "15:11",
+          "median_gap_minutes": 8.5,
+          "signals_per_hour": 5.61,
+          "gaps_under_3min": 0
+        },
+        "SENSEX 2026-09-22": {
+          "signals": 32,
+          "first": "09:21",
+          "last": "15:23",
+          "median_gap_minutes": 9,
+          "signals_per_hour": 5.3,
+          "gaps_under_3min": 0
+        },
+        "NIFTY 2026-09-23": {
+          "signals": 33,
+          "first": "09:19",
+          "last": "15:14",
+          "median_gap_minutes": 10.5,
+          "signals_per_hour": 5.58,
+          "gaps_under_3min": 0
+        },
+        "SENSEX 2026-09-23": {
+          "signals": 33,
+          "first": "09:20",
+          "last": "15:20",
+          "median_gap_minutes": 10.0,
+          "signals_per_hour": 5.5,
+          "gaps_under_3min": 0
+        }
+      },
+      "overall": {
+        "median_gap_minutes": 9.0,
+        "mean_gap_minutes": 10.8,
+        "mean_signals_per_hour": 5.97,
+        "gaps_under_3min": 2,
+        "total_gaps": 472
+      }
+    },
+    "runs": {
+      "same_direction_runs": 214,
+      "mean_run_length": 2.28,
+      "max_run_length": 18,
+      "run_length_histogram": {
+        "1": 110,
+        "2": 43,
+        "3": 25,
+        "4": 13,
+        "5": 9,
+        "6": 3,
+        "7": 5,
+        "8": 3,
+        "10": 1,
+        "15": 1,
+        "18": 1
+      },
+      "direction_changes": 198,
+      "transitions": 472,
+      "flip_rate_pct": 41.9
+    },
+    "flips": {
+      "flips": 198,
+      "market_confirmed": 157,
+      "not_confirmed": 41,
+      "unknown": 0,
+      "confirmed_pct": 79.3,
+      "median_gap_minutes": 9.0,
+      "mean_closed_pnl_per_unit": -0.39,
+      "sample": [
+        {
+          "at": "09:53",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 9,
+          "underlying_move_pct": -0.015,
+          "market_confirmed": true,
+          "closed_pnl": -3.9
+        },
+        {
+          "at": "10:05",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 12,
+          "underlying_move_pct": 0.111,
+          "market_confirmed": true,
+          "closed_pnl": -5.25
+        },
+        {
+          "at": "10:27",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 22,
+          "underlying_move_pct": 0.067,
+          "market_confirmed": false,
+          "closed_pnl": 18.05
+        },
+        {
+          "at": "10:44",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 17,
+          "underlying_move_pct": 0.042,
+          "market_confirmed": true,
+          "closed_pnl": 0.5
+        },
+        {
+          "at": "10:52",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 8,
+          "underlying_move_pct": -0.069,
+          "market_confirmed": true,
+          "closed_pnl": -6.9
+        },
+        {
+          "at": "11:13",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 8,
+          "underlying_move_pct": 0.173,
+          "market_confirmed": true,
+          "closed_pnl": -4.9
+        },
+        {
+          "at": "11:50",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 13,
+          "underlying_move_pct": -0.031,
+          "market_confirmed": true,
+          "closed_pnl": -5.45
+        },
+        {
+          "at": "12:00",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 10,
+          "underlying_move_pct": 0.055,
+          "market_confirmed": true,
+          "closed_pnl": -4.85
+        },
+        {
+          "at": "12:41",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 9,
+          "underlying_move_pct": 0.005,
+          "market_confirmed": false,
+          "closed_pnl": -2.6
+        },
+        {
+          "at": "12:59",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 12,
+          "underlying_move_pct": 0.058,
+          "market_confirmed": true,
+          "closed_pnl": -2.15
+        },
+        {
+          "at": "13:05",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 6,
+          "underlying_move_pct": -0.105,
+          "market_confirmed": true,
+          "closed_pnl": -7.8
+        },
+        {
+          "at": "13:28",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 9,
+          "underlying_move_pct": 0.067,
+          "market_confirmed": true,
+          "closed_pnl": -6.05
+        },
+        {
+          "at": "13:39",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 11,
+          "underlying_move_pct": -0.009,
+          "market_confirmed": true,
+          "closed_pnl": 1.65
+        },
+        {
+          "at": "13:49",
+          "market": "NIFTY",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 3,
+          "underlying_move_pct": 0.045,
+          "market_confirmed": true,
+          "closed_pnl": -6.9
+        },
+        {
+          "at": "15:01",
+          "market": "NIFTY",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 12,
+          "underlying_move_pct": -0.02,
+          "market_confirmed": true,
+          "closed_pnl": -4.05
+        },
+        {
+          "at": "09:47",
+          "market": "SENSEX",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 3,
+          "underlying_move_pct": -0.012,
+          "market_confirmed": true,
+          "closed_pnl": -9.65
+        },
+        {
+          "at": "09:58",
+          "market": "SENSEX",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 11,
+          "underlying_move_pct": 0.04,
+          "market_confirmed": true,
+          "closed_pnl": -16.4
+        },
+        {
+          "at": "10:26",
+          "market": "SENSEX",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 28,
+          "underlying_move_pct": 0.132,
+          "market_confirmed": false,
+          "closed_pnl": 60.35
+        },
+        {
+          "at": "10:36",
+          "market": "SENSEX",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 10,
+          "underlying_move_pct": -0.032,
+          "market_confirmed": false,
+          "closed_pnl": 8.2
+        },
+        {
+          "at": "10:53",
+          "market": "SENSEX",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 17,
+          "underlying_move_pct": -0.037,
+          "market_confirmed": true,
+          "closed_pnl": -9.0
+        },
+        {
+          "at": "10:59",
+          "market": "SENSEX",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 6,
+          "underlying_move_pct": 0.002,
+          "market_confirmed": true,
+          "closed_pnl": -1.25
+        },
+        {
+          "at": "12:11",
+          "market": "SENSEX",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 15,
+          "underlying_move_pct": -0.05,
+          "market_confirmed": true,
+          "closed_pnl": -20.25
+        },
+        {
+          "at": "12:17",
+          "market": "SENSEX",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 6,
+          "underlying_move_pct": -0.002,
+          "market_confirmed": false,
+          "closed_pnl": -2.95
+        },
+        {
+          "at": "13:05",
+          "market": "SENSEX",
+          "from_": "BUY_CE",
+          "to": "BUY_PE",
+          "gap_minutes": 16,
+          "underlying_move_pct": -0.047,
+          "market_confirmed": true,
+          "closed_pnl": -12.45
+        },
+        {
+          "at": "13:09",
+          "market": "SENSEX",
+          "from_": "BUY_PE",
+          "to": "BUY_CE",
+          "gap_minutes": 4,
+          "underlying_move_pct": 0.022,
+          "market_confirmed": true,
+          "closed_pnl": -6.05
+        }
+      ]
+    },
+    "data_quality": {
+      "missing_greeks": 0,
+      "missing_iv": 0,
+      "missing_entry_quote": 0,
+      "missing_exit_quote": 2,
+      "greeks_status": {
+        "VALID": 488
+      }
+    },
+    "min_sample": 20,
+    "caveat": "Diagnosis only, on paper simulation. No strategy rule was read for anything but its output and none was changed. Groups below the minimum sample are not interpretable."
+  },
+  "leakage_audit": [
+    {
+      "checked": 19,
+      "entry_fields_compared": 23,
+      "mismatches": [],
+      "passed": true,
+      "derived_future_fields_correctly_absent": 95,
+      "derived_future_fields_leaked": 0,
+      "passthrough_fields_not_tested": [
+        "final_pnl_per_unit",
+        "mfe_per_unit",
+        "mae_per_unit"
+      ],
+      "note": "Entry-time fields are bit-identical with the future removed, and every post-signal field 12E DERIVES vanishes under truncation. Fields copied through from the 12D row (final P&L, MFE, MAE) are not tested here: truncating 12E's series does not re-run 12D, so their survival proves nothing either way. 12D has its own leakage audit for those.",
+      "symbol": "NIFTY"
+    },
+    {
+      "checked": 20,
+      "entry_fields_compared": 23,
+      "mismatches": [],
+      "passed": true,
+      "derived_future_fields_correctly_absent": 100,
+      "derived_future_fields_leaked": 0,
+      "passthrough_fields_not_tested": [
+        "final_pnl_per_unit",
+        "mfe_per_unit",
+        "mae_per_unit"
+      ],
+      "note": "Entry-time fields are bit-identical with the future removed, and every post-signal field 12E DERIVES vanishes under truncation. Fields copied through from the 12D row (final P&L, MFE, MAE) are not tested here: truncating 12E's series does not re-run 12D, so their survival proves nothing either way. 12D has its own leakage audit for those.",
+      "symbol": "SENSEX"
+    }
+  ],
+  "answers": [
+    {
+      "question": "1. When the underlying falls, how often does PE actually rise?",
+      "answer": "At the 10m horizon, of 19 measurable PE signals <b>63.2%</b> had the underlying fall <i>and</i> the option profitable."
+    },
+    {
+      "question": "2. When the underlying falls, how often does PE fail to rise?",
+      "answer": "<b>5.3%</b> of measurable PE signals at 10m: the underlying moved down but the option still lost."
+    },
+    {
+      "question": "3. When PE fails despite the underlying falling, what explains it?",
+      "answer": "Attributed reasons for losing PE trades, most common first: <b>iv headwind</b> (4), <b>underlying did not continue</b> (3), <b>late entry</b> (2)."
+    },
+    {
+      "question": "4. How much of today's PE loss comes from spread?",
+      "answer": "Mean execution friction on PE was <b>0.34/unit</b> against a mean executable result of 2.49/unit. 2 of 17 losing PE trades (<b>11.8%</b>) would have been positive mid-to-mid, so the spread alone turned them negative."
+    },
+    {
+      "question": "5. How much comes from weak option response?",
+      "answer": "Median response efficiency across horizons was <b>1.12</b> (1.0 = exactly what delta implies), and only <b>0</b> losing PE trades were attributed to weak response or strike distance. Option response is not a material cause today."
+    },
+    {
+      "question": "6. How much comes from IV contraction?",
+      "answer": "<b>4</b> losing PE trades were attributed to an IV headwind. Mean IV change over the hold on PE was -0.73%."
+    },
+    {
+      "question": "7. How much comes from late entry?",
+      "answer": "<b>2</b> losing PE trades were attributed to late entry. On average <b>50%</b> of the underlying movement around a PE signal happened in the 5 minutes <i>before</i> it."
+    },
+    {
+      "question": "8. How much comes from the underlying reversing after entry?",
+      "answer": "<b>2</b> losing PE trades reversed after going the right way first, and <b>3</b> never went the right way at any measured horizon."
+    },
+    {
+      "question": "9. Does strike distance matter?",
+      "answer": "By band: atm N=29, mean 1.78/unit; itm N=10, mean -2.75/unit <i>(small N)</i>. Not separable at today's sample size."
+    },
+    {
+      "question": "10. Does delta matter?",
+      "answer": "By |delta|: 0.4-0.6 N=39, mean 0.62/unit."
+    },
+    {
+      "question": "11. Does time-of-day matter?",
+      "answer": "Best band 09:15-10:00 (N=5, mean 13.32/unit), worst 11:00-12:00 (N=16, mean -5.08/unit). Every band is below the minimum sample today \u2014 not interpretable on one session."
+    },
+    {
+      "question": "12. Are repeated signals causing overtrading?",
+      "answer": "<b>6.2</b> signals per hour, median gap <b>9 minutes</b>, 1 of 37 gaps under 3 minutes. Same-direction runs average 2.29 signals (max 7), so one move does produce several entries."
+    },
+    {
+      "question": "13. Are signal flips causing unnecessary churn?",
+      "answer": "<b>15</b> direction flips; <b>100%</b> were confirmed by the underlying actually moving against the old side, median gap 9 minutes. Every flip followed a real move in the underlying, so the churn is the market's, not the engine's."
+    },
+    {
+      "question": "14. Is the current &quot;direction correct&quot; metric misleading?",
+      "answer": "<b>Yes.</b> 12D's <code>MFE &ge; 0.5%</code> proxy reported 90.3% across history. Measured from the underlying itself, today's 10-minute figure is <b>50.0%</b> on 30 measurable signals, with 9 unmeasurable because spot barely moved. The old number was measuring the option ticking up, not the market being read correctly."
+    },
+    {
+      "question": "15. What is the largest measurable source of today's losses?",
+      "answer": "By count, <b>iv headwind</b> (6 trades). But the structural finding is context: <b>24 of 27</b> PE signals fired while the underlying's own 10-minute state was RANGE, not TRENDING DOWN. The day's decline was a slow drift, so at the scale the signal operates on there was usually no trend to capture \u2014 and the round trip still cost 0.33/unit."
+    }
+  ]
+}
