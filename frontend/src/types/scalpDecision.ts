@@ -148,6 +148,24 @@ export interface ScalpDecisionDTO {
   levels: Record<string, unknown> | null;
   trace: Record<string, unknown> | null;
   position_simulation: PositionSimulation | null;
+  signal_learning: SignalLearningBlock | null;
+}
+
+// 12D-signal-learning-v1. Where in the move the signal landed. Observation only: these labels
+// change no 12C rule, and the boundaries behind them are provisional, not validated.
+export interface SignalLearningBlock {
+  applies_to: string | null;
+  is_signal: boolean;
+  direction: string;
+  entry_timing: string;
+  entry_timing_note: string;
+  entry_timing_provisional: boolean;
+  momentum_state: string;
+  momentum_note: string;
+  exhaustion_state: string;
+  exhaustion_note: string;
+  signal_age_minutes: number | null;
+  caveat: string;
 }
 
 // Closed hypothetical positions. SIMULATION ONLY -- not orders, not paper-account trades.

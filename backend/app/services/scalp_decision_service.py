@@ -14,6 +14,7 @@ from position_sim_12c.simulator import close_out, simulate
 from scalp_decision_12c.config import DEFAULT as DECISION_CFG
 from scalp_decision_12c.engine import decide_at, decide_prepared
 from scalp_decision_12c.loader import LEVELS_COLUMNS
+from signal_learning_12d import live_view as LIVE_12D
 
 
 # A full-session replay costs a few seconds, so it is cached per minute: the result can only
@@ -67,9 +68,11 @@ class ScalpDecisionService:
         sim = await self._simulation(symbol, session_date, snap_dicts, candle_dicts, start, cutoff,
                                      result.get("minute"))
         entry = result.get("entry") or {}
+        learning = LIVE_12D.block(result)          # read-only over 12C's own output
         passthrough = {k: v for k, v in result.items() if k in ScalpDecisionDTO.model_fields
                        and k not in ("decision", "confirmation", "reason", "is_live_session", "position_source")}
         return ScalpDecisionDTO(is_live_session=live, position_source=source, position_simulation=sim,
+                                signal_learning=learning,
                                 decision=entry.get("decision", result.get("decision")),
                                 confirmation=entry.get("confirmation", result.get("confirmation")),
                                 reason=entry.get("reason", result.get("reason")), **passthrough)

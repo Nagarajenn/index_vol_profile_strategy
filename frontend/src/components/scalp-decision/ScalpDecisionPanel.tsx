@@ -193,6 +193,62 @@ function EntryBlock({ data }: { data: ScalpDecisionDTO }) {
   );
 }
 
+// 12D. WHERE IN THE MOVE the signal landed -- deliberately its own strip, because "BUY CE while
+// CE is already decelerating into an extended move" and "BUY CE at the start of a move" are the
+// same decision to the entry engine and very different things to a scalper.
+function timingColor(v: string): ChipColor {
+  if (v === "GOOD") return "success";
+  if (v === "EARLY") return "info";
+  if (v === "LATE") return "warning";
+  if (v === "EXHAUSTED") return "error";
+  return "default";
+}
+
+function moveColor(v: string): ChipColor {
+  if (/^(ACTIVE|ACCELERATING|RISING|PERSISTENT)$/.test(v)) return "success";
+  if (/^(EXTENDING)$/.test(v)) return "info";
+  if (/^(SLOWING|DECELERATING|FLAT)$/.test(v)) return "warning";
+  if (/^(EXHAUSTING|REVERSING|FALLING)$/.test(v)) return "error";
+  return "default";
+}
+
+function SignalQualityBlock({ data }: { data: ScalpDecisionDTO }) {
+  const s = data.signal_learning;
+  if (!s) return null;
+  const cells: [string, string, ChipColor, string][] = [
+    ["DIRECTION", s.direction || "UNKNOWN", moveColor(s.direction), "The underlying's own direction vote at this minute."],
+    ["ENTRY TIMING", s.entry_timing, timingColor(s.entry_timing), s.entry_timing_note],
+    ["MOMENTUM", s.momentum_state, moveColor(s.momentum_state), s.momentum_note],
+    ["MOVE STATE", s.exhaustion_state, moveColor(s.exhaustion_state), s.exhaustion_note],
+    ["SIGNAL AGE", s.signal_age_minutes === null ? "–" : `${s.signal_age_minutes}m`, "default",
+      "Minutes this signal state has held. Not the same as a position's hold time."],
+  ];
+  return (
+    <Box>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "baseline", mb: 0.5 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>SIGNAL QUALITY</Typography>
+        <Typography variant="caption" color="text.secondary">
+          12D · where in the move this signal landed{s.is_signal ? "" : " (no BUY this minute)"}
+        </Typography>
+      </Stack>
+      <Stack direction="row" spacing={2} sx={{ flexWrap: "wrap", rowGap: 1 }}>
+        {cells.map(([label, value, color, note]) => (
+          <Tooltip key={label} title={note} placement="top">
+            <Box sx={{ minWidth: 132 }}>
+              <Typography variant="caption" color="text.secondary" component="div">{label}</Typography>
+              <Chip size="small" color={color} label={value.replace(/_/g, " ")} sx={{ fontWeight: 700 }} />
+            </Box>
+          </Tooltip>
+        ))}
+      </Stack>
+      <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
+        Provisional measurement boundaries, not validated quality judgements — they describe where in a move the
+        signal arrived, not whether it will work.
+      </Typography>
+    </Box>
+  );
+}
+
 function BrakeBlock({ data }: { data: ScalpDecisionDTO }) {
   const r = data.risk_brake;
   if (!r) return null;
@@ -406,7 +462,24 @@ export function ScalpDecisionPanel({ symbol: fixedSymbol }: { symbol?: string })
               <Stat label="Data quality" value={(data.summary?.data_quality ?? []).join(", ")} />
             )}
           </Stack>
-          {data.position_state === "NONE" ? <EntryBlock data={data} /> : <BrakeBlock data={data} />}
+          {/* 12D: the two engines are shown as two separate things. With a position open the
+              entry call is still displayed, but explicitly as information that does NOT manage
+              the position -- a WAIT here is not an instruction to get out. */}
+          {data.position_state === "NONE" ? (
+            <EntryBlock data={data} />
+          ) : (
+            <>
+              <BrakeBlock data={data} />
+              <Box sx={{ opacity: 0.75 }}>
+                <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 0.5 }}>
+                  ENTRY ENGINE (would I open a NEW position now?) — informational. It does not manage the position
+                  above; a WAIT here is not an exit.
+                </Typography>
+                <EntryBlock data={data} />
+              </Box>
+            </>
+          )}
+          <SignalQualityBlock data={data} />
           {data.position_simulation?.open_position && (
             <SimulatedPositionBlock sim={data.position_simulation.open_position} />
           )}
@@ -415,7 +488,8 @@ export function ScalpDecisionPanel({ symbol: fixedSymbol }: { symbol?: string })
           {data.position_state !== "NONE" && (
             <Box>
               <Typography variant="caption" color="text.secondary">
-                Entry decisions are hidden while a position is open; the brake above is the only call shown.
+                Two independent engines: POSITION MANAGEMENT decides whether to stay in, the ENTRY ENGINE only
+                decides whether a new position is warranted. They are allowed to disagree.
               </Typography>
             </Box>
           )}

@@ -1,0 +1,95 @@
+12D SIGNAL LEARNING REPORT
+==========================================================================
+Signals: 2559   Sessions: 39   Markets: {'NIFTY': 1291, 'SENSEX': 1268}
+Average P&L: Rs -21.72   Median: Rs -120.25   Total: Rs -55378.5
+Win rate: 29.3%   Avg MFE/unit: 56.61   Avg MAE/unit: -50.75
+Positive MFE rate: 90.3%   Negative MAE rate: 96.1%
+Average hold: 6.4 min
+
+BY ENTRY TIMING
+---------------
+  LATE                               N=1239  avg Rs    -15.04  med Rs    -122.0  win  30.9%  posMFE  90.2%
+  GOOD                               N=638   avg Rs    -37.49  med Rs    -125.0  win  28.3%  posMFE  90.9%
+  EXHAUSTED                          N=448   avg Rs    -22.87  med Rs    -108.0  win  27.5%  posMFE  89.7%
+  EARLY                              N=234   avg Rs    -11.82  med Rs    -117.0  win  26.6%  posMFE  90.6%
+
+BY MOMENTUM AT ENTRY
+--------------------
+  ACCELERATING                       N=1101  avg Rs    -24.75  med Rs   -120.12  win  29.4%  posMFE  91.2%
+  DECELERATING                       N=878   avg Rs    -16.54  med Rs   -126.75  win  29.6%  posMFE  89.7%
+  REVERSING                          N=337   avg Rs    -31.41  med Rs    -104.0  win  27.1%  posMFE  89.0%
+  PERSISTENT                         N=184   avg Rs    -40.46  med Rs    -129.5  win  27.7%  posMFE  89.1%
+  RISING                             N=59    avg Rs     71.19  med Rs   -100.75  win  37.3%  posMFE  93.2%
+
+BY MOVE EXHAUSTION
+------------------
+  ACTIVE                             N=872   avg Rs     -30.6  med Rs   -120.25  win  27.8%  posMFE  90.8%
+  SLOWING                            N=767   avg Rs    -19.37  med Rs   -126.75  win  29.8%  posMFE  89.4%
+  EXTENDING                          N=472   avg Rs     -7.96  med Rs    -116.0  win  32.7%  posMFE  91.3%
+  REVERSING                          N=337   avg Rs    -31.41  med Rs    -104.0  win  27.1%  posMFE  89.0%
+  EXHAUSTING                         N=111   avg Rs      2.99  med Rs    -122.0  win  28.8%  posMFE  91.9%
+
+BY CONFIDENCE
+-------------
+  MODERATE                           N=1422  avg Rs    -17.77  med Rs    -117.0  win  28.5%  posMFE  89.7%
+  STRONG                             N=1137  avg Rs    -26.62  med Rs    -123.0  win  30.3%  posMFE  91.0%
+
+BY DIRECTION
+------------
+  BUY_PE                             N=1324  avg Rs    -14.75  med Rs    -122.0  win  30.5%  posMFE  90.4%
+  BUY_CE                             N=1235  avg Rs    -29.17  med Rs    -117.0  win  27.9%  posMFE  90.2%
+
+BY EXIT REASON
+--------------
+  SIGNAL_FLIP                        N=1208  avg Rs    -95.13  med Rs    -137.5  win  21.1%  posMFE  89.5%
+  POSITION_SIGNAL                    N=1200  avg Rs     86.17  med Rs     -72.0  win  40.1%  posMFE  92.9%
+  STOP_LOSS                          N=126   avg Rs   -395.46  med Rs    -330.5  win   0.0%  posMFE  77.0%
+  SESSION_END                        N=16    avg Rs    372.47  med Rs      48.5  win  62.5%  posMFE  81.2%   << INSUFFICIENT SAMPLE
+  STILL_OPEN                         N=9     avg Rs      None  med Rs      None  win  None%  posMFE  55.6%   << INSUFFICIENT SAMPLE
+
+BY LIFECYCLE
+------------
+  GOOD_DIRECTION_LATE_ENTRY          N=958   avg Rs   -208.87  med Rs   -178.75  win   0.0%  posMFE 100.0%
+  GOOD_ENTRY_GOOD_FOLLOW_THROUGH     N=522   avg Rs    488.83  med Rs     285.5  win 100.0%  posMFE 100.0%
+  GOOD_DIRECTION_BAD_EXIT            N=510   avg Rs   -207.14  med Rs   -178.75  win   0.0%  posMFE 100.0%
+  IMMEDIATE_FALSE_SIGNAL             N=229   avg Rs   -311.76  med Rs    -270.0  win   0.4%  posMFE   0.0%
+  CHOPPY_SIGNAL                      N=174   avg Rs    -10.65  med Rs      -6.5  win  41.4%  posMFE  94.8%
+  INITIAL_ADVERSE_THEN_RECOVERED     N=151   avg Rs    457.48  med Rs    243.75  win 100.0%  posMFE 100.0%
+  INCONCLUSIVE                       N=9     avg Rs      None  med Rs      None  win  None%  posMFE  55.6%   << INSUFFICIENT SAMPLE
+  MOMENTUM_EXHAUSTION_ENTRY          N=6     avg Rs   -106.79  med Rs    -118.5  win   0.0%  posMFE   0.0%   << INSUFFICIENT SAMPLE
+
+BY HOUR
+-------
+  09:00                              N=314   avg Rs      4.97  med Rs   -141.38  win  33.8%  posMFE  91.7%
+  10:00                              N=384   avg Rs     10.69  med Rs     -94.5  win  34.6%  posMFE  93.8%
+  11:00                              N=394   avg Rs     -1.21  med Rs   -109.75  win  27.9%  posMFE  92.1%
+  12:00                              N=437   avg Rs    -36.34  med Rs   -126.75  win  24.9%  posMFE  92.4%
+  13:00                              N=438   avg Rs    -39.04  med Rs   -122.75  win  30.6%  posMFE  91.8%
+  14:00                              N=406   avg Rs    -35.38  med Rs    -123.5  win  27.6%  posMFE  87.4%
+  15:00                              N=186   avg Rs    -74.72  med Rs    -131.0  win  23.7%  posMFE  74.7%
+
+LOSSES THAT WERE ONCE IN PROFIT
+-------------------------------
+  Losing episodes           : 1804
+  Of those, had positive MFE: 1561 (86.5%)
+  MFE above the win band    : 1306
+  Average MFE of those      : 55.1 per unit
+
+ENTRY WAIT vs POSITION MANAGEMENT
+---------------------------------
+  Episodes where the entry engine said WAIT while holding: 2332 (91.1%)
+  Of those, ended profitable: 727 (31.2%)
+  Average WAIT minutes survived: 3.8   max: 25
+  Under the previous coupling every one of these would have been closed immediately.
+
+DIAGNOSTIC MATRIX
+-----------------
+  BAD_ENTRY / EXIT_BAD         366
+  GOOD_ENTRY / EXIT_BAD        1987
+  GOOD_ENTRY / EXIT_GOOD       186
+  BAD_ENTRY / EXIT_GOOD        6
+  unknown: 14
+  direction: {'DIRECTION_CORRECT': 2311, 'DIRECTION_WRONG': 248}
+
+Groups below N=20 are marked INSUFFICIENT SAMPLE and must not be interpreted.
+Descriptive only. These are observations of an existing signal on a limited sample, not evidence of an edge and not a basis for changing a threshold.

@@ -31,6 +31,9 @@ class ScalpDecisionDTO(BaseModel):
     levels: dict[str, Any] | None = None
     trace: dict[str, Any] | None = None
     position_simulation: dict[str, Any] | None = None
+    # 12D-signal-learning-v1: where in the move this signal landed. Observation only -- it
+    # changes no 12C rule and the labels are provisional measurement boundaries.
+    signal_learning: dict[str, Any] | None = None
 
 
 class SimPositionHistoryDTO(BaseModel):
