@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>12D Signal Learning</title>
+<style>
+  :root{
+    --bg:#f7f7f5; --panel:#ffffff; --ink:#1b1b19; --muted:#6b6b66; --line:#e2e2dd;
+    --up:#2e7d32; --down:#c62828; --warn:#b26a00; --info:#1565c0; --accent:#3a3a36;
+    --chip:#f0f0ec;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14140f; --panel:#1c1c18; --ink:#ecece6; --muted:#9a9a92; --line:#2e2e28;
+      --up:#7bc47f; --down:#ef8d86; --warn:#e0a34a; --info:#7fb2e8; --accent:#c9c9c0;
+      --chip:#26262040;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14140f; --panel:#1c1c18; --ink:#ecece6; --muted:#9a9a92; --line:#2e2e28;
+    --up:#7bc47f; --down:#ef8d86; --warn:#e0a34a; --info:#7fb2e8; --accent:#c9c9c0;
+    --chip:#26262040;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .wrap{max-width:1080px; margin:0 auto; padding:40px 16px 80px}
+  header{border-bottom:2px solid var(--ink); padding-bottom:18px; margin-bottom:32px}
+  h1{font-size:28px; margin:0 0 6px; letter-spacing:-.02em}
+  .sub{color:var(--muted); font-size:14px}
+  .meta{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+  .chip{background:var(--chip); border:1px solid var(--line); border-radius:999px;
+        padding:3px 11px; font-size:12px; color:var(--muted); white-space:nowrap}
+  h2{font-size:13px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted);
+     margin:44px 0 14px; padding-bottom:7px; border-bottom:1px solid var(--line)}
+  h3{font-size:16px; margin:26px 0 8px}
+  p{margin:0 0 14px}
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:10px;
+         padding:18px 20px; margin:16px 0}
+  .callout{border-left:4px solid var(--warn); background:var(--panel); border-radius:0 8px 8px 0;
+           padding:14px 18px; margin:18px 0}
+  .callout.bad{border-left-color:var(--down)}
+  .callout.good{border-left-color:var(--up)}
+  .callout b{display:block; margin-bottom:4px}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin:18px 0}
+  .stat{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px}
+  .stat .k{font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted)}
+  .stat .v{font-size:22px; font-weight:650; margin-top:3px; letter-spacing:-.02em}
+  .tw{overflow-x:auto; -webkit-overflow-scrolling:touch; margin:14px 0}
+  table{border-collapse:collapse; width:100%; font-size:14px; min-width:460px}
+  th,td{text-align:left; padding:8px 12px; border-bottom:1px solid var(--line)}
+  th{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); font-weight:600}
+  td.n,th.n{text-align:right; font-variant-numeric:tabular-nums}
+  tr.hl td{background:var(--chip); font-weight:600}
+  .up{color:var(--up)} .down{color:var(--down)} .warn{color:var(--warn)}
+  .small{font-size:13px; color:var(--muted)}
+  .tag{display:inline-block; font-size:11px; padding:1px 7px; border-radius:4px;
+       background:var(--chip); border:1px solid var(--line); color:var(--muted)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:.9em;
+       background:var(--chip); padding:1px 5px; border-radius:4px}
+  .ba{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin:16px 0}
+  @media (max-width:640px){ .ba{grid-template-columns:1fr} h1{font-size:23px} .wrap{padding:26px 16px 60px} }
+  ul{margin:0 0 14px; padding-left:20px} li{margin-bottom:6px}
+  footer{margin-top:56px; padding-top:18px; border-top:1px solid var(--line);
+         color:var(--muted); font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>12D — Signal Learning &amp; Trade Lifecycle Intelligence</h1>
+  <div class="sub">Separating the entry decision from position management, and measuring what the existing 12C signal actually does.</div>
+  <div class="meta">
+    <span class="chip">12D-signal-learning-v1</span>
+    <span class="chip">2,559 signal episodes</span>
+    <span class="chip">39 sessions · NIFTY + SENSEX</span>
+    <span class="chip">Observation only — no thresholds changed</span>
+    <span class="chip">No ML</span>
+    <span class="chip">2026-09-24</span>
+  </div>
+</header>
+
+<div class="callout bad">
+  <b>Read this first</b>
+  This is research on a <strong>loss-making sample</strong>. Nothing here demonstrates an edge. Separating entry
+  from position management changed the <em>shape</em> of the results without changing their <em>sign</em>. All
+  figures are pre-cost beyond the bid-ask spread — no brokerage, STT or slippage is modelled.
+</div>
+
+<h2>1 · The architectural change</h2>
+
+<p>Your premise was correct, and it was written down in the existing simulator's own docstring:</p>
+<div class="panel"><code>* WAIT &rarr; CLOSE at that minute's BID (reason WAIT).</code></div>
+
+<p>That conflates two different questions. <strong>WAIT means "I would not open a position now"</strong> — it does not
+mean "get out of the one you have."</p>
+
+<div class="ba">
+  <div class="panel">
+    <div class="tag">Before</div>
+    <h3 style="margin-top:8px">One engine</h3>
+    <p class="small">Entry decision drives everything. A WAIT closes the position at that minute's bid, whatever the
+    position itself is doing. Hold times 1–3 minutes.</p>
+  </div>
+  <div class="panel">
+    <div class="tag">After (12D)</div>
+    <h3 style="margin-top:8px">Two engines</h3>
+    <p class="small">The position manager never reads the entry decision. It escalates
+    HOLD &rarr; CAUTION &rarr; PREPARE_EXIT &rarr; EXIT with confirmation across minutes, and clean minutes step it
+    back down. Average hold 6.4 minutes.</p>
+  </div>
+</div>
+
+<p>Exit categories are kept strictly apart: <strong>STOP_LOSS</strong> and <strong>DATA_RISK</strong> are hard and
+immediate; <strong>POSITION_SIGNAL</strong> requires consecutive adverse minutes <em>and</em> a broken premium
+trend. A single weak minute can only reach CAUTION.</p>
+
+<p class="small">A test asserts that identical evidence produces an identical verdict whether the entry engine says
+WAIT, BUY&nbsp;CE, BUY&nbsp;PE or nothing at all. The existing simulator is untouched, so both run on the same
+signals and can be compared.</p>
+
+<h2>2 · Headline numbers</h2>
+
+<div class="grid">
+  <div class="stat"><div class="k">Signal episodes</div><div class="v">2,559</div></div>
+  <div class="stat"><div class="k">Win rate</div><div class="v">29.3%</div></div>
+  <div class="stat"><div class="k">Mean P&amp;L / unit</div><div class="v down">−₹0.62</div></div>
+  <div class="stat"><div class="k">Avg hold</div><div class="v">6.4 min</div></div>
+  <div class="stat"><div class="k">Losers once in profit</div><div class="v warn">86.5%</div></div>
+  <div class="stat"><div class="k">Leakage audit</div><div class="v up">PASS</div></div>
+</div>
+
+<h2>3 · Findings</h2>
+
+<h3>3.1 &nbsp;The momentum hypothesis is not supported</h3>
+<p>You expected DECELERATING momentum at entry to correlate with poor outcomes and ACCELERATING with better ones.
+In this sample it points the other way.</p>
+<div class="tw">
+<table>
+  <thead><tr><th>Momentum at entry</th><th class="n">N</th><th class="n">Avg P&amp;L</th><th class="n">Win rate</th></tr></thead>
+  <tbody>
+    <tr><td>ACCELERATING</td><td class="n">1,101</td><td class="n down">−₹24.75</td><td class="n">29.4%</td></tr>
+    <tr class="hl"><td>DECELERATING</td><td class="n">878</td><td class="n down">−₹16.54</td><td class="n">29.6%</td></tr>
+    <tr><td>REVERSING</td><td class="n">337</td><td class="n down">−₹31.41</td><td class="n">27.1%</td></tr>
+    <tr><td>PERSISTENT</td><td class="n">184</td><td class="n down">−₹40.46</td><td class="n">27.7%</td></tr>
+    <tr><td>RISING <span class="tag">small sample</span></td><td class="n">59</td><td class="n up">+₹71.19</td><td class="n">37.3%</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="small">DECELERATING slightly <em>beats</em> ACCELERATING. RISING looks interesting and is far too small to trust.</p>
+
+<h3>3.2 &nbsp;Entry timing separates nothing — and "GOOD" is the worst bucket</h3>
+<div class="tw">
+<table>
+  <thead><tr><th>Entry timing</th><th class="n">N</th><th class="n">Avg P&amp;L</th><th class="n">Win rate</th></tr></thead>
+  <tbody>
+    <tr><td>LATE</td><td class="n">1,239</td><td class="n down">−₹15.04</td><td class="n">30.9%</td></tr>
+    <tr class="hl"><td>GOOD</td><td class="n">638</td><td class="n down">−₹37.49</td><td class="n">28.3%</td></tr>
+    <tr><td>EXHAUSTED</td><td class="n">448</td><td class="n down">−₹22.87</td><td class="n">27.5%</td></tr>
+    <tr><td>EARLY</td><td class="n">234</td><td class="n down">−₹11.82</td><td class="n">26.6%</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <b>This is a negative result about my construct, not about your intuition.</b>
+  As parameterised, ENTRY_TIMING has no discriminative power and should not be used to filter anything. It should
+  be rebuilt or dropped — not tuned.
+</div>
+
+<h3>3.3 &nbsp;No holding rule rescues it</h3>
+<p>Same episodes, per unit, comparing the managed exit against simply holding a fixed number of minutes:</p>
+<div class="tw">
+<table>
+  <thead><tr><th>Exit rule</th><th class="n">Mean</th><th class="n">Median</th><th class="n">Win rate</th></tr></thead>
+  <tbody>
+    <tr><td>Managed exit (12D)</td><td class="n down">−0.62</td><td class="n down">−2.75</td><td class="n">29.3%</td></tr>
+    <tr><td>Hold exactly 1 min</td><td class="n down">−0.55</td><td class="n down">−0.45</td><td class="n">43.2%</td></tr>
+    <tr><td>Hold exactly 3 min</td><td class="n down">−0.50</td><td class="n down">−0.75</td><td class="n">43.0%</td></tr>
+    <tr class="hl"><td>Hold exactly 5 min</td><td class="n down">−0.40</td><td class="n down">−1.00</td><td class="n">43.1%</td></tr>
+    <tr><td>Hold exactly 10 min</td><td class="n down">−0.89</td><td class="n down">−1.55</td><td class="n">42.0%</td></tr>
+  </tbody>
+</table>
+</div>
+<p><strong>Every variant loses.</strong> The exit rule is not the reason this loses money.</p>
+
+<h3>3.4 &nbsp;The bid-ask spread is most of the loss</h3>
+<div class="grid">
+  <div class="stat"><div class="k">Spread at entry</div><div class="v">₹0.42</div><div class="small">0.224% of entry</div></div>
+  <div class="stat"><div class="k">Mean result</div><div class="v down">−₹0.62</div><div class="small">per unit</div></div>
+  <div class="stat"><div class="k">Gross of spread</div><div class="v warn">−₹0.20</div><div class="small">per unit</div></div>
+</div>
+<div class="callout bad">
+  <b>Roughly two thirds of the average loss is the round trip itself.</b>
+  Gross of the spread the average signal is close to a coin flip. That points the next question at
+  <em>how often we trade</em>, not at how well we exit.
+</div>
+
+<h3>3.5 &nbsp;The WAIT coupling was real, and large</h3>
+<div class="grid">
+  <div class="stat"><div class="k">Episodes with a WAIT while open</div><div class="v">91.1%</div><div class="small">2,332 of 2,559</div></div>
+  <div class="stat"><div class="k">Of those, profitable</div><div class="v">31.2%</div><div class="small">727 episodes</div></div>
+  <div class="stat"><div class="k">Max WAITs survived</div><div class="v">25</div><div class="small">avg 3.8</div></div>
+</div>
+<p class="small">Under the previous coupling every one of these would have been closed on the spot.</p>
+
+<h3>3.6 &nbsp;Exit reason</h3>
+<div class="tw">
+<table>
+  <thead><tr><th>Exit reason</th><th class="n">N</th><th class="n">Avg P&amp;L / unit</th><th class="n">Win rate</th><th class="n">Avg hold</th></tr></thead>
+  <tbody>
+    <tr><td>SIGNAL_FLIP <span class="tag">opposite BUY appeared</span></td><td class="n">1,208</td><td class="n down">−2.93</td><td class="n">21.1%</td><td class="n">5.2m</td></tr>
+    <tr><td>POSITION_SIGNAL <span class="tag">12D's own manager</span></td><td class="n">1,200</td><td class="n up">+2.83</td><td class="n">40.1%</td><td class="n">8.0m</td></tr>
+    <tr><td>STOP_LOSS</td><td class="n">126</td><td class="n down">−13.30</td><td class="n">0.0%</td><td class="n">3.2m</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h3>3.7 &nbsp;Lifecycle shape</h3>
+<div class="tw">
+<table>
+  <thead><tr><th>Lifecycle label</th><th class="n">N</th><th class="n">Avg P&amp;L</th></tr></thead>
+  <tbody>
+    <tr><td>GOOD_DIRECTION_LATE_ENTRY</td><td class="n">958</td><td class="n down">−₹208.87</td></tr>
+    <tr><td>GOOD_ENTRY_GOOD_FOLLOW_THROUGH</td><td class="n">522</td><td class="n up">+₹488.83</td></tr>
+    <tr><td>GOOD_DIRECTION_BAD_EXIT</td><td class="n">510</td><td class="n down">−₹207.14</td></tr>
+    <tr><td>IMMEDIATE_FALSE_SIGNAL</td><td class="n">229</td><td class="n down">−₹311.76</td></tr>
+    <tr><td>CHOPPY_SIGNAL</td><td class="n">174</td><td class="n down">−₹10.65</td></tr>
+    <tr><td>INITIAL_ADVERSE_THEN_RECOVERED</td><td class="n">151</td><td class="n up">+₹457.48</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="small">Your example is preserved exactly as you asked: a trade that reached +₹54 MFE and closed at −₹157
+is <em>not</em> labelled the same as one that never worked at all.</p>
+
+<h3>3.8 &nbsp;Time of day</h3>
+<div class="tw">
+<table>
+  <thead><tr><th>Hour</th><th class="n">N</th><th class="n">Avg P&amp;L</th><th class="n">Win rate</th></tr></thead>
+  <tbody>
+    <tr><td>09:00</td><td class="n">314</td><td class="n up">+₹4.97</td><td class="n">33.8%</td></tr>
+    <tr class="hl"><td>10:00</td><td class="n">384</td><td class="n up">+₹10.69</td><td class="n">34.6%</td></tr>
+    <tr><td>11:00</td><td class="n">394</td><td class="n down">−₹1.21</td><td class="n">27.9%</td></tr>
+    <tr><td>12:00</td><td class="n">437</td><td class="n down">−₹36.34</td><td class="n">24.9%</td></tr>
+    <tr><td>13:00</td><td class="n">438</td><td class="n down">−₹39.04</td><td class="n">30.6%</td></tr>
+    <tr><td>14:00</td><td class="n">406</td><td class="n down">−₹35.38</td><td class="n">27.6%</td></tr>
+    <tr><td>15:00</td><td class="n">186</td><td class="n down">−₹74.72</td><td class="n">23.7%</td></tr>
+  </tbody>
+</table>
+</div>
+<div class="callout">
+  <b>This cuts against the live-trading entry window.</b>
+  The best hours are 09:00–10:00 and the worst is 15:00, while the live plan starts entries at 09:45. One sample
+  is not a reason to change the window — but it is a reason to look again before widening anything.
+</div>
+
+<h2>4 · The diagnostic matrix, and why I distrust it</h2>
+<div class="tw">
+<table>
+  <thead><tr><th></th><th class="n">Exit good</th><th class="n">Exit bad</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Good entry</strong></td><td class="n">186</td><td class="n">1,987</td></tr>
+    <tr><td><strong>Bad entry</strong></td><td class="n">6</td><td class="n">366</td></tr>
+  </tbody>
+</table>
+</div>
+<p>Direction correct in 2,311 of 2,559 (90.3%).</p>
+<div class="callout bad">
+  <b>Read this matrix with suspicion — I would not act on it.</b>
+  My <code>exit_ok</code> test demands capturing ≥40% of MFE. My <code>entry_timing_ok</code> test only asks that the
+  first minute wasn't −3%. A lenient entry test next to a strict exit test mechanically produces
+  "GOOD_ENTRY / EXIT_BAD". And <code>direction_correct</code> only needs MFE ≥ 0.5%, which nearly any option
+  touches at some point. The matrix is substantially an artifact of my own definitions.
+</div>
+
+<h2>5 · Answers to the twelve questions</h2>
+<div class="tw">
+<table>
+  <thead><tr><th>Question</th><th>Answer</th></tr></thead>
+  <tbody>
+    <tr><td>Are signals directionally wrong?</td><td>Rarely, on a loose test (90.3% touch +0.5% at some point).</td></tr>
+    <tr><td>Directionally reasonable but late?</td><td>Cannot be shown — the timing construct doesn't separate.</td></tr>
+    <tr><td>Exited too quickly?</td><td>No. Holding longer does not help; every fixed horizon also loses.</td></tr>
+    <tr><td>Losers with positive MFE?</td><td><strong>1,561 of 1,804 (86.5%)</strong>, avg MFE ₹55.10/unit.</td></tr>
+    <tr><td>Good direction / bad entry?</td><td>958 labelled so — but see the caveat on definitions.</td></tr>
+    <tr><td>Good entry / bad exit?</td><td>510 labelled so.</td></tr>
+    <tr><td>DECELERATING → poor outcomes?</td><td><strong>No.</strong> Slightly better than ACCELERATING.</td></tr>
+    <tr><td>ACCELERATING → better outcomes?</td><td><strong>No.</strong></td></tr>
+    <tr><td>Exhaustion → poor entries?</td><td>No clear relationship.</td></tr>
+    <tr><td>Confidence → outcome?</td><td>No. STRONG −₹26.62 vs MODERATE −₹17.77.</td></tr>
+    <tr><td>Time of day?</td><td>Yes, apparently — best 09:00–10:00, worst 15:00.</td></tr>
+    <tr><td>Exit too sensitive to WAIT?</td><td><strong>Yes, mechanically</strong> — 91.1% of episodes hit one. But fixing it did not make the strategy profitable.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>6 · Limitations</h2>
+<ul>
+  <li>39 sessions is not a regime. Five groups fall below N=20 and are marked INSUFFICIENT SAMPLE.</li>
+  <li>Pre-cost beyond the spread — no brokerage, STT or slippage.</li>
+  <li>Entry assumes a fill at the ASK, which flatters a real fill.</li>
+  <li>All labels come from provisional boundaries chosen a priori, never fitted to outcomes.</li>
+</ul>
+
+<h2>7 · What changed in the code</h2>
+<p><strong>New:</strong> <code>signal_learning_12d/</code> (11 modules + schema), <code>tests/test_signal_learning_12d.py</code>,
+both report files.<br>
+<strong>Modified:</strong> the scalp-decision DTO and service (one additive field), the decision panel and its types,
+<code>pyproject.toml</code>.</p>
+
+<div class="callout good">
+  <b>Untouched, verified by an empty <code>git diff</code></b>
+  11D · 12A · 12B · 12C signal generation · position_sim_12c · paper_trading · live_trading · Dhan capture ·
+  Dhan order APIs · pipeline · db · analytics · market_transition. No real orders. No ML.
+  Tests: <strong>876 root</strong> (833 before + 43 new) and <strong>58 backend</strong>, all passing.
+  Leakage audit PASS on both symbols, zero mismatches.
+</div>
+
+<h2>8 · Recommended next step</h2>
+<p><strong>No threshold change is recommended, and none was made.</strong> Two hypotheses for a future milestone:</p>
+<div class="panel">
+  <p><strong>H1 — trade frequency, not exit timing, is the dominant cost.</strong> The spread is ₹0.42/unit against a
+  −₹0.62/unit result. If that holds, the lever is taking <em>far fewer</em> trades, not managing them better. This is
+  testable without touching a single 12C threshold.</p>
+  <p style="margin-bottom:0"><strong>H2 — ENTRY_TIMING and MOMENTUM_STATE as built have no predictive content</strong>
+  and should be rebuilt or dropped rather than tuned.</p>
+</div>
+
+<footer>
+  12D-signal-learning-v1 · dataset <code>sl12d_signals</code> · full tables in
+  <code>12D_SIGNAL_LEARNING_REPORT.txt</code> / <code>.json</code>.<br>
+  Descriptive research on paper simulation. Not a profitable strategy, not production-ready, and not evidence of
+  predictive accuracy.
+</footer>
+
+</div>
+</body>
+</html>
