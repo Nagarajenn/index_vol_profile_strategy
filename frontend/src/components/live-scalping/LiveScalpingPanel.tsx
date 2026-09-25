@@ -105,6 +105,77 @@ function MarketState({ d }: { d: LiveScalpingDTO }) {
   );
 }
 
+function paColor(v: string | null | undefined): ChipColor {
+  if (v === "CONFIRMED") return "success";
+  if (v === "PARTIAL") return "warning";
+  if (v === "CONTRADICTED") return "error";
+  if (v === "NO_SETUP") return "default";
+  return "default";
+}
+
+function breakColor(v: string): ChipColor {
+  if (v === "CLEAN_BREAK_WITH_FOLLOW_THROUGH") return "success";
+  if (v === "CLEAN_BREAK") return "info";
+  if (v === "FAILED_BREAK" || v === "EXHAUSTED_BREAK") return "error";
+  return "default";
+}
+
+function volColor(v: string): ChipColor {
+  if (v === "VOLUME_EXPANDING" || v === "VOLUME_SPIKE") return "success";
+  if (v === "VOLUME_DECLINING") return "warning";
+  return "default";
+}
+
+/** 13B. Does the UNDERLYING actually show a clean setup at this minute? */
+function PriceAction({ d }: { d: LiveScalpingDTO }) {
+  const pa = d.price_action;
+  if (!pa) return null;
+  const structure = [
+    pa.higher_high === true ? "HIGHER HIGH" : pa.lower_high === true ? "LOWER HIGH" : null,
+    pa.higher_low === true ? "HIGHER LOW" : pa.lower_low === true ? "LOWER LOW" : null,
+  ].filter(Boolean).join(" → ");
+  const cells: [string, string, ChipColor, string][] = [
+    ["STRUCTURE", structure || pa.structure.replace(/_/g, " "), "default", pa.structure_note],
+    ["BREAK", pa.break_state.replace(/_/g, " "), breakColor(pa.break_state), pa.break_note],
+    ["FOLLOW-THROUGH", pa.follow_through ? "YES" : "NO", pa.follow_through ? "success" : "default",
+      "Completed bars that held beyond the broken level."],
+    ["SETUP", pa.setup.replace(/_/g, " "), "default", pa.setup_note],
+    ["VWAP", pa.vwap_state.replace(/_/g, " "), "default", pa.vwap_note],
+    ["VOLUME PROFILE", pa.value_state.replace(/_/g, " "), "default", pa.value_note],
+    ["VOLUME", pa.volume_state.replace(/VOLUME_/, ""), volColor(pa.volume_state), pa.volume_note],
+    ["PRICE ACTION", pa.confirmation.replace(/_/g, " "), paColor(pa.confirmation), pa.reason],
+  ];
+  return (
+    <Box>
+      <Stack direction="row" spacing={1} sx={{ alignItems: "baseline", mb: 0.75 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>PRICE ACTION CONFIRMATION</Typography>
+        <Typography variant="caption" color="text.secondary">
+          13B · the underlying, read independently of the option engine
+        </Typography>
+        {pa.price_action_block && (
+          <Chip size="small" color="error" label="BLOCKED THE 13A BUY" sx={{ fontWeight: 700 }} />
+        )}
+        {pa.is_candidate === false && (
+          <Chip size="small" variant="outlined" label="context only — no candidate this minute" />
+        )}
+      </Stack>
+      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, minmax(0,1fr))" }, gap: 1 }}>
+        {cells.map(([k, v, c, note]) => (
+          <Tooltip key={k} title={note ?? ""} placement="top">
+            <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 1 }}>
+              <Typography variant="caption" color="text.secondary">{k}</Typography>
+              <Chip size="small" color={c} label={v} sx={{ fontWeight: 700, maxWidth: "70%" }} />
+            </Box>
+          </Tooltip>
+        ))}
+      </Box>
+      <Typography variant="body2" sx={{ mt: 0.75 }}>
+        <b>Reason:</b> {pa.reason}
+      </Typography>
+    </Box>
+  );
+}
+
 /** Spec 22: the four money numbers must never be confused with one another. */
 function RiskBrake({ d }: { d: LiveScalpingDTO }) {
   const r = d.risk;
@@ -282,6 +353,7 @@ export function LiveScalpingPanel({ symbol: fixed }: { symbol?: string }) {
           )}
         </Stack>
 
+        <PriceAction d={data} />
         <RiskBrake d={data} />
         {data.open_position && <PositionCard p={data.open_position} />}
         <ClosedTable rows={data.closed_positions} />

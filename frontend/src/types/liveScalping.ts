@@ -89,6 +89,40 @@ export interface DailyReview {
   rejected_no_base_signal: number; rejected_position_open: number;
 }
 
+// 13B-price-action-v1. A confirmation layer: it can veto a 13A BUY, never create one.
+export interface PriceActionBlock {
+  confirmation: string;
+  reason: string;
+  structure: string;
+  structure_note: string;
+  higher_high: boolean | null;
+  higher_low: boolean | null;
+  lower_high: boolean | null;
+  lower_low: boolean | null;
+  break_state: string;
+  break_level: number | null;
+  break_note: string;
+  follow_through: boolean;
+  setup: string;
+  setup_note: string;
+  vwap_state: string;
+  vwap_distance_pct: number | null;
+  vwap_note: string;
+  value_state: string;
+  value_note: string;
+  volume_state: string;
+  volume_ratio: number | null;
+  volume_note: string;
+  volume_confirms: boolean | null;
+  agreeing_factors: number;
+  contradicting_factors: string[];
+  final_decision?: string;
+  price_action_block?: boolean;
+  final_price_action_state?: string;
+  block_reason?: string | null;
+  is_candidate?: boolean;
+}
+
 export interface LiveScalpingDTO {
   version: string;
   config_hash: string;
@@ -105,6 +139,7 @@ export interface LiveScalpingDTO {
   risk: LiveRisk;
   open_position: LivePositionCard | null;
   closed_positions: LivePositionCard[];
+  price_action: PriceActionBlock | null;
   daily_review: DailyReview | null;
   notice: string;
 }

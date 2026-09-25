@@ -25,6 +25,7 @@ class LiveScalpingDTO(BaseModel):
     risk: dict[str, Any]
     open_position: dict[str, Any] | None = None
     closed_positions: list[dict[str, Any]] = []
+    price_action: dict[str, Any] | None = None
     daily_review: dict[str, Any] | None = None
     config: dict[str, Any] | None = None
     notice: str

@@ -12,6 +12,8 @@ from live_scalping_13a import replay as RP
 from live_scalping_13a import risk_brake as RB
 from live_scalping_13a.config import DEFAULT as CFG
 from live_scalping_13a.config import LIVE_DECISION_SUPPORT_NOTE
+from price_action_13b import decide as PA13B
+from price_action_13b.config import DEFAULT as PA_CFG
 from scalp_decision_12c.loader import LEVELS_COLUMNS
 
 # A full-session 13A replay costs a few seconds. It can only change when a new minute of data
@@ -59,6 +61,7 @@ class LiveScalpingService:
             primary_rejection_reason=state["primary_rejection_reason"],
             reason_note=state["reason_note"], panel=state["panel"], risk=state["risk"],
             open_position=state["open_position"], closed_positions=state["closed_positions"],
+            price_action=state.get("price_action"),
             daily_review=state["daily_review"], config=CFG.to_json(),
             notice=LIVE_DECISION_SUPPORT_NOTE,
         )
@@ -136,6 +139,29 @@ def _run_sync(symbol, session_date, snaps, candles, levels, as_of) -> dict | Non
         if r:
             rej[r] = rej.get(r, 0) + 1
 
+    # 13B price-action confirmation for the minute being shown. Read-only over 13A's output:
+    # it can veto a BUY, never create one.
+    last_minute = last_out["minute"]
+    last_levels = None
+    for mm in sorted(levels):
+        if mm <= last_minute:
+            last_levels = levels[mm]
+    # A confirmation verdict only makes sense against a proposed side. When there is no
+    # candidate the structural read (structure, VWAP, value, volume) is still shown as context
+    # and flagged `is_candidate=False`, so the section does not vanish for most of the session.
+    base = last_out.get("base_decision")
+    side = last_out.get("side") or (base[-2:] if base in ("BUY_CE", "BUY_PE") else None)
+    pa = None
+    if side:
+        pa = PA13B.evaluate(cmap, last_minute, side, last_levels, PA_CFG)
+        applied = PA13B.apply(last_out["decision"], pa, PA_CFG)
+        pa = {**pa, **applied, "is_candidate": last_out["decision"] in ("BUY_CE", "BUY_PE")}
+    else:
+        pa = PA13B.evaluate(cmap, last_minute, "CE", last_levels, PA_CFG)
+        pa = {**pa, "is_candidate": False, "price_action_block": False,
+              "final_decision": last_out["decision"], "applies_to": None,
+              "reason": "No BUY candidate this minute -- the structural read is shown as context only."}
+
     f = (last_out.get("features") or {})
     checks = last_out.get("checks") or {}
     panel = dict(
@@ -168,4 +194,5 @@ def _run_sync(symbol, session_date, snaps, candles, levels, as_of) -> dict | Non
                 primary_rejection_reason=last_out["primary_rejection_reason"],
                 reason_note=last_out.get("reason_note"), panel=panel,
                 risk=RB.evaluate(risk, CFG), open_position=card, closed_positions=closed,
+                price_action=pa,
                 daily_review=analysis.daily_review(decisions, closed, rej))
