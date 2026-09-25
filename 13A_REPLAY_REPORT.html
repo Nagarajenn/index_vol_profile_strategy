@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>13A Replay</title><style>
+:root{--bg:#f7f7f5;--panel:#fff;--ink:#1b1b19;--muted:#6b6b66;--line:#e2e2dd;--up:#2e7d32;
+--down:#c62828;--warn:#b26a00;--chip:#f0f0ec}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14140f;--panel:#1c1c18;
+--ink:#ecece6;--muted:#9a9a92;--line:#2e2e28;--up:#7bc47f;--down:#ef8d86;--warn:#e0a34a;--chip:#26262040}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:40px 16px 80px}
+header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:30px}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.02em}
+h2{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:42px 0 12px;
+padding-bottom:7px;border-bottom:1px solid var(--line)}
+h3{font-size:15px;margin:24px 0 8px}
+.sub{color:var(--muted);font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px;
+font-size:12px;color:var(--muted);white-space:nowrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0}
+.callout{border-left:4px solid var(--warn);background:var(--panel);border-radius:0 8px 8px 0;padding:13px 17px;margin:16px 0}
+.callout.bad{border-left-color:var(--down)}.callout.good{border-left-color:var(--up)}
+.callout b{display:block;margin-bottom:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin:16px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px}
+.stat .k{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-size:21px;font-weight:650;margin-top:3px;letter-spacing:-.02em}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:480px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}.small{font-size:12.5px;color:var(--muted)}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:4px;background:var(--chip);
+border:1px solid var(--line);color:var(--muted)}
+.pass{color:var(--up);font-weight:700}.fail{color:var(--down);font-weight:700}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--chip);padding:1px 5px;border-radius:4px}
+ul{margin:0 0 14px;padding-left:20px}li{margin-bottom:6px}
+footer{margin-top:54px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+@media (max-width:640px){h1{font-size:22px}.wrap{padding:26px 16px 60px}}
+</style></head><body><div class="wrap"><header><h1>13A — Historical Replay</h1><div class="sub">12D unfiltered versus 13A filtered, on identical signal streams.</div><div class="meta"><span class="chip">13A-live-scalping-engine-v1</span><span class="chip">44 sessions</span><span class="chip">Chronological split</span><span class="chip">No threshold optimised on outcomes</span></div></header><div class="grid">
+<div class="stat"><div class="k">12D trades</div><div class="v">2559</div></div>
+<div class="stat"><div class="k">13A trades</div><div class="v">54</div>
+<div class="small">97.9% removed</div></div>
+<div class="stat"><div class="k">12D total</div><div class="v down">₹-55,378</div></div>
+<div class="stat"><div class="k">13A total</div><div class="v up">₹1,220</div></div>
+<div class="stat"><div class="k">13A win rate</div><div class="v">33.3%</div></div>
+<div class="stat"><div class="k">13A max drawdown</div><div class="v down">₹-5,500</div></div>
+</div><h2>1 · By period <span class='tag'>chronological, never random</span></h2><div class='tw'><table><thead><tr><th>Period</th><th class='n'>Sessions</th><th class='n'>12D trades</th><th class='n'>12D total</th><th class='n'>13A trades</th><th class='n'>13A total</th><th class='n'>13A win %</th><th class='n'>Max DD</th><th class='n'>Max cons. losses</th></tr></thead><tbody><tr><td><b>development</b></td><td class='n'>22</td><td class='n'>1257</td><td class='n down'>₹-41,452</td><td class='n'>21</td><td class='n down'>₹-5,500</td><td class='n'>19.0%</td><td class='n'>₹-5,500</td><td class='n'>8</td></tr><tr><td><b>validation</b> <span class='tag'>small N</span></td><td class='n'>11</td><td class='n'>683</td><td class='n down'>₹-14,016</td><td class='n'>16</td><td class='n up'>₹5,038</td><td class='n'>56.2%</td><td class='n'>₹-779</td><td class='n'>2</td></tr><tr><td><b>unseen</b> <span class='tag'>small N</span></td><td class='n'>11</td><td class='n'>619</td><td class='n up'>₹90</td><td class='n'>17</td><td class='n up'>₹1,682</td><td class='n'>29.4%</td><td class='n'>₹-1,718</td><td class='n'>5</td></tr></tbody></table></div><h2>2 · What was removed, and why</h2><div class='tw'><table><thead><tr><th>Primary rejection reason</th><th class='n'>Decisions</th></tr></thead><tbody><tr><td>NO BASE SIGNAL</td><td class='n'>17551</td></tr><tr><td>REGIME RANGE</td><td class='n'>10120</td></tr><tr><td>TIMING EXTENDED</td><td class='n'>664</td></tr><tr><td>UNDERLYING NOT CONFIRMED</td><td class='n'>570</td></tr><tr><td>REGIME UNKNOWN</td><td class='n'>331</td></tr><tr><td>POSITION OPEN</td><td class='n'>228</td></tr><tr><td>RISK LOCKED</td><td class='n'>158</td></tr><tr><td>REGIME AGAINST</td><td class='n'>37</td></tr><tr><td>QUALITY TOO LOW</td><td class='n'>13</td></tr><tr><td>REGIME REVERSING</td><td class='n'>6</td></tr><tr><td>ECONOMICS INSUFFICIENT</td><td class='n'>1</td></tr></tbody></table></div><div class="panel"><p style="margin-bottom:0">Removed by category —
+regime <b>10494</b> · timing <b>664</b> ·
+underlying <b>570</b> · option confirmation <b>0</b> ·
+spread <b>0</b> · economics <b>1</b> ·
+quality <b>13</b> · risk lock <b>158</b>.</p></div><h2>3 · 13A trade composition</h2><div class='tw'><table><thead><tr><th>Breakdown</th><th>Counts</th></tr></thead><tbody><tr><td>By side</td><td>{&#x27;CE&#x27;: 25, &#x27;PE&#x27;: 29}</td></tr><tr><td>By quality</td><td>{&#x27;A&#x27;: 15, &#x27;B&#x27;: 39}</td></tr><tr><td>By exit reason</td><td>{&#x27;SIGNAL_FLIP&#x27;: 48, &#x27;STOP_LOSS&#x27;: 5, &#x27;SESSION_END&#x27;: 1}</td></tr><tr><td>Mean hold</td><td>11.8 minutes</td></tr></tbody></table></div><div class="callout bad"><b>How to read this</b>
+Fewer trades is the <em>intent</em>, not the achievement. A smaller loss on far fewer trades is
+consistent with the filters working and also consistent with simply trading less of a
+break-even-minus-costs signal. With this few surviving trades in the unseen period, the two
+cannot be told apart, and no threshold here has been validated out of sample.</div><footer>13A-live-scalping-engine-v1 · config <code>7165af1287d25148</code> · decision support only. No order is placed and no broker API is reachable from this package. Gates are provisional measurement boundaries, not validated rules.</footer></div></body></html>

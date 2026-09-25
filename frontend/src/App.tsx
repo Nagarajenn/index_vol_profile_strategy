@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { AppShell } from "./components/layout/AppShell";
 import { CasDayDetailPage } from "./pages/CasDayDetailPage";
+import { LiveScalpingPage } from "./pages/LiveScalpingPage";
 import { LiveTradingPage } from "./pages/LiveTradingPage";
 import { MarketTransitionPage } from "./pages/MarketTransitionPage";
 import { PaperTradingPage } from "./pages/PaperTradingPage";
@@ -25,6 +26,7 @@ function App() {
               <Route path="/scalping-decision" element={<ScalpDecisionPage />} />
               <Route path="/paper-trading" element={<PaperTradingPage />} />
               <Route path="/live-trading" element={<LiveTradingPage />} />
+              <Route path="/scalping-13a" element={<LiveScalpingPage />} />
               <Route path="/market-transition-intelligence" element={<MarketTransitionPage />} />
               <Route path="/market-transition-intelligence/cas-day/:symbol/:date" element={<CasDayDetailPage />} />
             </Routes>

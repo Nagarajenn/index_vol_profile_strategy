@@ -1,0 +1,39 @@
+{
+  "version": "13A-live-scalping-engine-v1",
+  "config_hash": "7165af1287d25148",
+  "mode": "RESEARCH",
+  "gates": {
+    "enable_range_filter": true,
+    "regime_lookback_min": 10,
+    "regime_trend_pct": 0.1,
+    "regime_range_pct": 0.05,
+    "regime_reversal_ratio": 0.5,
+    "enable_reversing_filter": true,
+    "und_confirm_pct_3m": 0.04,
+    "und_confirm_pct_1m": 0.0,
+    "option_min_categories": 3,
+    "timing_extended_opt_pre_5m": 6.0,
+    "timing_extended_und_pre_5m": 0.25,
+    "timing_early_opt_pre_3m": 0.5,
+    "timing_extended_range_position": 92.0,
+    "enable_timing_filter": true,
+    "max_spread_pct_of_premium": 1.0,
+    "enable_spread_filter": true,
+    "min_expected_move_to_spread_ratio": 3.0,
+    "expected_move_lookback_min": 5,
+    "enable_economics_filter": true,
+    "iv_move_pct": 1.0,
+    "iv_headwind_downgrades_quality": true,
+    "min_quality_to_buy": "B",
+    "stop_loss_pct": 10.0
+  },
+  "risk": {
+    "experiment_capital": 10000.0,
+    "max_daily_loss": 2000.0,
+    "max_loss_per_trade": 900.0,
+    "max_consecutive_losses": 3,
+    "max_trades_per_day": 6,
+    "max_position_value": 9000.0
+  },
+  "note": "Gates are PROVISIONAL measurement boundaries motivated by 12E's evidence, not optimised on outcomes. Risk limits are the trader's own and are deliberately separate from allocated capital."
+}

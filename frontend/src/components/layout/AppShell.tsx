@@ -45,6 +45,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <Box component={NavLink} to="/scalping-decision" sx={navLinkSx}>
               Scalping Decision
             </Box>
+            <Box component={NavLink} to="/scalping-13a" sx={navLinkSx}>
+              13A Engine
+            </Box>
             <Box component={NavLink} to="/paper-trading" sx={navLinkSx}>
               Paper Trading
             </Box>

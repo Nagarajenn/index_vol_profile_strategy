@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>13A Implementation</title><style>
+:root{--bg:#f7f7f5;--panel:#fff;--ink:#1b1b19;--muted:#6b6b66;--line:#e2e2dd;--up:#2e7d32;
+--down:#c62828;--warn:#b26a00;--chip:#f0f0ec}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14140f;--panel:#1c1c18;
+--ink:#ecece6;--muted:#9a9a92;--line:#2e2e28;--up:#7bc47f;--down:#ef8d86;--warn:#e0a34a;--chip:#26262040}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1120px;margin:0 auto;padding:40px 16px 80px}
+header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:30px}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.02em}
+h2{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:42px 0 12px;
+padding-bottom:7px;border-bottom:1px solid var(--line)}
+h3{font-size:15px;margin:24px 0 8px}
+.sub{color:var(--muted);font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px;
+font-size:12px;color:var(--muted);white-space:nowrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0}
+.callout{border-left:4px solid var(--warn);background:var(--panel);border-radius:0 8px 8px 0;padding:13px 17px;margin:16px 0}
+.callout.bad{border-left-color:var(--down)}.callout.good{border-left-color:var(--up)}
+.callout b{display:block;margin-bottom:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin:16px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px}
+.stat .k{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-size:21px;font-weight:650;margin-top:3px;letter-spacing:-.02em}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:480px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}.small{font-size:12.5px;color:var(--muted)}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:4px;background:var(--chip);
+border:1px solid var(--line);color:var(--muted)}
+.pass{color:var(--up);font-weight:700}.fail{color:var(--down);font-weight:700}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--chip);padding:1px 5px;border-radius:4px}
+ul{margin:0 0 14px;padding-left:20px}li{margin-bottom:6px}
+footer{margin-top:54px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+@media (max-width:640px){h1{font-size:22px}.wrap{padding:26px 16px 60px}}
+</style></head><body><div class="wrap"><header><h1>13A — Live Scalping Engine + Risk Brake</h1><div class="sub">What changed, why, and what is still uncertain.</div><div class="meta"><span class="chip">13A-live-scalping-engine-v1</span><span class="chip">config 7165af1287d25148</span><span class="chip">Decision support only</span><span class="chip">No broker order path</span><span class="chip">No ML</span></div></header><div class="callout bad"><b>Status</b>
+This is a <strong>selectivity and risk-control</strong> change, not a profitability claim.
+13A does not predict better than 12C — it declines far more trades and says why. Nothing here
+is validated for live deployment; see the go/no-go table at the end.</div><h2>1 · What changed and why</h2><div class="panel"><p>12E established three things that shaped every gate below:</p>
+<ul>
+<li>Option response was <strong>not</strong> the problem — median response efficiency ≈ 1.0.</li>
+<li>Signals fire overwhelmingly in <strong>RANGE</strong> conditions: 211 of 241 historical PE
+signals, where there is no trend to capture.</li>
+<li>Execution friction consumes <strong>84%</strong> of the gross result (mid-to-mid +0.55/unit
+becomes +0.09/unit executable).</li>
+</ul>
+<p style="margin-bottom:0">So 13A does not try to read the market better. It refuses trades whose
+<em>context</em> or <em>economics</em> do not justify paying the spread.</p></div><div class='tw'><table><thead><tr><th>Gate</th><th>Rule</th><th>Evidence behind it</th></tr></thead><tbody><tr><td><b>Regime gate</b></td><td class='small'>CE needs TRENDING_UP, PE needs TRENDING_DOWN. RANGE and REVERSING are refused (both toggleable). Trend = |move| ≥ 0.1% over 10 minutes.</td><td class='small'>12E: 211 of 241 PE signals fired in RANGE</td></tr><tr><td><b>Underlying confirmation</b></td><td class='small'>The direction must be visible in spot itself: ≥0.04% over 3 minutes, and the last minute must not oppose it.</td><td class='small'>Direction measured from spot was ~50% — a coin flip</td></tr><tr><td><b>Option confirmation</b></td><td class='small'>3 of 4 independent categories: relative strength, own momentum, participation, other-side weakness.</td><td class='small'>No single indicator is sufficient</td></tr><tr><td><b>Entry timing</b></td><td class='small'>EXTENDED when the premium is already +6.0% or spot ±0.25% before the signal, or the premium sits above 92.0% of its range without accelerating.</td><td class='small'>Rebuilt from continuous measures; 12D&#x27;s labels had no discriminative power</td></tr><tr><td><b>Spread</b></td><td class='small'>Relative only: spread ≤ 1.0% of premium. Never a fixed rupee threshold.</td><td class='small'>A 0.50 spread is cheap at 250 and ruinous at 15</td></tr><tr><td><b>Economics</b></td><td class='small'>Expected first-order move ≥ 3.0× the round-trip spread, from delta and the last 5 minutes.</td><td class='small'>Friction consumed 84% of the gross result</td></tr><tr><td><b>IV</b></td><td class='small'>An IV headwind never rejects; it costs one quality grade.</td><td class='small'>IV tailwind +9.08/unit vs headwind −2.15 historically</td></tr></tbody></table></div><h2>2 · P&amp;L reconciliation <span class='tag'>gate</span></h2><div class="panel"><p>The identity checked is
+<code>cash P&amp;L = (exit BID − entry ASK) × quantity</code>, per row, in both sources.</p>
+<div class="tw"><table><thead><tr><th>Source</th><th class="n">Rows</th><th class="n">Checked</th>
+<th class="n">Unpriced</th><th class="n">Mismatches</th><th>Result</th></tr></thead><tbody>
+<tr><td>sl12d_signals (research / 12D / 12E)</td><td class="n">2559</td><td class="n">2550</td>
+<td class="n">9</td><td class="n">0</td>
+<td><span class="pass">EXACT</span></td></tr>
+<tr><td>sim12c_positions (Command Center)</td><td class="n">381</td><td class="n">380</td>
+<td class="n">1</td><td class="n">0</td>
+<td><span class="pass">EXACT</span></td></tr></tbody></table></div>
+<p class="small" style="margin-bottom:0">Cross-source: <b>10</b> signals
+closed at the same minute in both — all agree exactly (0 mismatches).
+<b>121</b> closed at different minutes, which is an
+<em>explained</em> difference: 12C's simulator closes when the entry decision turns WAIT, while
+12D's manager ignores the entry decision entirely. 2428 research rows have no
+Command Center counterpart because only two sessions have been stored there.</p></div><h2>3 · Risk brake</h2><div class="callout"><b>Allocated capital is not the loss limit</b>
+₹10,000 is the money set aside for the experiment. The most it may lose in a
+day is ₹2,000 — a separate, much smaller number. The UI shows both, plus what
+remains, and never presents one as the other.</div><div class='tw'><table><thead><tr><th>Limit</th><th class='n'>Value</th><th>Effect</th></tr></thead><tbody><tr><td>Allocated capital</td><td class='n'>₹10,000</td><td class='small'>Not a loss limit</td></tr><tr><td>Max daily loss</td><td class='n'>₹2,000</td><td class='small'>LOCKED on realised losses</td></tr><tr><td>Max loss per trade</td><td class='n'>₹900</td><td class='small'>Sizing guard</td></tr><tr><td>Max consecutive losses</td><td class='n'>3</td><td class='small'>LOCKED</td></tr><tr><td>Max trades per day</td><td class='n'>6</td><td class='small'>LOCKED</td></tr><tr><td>Max position value</td><td class='n'>₹9,000</td><td class='small'>Entry refused above this</td></tr></tbody></table></div><p class='small'>When LOCKED, BUY CE and BUY PE are both disabled and only WAIT is produced. An already-open position is still managed — refusing to manage a live position is not risk control.</p><h2>4 · Case study — 2026-09-24 <span class='tag'>acceptance test</span></h2><p class='small'>The actual decisions, not a forced result.</p><h3>NIFTY</h3><div class='grid'><div class='stat'><div class='k'>12C candidate minutes</div><div class='v'>145</div></div><div class='stat'><div class='k'>13A buys</div><div class='v'>2</div></div><div class='stat'><div class='k'>Rejected: RANGE</div><div class='v'>111</div></div><div class='stat'><div class='k'>Rejected: EXTENDED</div><div class='v'>10</div></div><div class='stat'><div class='k'>Realised</div><div class='v down'>₹-104.00</div></div></div><div class='tw'><table><thead><tr><th>Signal</th><th>Contract</th><th>Q</th><th class='n'>Entry ASK</th><th class='n'>Exit BID</th><th>Exit</th><th class='n'>Hold</th><th class='n'>P&amp;L</th></tr></thead><tbody><tr><td>10:38</td><td>NIFTY 23250 CE</td><td>B</td><td class='n'>112.60</td><td class='n'>110.30</td><td>SIGNAL_FLIP</td><td class='n'>2m</td><td class='n down'>₹-149.50</td></tr><tr><td>13:52</td><td>NIFTY 23100 PE</td><td>B</td><td class='n'>138.35</td><td class='n'>139.05</td><td>SIGNAL_FLIP</td><td class='n'>23m</td><td class='n up'>₹45.50</td></tr></tbody></table></div><h3>SENSEX</h3><div class='grid'><div class='stat'><div class='k'>12C candidate minutes</div><div class='v'>142</div></div><div class='stat'><div class='k'>13A buys</div><div class='v'>2</div></div><div class='stat'><div class='k'>Rejected: RANGE</div><div class='v'>111</div></div><div class='stat'><div class='k'>Rejected: EXTENDED</div><div class='v'>11</div></div><div class='stat'><div class='k'>Realised</div><div class='v down'>₹-379.00</div></div></div><div class='tw'><table><thead><tr><th>Signal</th><th>Contract</th><th>Q</th><th class='n'>Entry ASK</th><th class='n'>Exit BID</th><th>Exit</th><th class='n'>Hold</th><th class='n'>P&amp;L</th></tr></thead><tbody><tr><td>11:32</td><td>SENSEX 74100 PE</td><td>B</td><td class='n'>146.35</td><td class='n'>141.50</td><td>SIGNAL_FLIP</td><td class='n'>15m</td><td class='n down'>₹-97.00</td></tr><tr><td>15:13</td><td>SENSEX 73700 PE</td><td>B</td><td class='n'>128.95</td><td class='n'>114.85</td><td>STOP_LOSS</td><td class='n'>3m</td><td class='n down'>₹-282.00</td></tr></tbody></table></div><h2>5 · Leakage audit</h2><div class='tw'><table><thead><tr><th>Symbol</th><th class='n'>Candidates</th><th class='n'>Fields</th><th class='n'>Mismatches</th><th>Result</th></tr></thead><tbody><tr><td>NIFTY</td><td class='n'>30</td><td class='n'>21</td><td class='n'>0</td><td><span class="pass">PASS</span></td></tr><tr><td>SENSEX</td><td class='n'>30</td><td class='n'>21</td><td class='n'>0</td><td><span class="pass">PASS</span></td></tr></tbody></table></div><p class='small'>Every feature is recomputed with all later minutes deleted and compared field by field, including the regime verdict itself.</p><h2>6 · Go / no-go</h2><div class='tw'><table><thead><tr><th>Item</th><th>Status</th><th>Detail</th></tr></thead><tbody><tr><td><b>Signal engine</b></td><td>IMPLEMENTED</td><td class='small'>12C candidates filtered by 7 gates; 12C itself unmodified.</td></tr><tr><td><b>P&amp;L reconciliation</b></td><td>PASS</td><td class='small'>Identity exact in both sources; cross-source differences explained by exit rule.</td></tr><tr><td><b>Range filter</b></td><td>IMPLEMENTED</td><td class='small'>Configurable; the dominant rejection in every period.</td></tr><tr><td><b>Timing filter</b></td><td>IMPLEMENTED</td><td class='small'>Rebuilt from continuous pre-signal measures.</td></tr><tr><td><b>IV filter</b></td><td>IMPLEMENTED</td><td class='small'>Downgrades quality; never rejects alone.</td></tr><tr><td><b>Spread filter</b></td><td>IMPLEMENTED</td><td class='small'>Relative to premium, not a fixed rupee amount.</td></tr><tr><td><b>Risk brake</b></td><td>IMPLEMENTED</td><td class='small'>Daily loss, consecutive losses and trade count all lock.</td></tr><tr><td><b>Historical validation</b></td><td>INSUFFICIENT</td><td class='small'>Validation period: 16 trades. Too few to characterise anything.</td></tr><tr><td><b>Unseen validation</b></td><td>NOT VALIDATED</td><td class='small'>Unseen period: 17 trades. NOT VALIDATED FOR LIVE DEPLOYMENT.</td></tr><tr><td><b>Live decision support</b></td><td>READY (decision only)</td><td class='small'>Live data, real-time gates, hypothetical position, risk brake, no order path.</td></tr></tbody></table></div><div class='callout bad'><b>NOT VALIDATED FOR LIVE DEPLOYMENT</b>The unseen period contains too few surviving trades to validate anything. 13A is a selectivity and risk-control change with an audit trail — it is not evidence of an edge, and nothing here should be read as a profitability claim.</div><footer>13A-live-scalping-engine-v1 · config <code>7165af1287d25148</code> · decision support only. No order is placed and no broker API is reachable from this package. Gates are provisional measurement boundaries, not validated rules.</footer></div></body></html>

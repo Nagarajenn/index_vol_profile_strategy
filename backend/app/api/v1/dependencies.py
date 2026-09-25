@@ -16,6 +16,7 @@ from app.services.market_intelligence_service import MarketIntelligenceService
 from app.services.market_transition_service import MarketTransitionService
 from app.services.option_risk_service import OptionRiskService
 from app.services.paper_trading_service import PaperTradingService
+from app.services.live_scalping_service import LiveScalpingService
 from app.services.scalp_decision_service import ScalpDecisionService
 from app.services.session_amd_service import SessionAmdService
 from app.services.volume_intelligence_service import VolumeIntelligenceService
@@ -122,3 +123,11 @@ def get_scalp_decision_service(
 ) -> ScalpDecisionService:
     """12C-scalp-decision-v1: read-only, advisory. Never writes and cannot affect any position."""
     return ScalpDecisionService(option_repo, levels_repo)
+
+
+def get_live_scalping_service(
+    option_repo: OptionRiskRepository = Depends(get_option_risk_repository),
+    levels_repo: ScalpDecisionRepository = Depends(get_scalp_decision_repository),
+) -> LiveScalpingService:
+    """13A-live-scalping-engine-v1: decision support. Read-only, no order path."""
+    return LiveScalpingService(option_repo, levels_repo)
