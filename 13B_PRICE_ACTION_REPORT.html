@@ -1,0 +1,95 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>13B Price Action</title>
+<style>
+:root{--bg:#f7f7f5;--panel:#fff;--ink:#1b1b19;--muted:#6b6b66;--line:#e2e2dd;--up:#2e7d32;
+--down:#c62828;--warn:#b26a00;--chip:#f0f0ec}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14140f;--panel:#1c1c18;
+--ink:#ecece6;--muted:#9a9a92;--line:#2e2e28;--up:#7bc47f;--down:#ef8d86;--warn:#e0a34a;--chip:#26262040}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1140px;margin:0 auto;padding:40px 16px 80px}
+header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:30px}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.02em}
+h2{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:42px 0 12px;
+padding-bottom:7px;border-bottom:1px solid var(--line)}
+h3{font-size:15px;margin:22px 0 8px}
+.sub{color:var(--muted);font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px;
+font-size:12px;color:var(--muted);white-space:nowrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0}
+.callout{border-left:4px solid var(--warn);background:var(--panel);border-radius:0 8px 8px 0;padding:13px 17px;margin:16px 0}
+.callout.bad{border-left-color:var(--down)}.callout.good{border-left-color:var(--up)}
+.callout b{display:block;margin-bottom:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin:16px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px}
+.stat .k{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-size:21px;font-weight:650;margin-top:3px;letter-spacing:-.02em}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:480px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td.wrap{white-space:normal;min-width:320px}
+.up{color:var(--up)}.down{color:var(--down)}.small{font-size:12.5px;color:var(--muted)}
+.pass{color:var(--up);font-weight:700}.fail{color:var(--down);font-weight:700}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:4px;background:var(--chip);
+border:1px solid var(--line);color:var(--muted)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--chip);padding:1px 5px;border-radius:4px}
+ul{margin:0 0 14px;padding-left:20px}li{margin-bottom:6px}
+footer{margin-top:54px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+@media (max-width:640px){h1{font-size:22px}.wrap{padding:26px 16px 60px}}
+</style></head><body><div class="wrap">
+<header><h1>13B — Price-Action Confirmation</h1>
+<div class="sub">Does the underlying actually show a clean scalp setup when 13A produces a candidate?</div>
+<div class="meta"><span class="chip">13B-price-action-v1</span>
+<span class="chip">config a538763a3281f74b</span>
+<span class="chip">45 sessions</span>
+<span class="chip">Paper / advisory only</span>
+<span class="chip">Not tuned to P&amp;L</span></div></header><div class="callout bad"><b>Read the P&amp;L line last</b>
+13B can only ever REMOVE trades, so total P&amp;L will move simply because fewer trades happen.
+That is not evidence the layer works. The questions that matter are in section 3: did it remove
+the <em>worse</em> candidates, or just some candidates? With 2 surviving trades, most
+of those answers are not yet decidable.</div><h2>1 · 13A baseline &nbsp;·&nbsp; 2 · 13B results</h2><div class="grid">
+<div class="stat"><div class="k">13A candidates</div><div class="v">57</div></div>
+<div class="stat"><div class="k">Survive price action</div><div class="v">2</div>
+<div class="small">96.5% removed</div></div>
+<div class="stat"><div class="k">13A trades</div><div class="v">57</div></div>
+<div class="stat"><div class="k">13B trades</div><div class="v">2</div></div>
+<div class="stat"><div class="k">13A total</div><div class="v up">₹2,095</div></div>
+<div class="stat"><div class="k">13B total</div><div class="v down">₹-358</div></div>
+</div><h2>3 · 13A vs 13B</h2><div class='tw'><table><thead><tr><th>Engine</th><th class='n'>Trades</th><th class='n'>Win %</th><th class='n'>Total</th><th class='n'>Mean</th><th class='n'>Median</th><th class='n'>Max DD</th><th class='n'>Max cons. loss</th><th class='n'>Hold</th><th class='n'>MFE/u</th><th class='n'>MAE/u</th><th class='n'>Stop/Flip/End</th></tr><tbody><tr><td><b>13A</b></td><td class='n'>57</td><td class='n'>36.8%</td><td class='n up'>2,095</td><td class='n'>36.75</td><td class='n'>-124.00</td><td class='n down'>-5,500</td><td class='n'>8</td><td class='n'>11.7</td><td class='n'>12.60</td><td class='n'>-6.64</td><td class='n'>5/49/3</td></tr><tr><td><b>13B</b> <span class=tag>small N</span></td><td class='n'>2</td><td class='n'>50.0%</td><td class='n down'>-358</td><td class='n'>-178.75</td><td class='n'>-178.75</td><td class='n down'>-406</td><td class='n'>1</td><td class='n'>9.5</td><td class='n'>2.95</td><td class='n'>-3.75</td><td class='n'>0/2/0</td></tr></tbody></table></div><h3>The seven questions, answered separately from P&amp;L</h3><div class='tw'><table style='min-width:640px'><thead><tr><th>Question</th><th>Improved?</th><th>Measurement</th></tr></thead><tbody><tr><td>Selectivity</td><td><span class="pass">YES</span></td><td class='wrap small'>96.5% of 13A buys removed (57 -&gt; 2).</td></tr><tr><td>Entry Timing</td><td><span class="small">not separable</span></td><td class='wrap small'>Not separable: blocking a trade removes it rather than moving its entry, so 13B cannot improve the timing of a trade it keeps.</td></tr><tr><td>Adverse Excursion</td><td><span class="pass">YES</span></td><td class='wrap small'>Mean MAE per unit -6.64 -&gt; -3.75.</td></tr><tr><td>Favorable Excursion</td><td><span class="fail">NO</span></td><td class='wrap small'>Mean MFE per unit 12.6 -&gt; 2.95.</td></tr><tr><td>Drawdown</td><td><span class="pass">YES</span></td><td class='wrap small'>Max drawdown -5499.75 -&gt; -406.25.</td></tr><tr><td>Trade Quality</td><td><span class="small">not separable</span></td><td class='wrap small'>Win rate 36.8% -&gt; 50.0%, median P&amp;L -124.0 -&gt; -178.75.</td></tr><tr><td>Low Quality Entries</td><td><span class="pass">YES</span></td><td class='wrap small'>Of 56 blocked candidates, 57.1% moved adversely in the next 10 minutes and 75.0% had a positive excursion that was given up.</td></tr></tbody></table></div><div class="panel"><h3 style="margin-top:0">What happened to the blocked candidates</h3>
+<p>Measured over the 10 minutes after the blocked signal, priced on the BID against the entry ASK.</p>
+<div class="grid">
+<div class="stat"><div class="k">Blocked</div><div class="v">56</div>
+<div class="small">56 measurable</div></div>
+<div class="stat"><div class="k">Moved adversely</div><div class="v">57.1%</div>
+<div class="small">32 of 56</div></div>
+<div class="stat"><div class="k">Moved favourably</div><div class="v">42.9%</div>
+<div class="small">24 of 56</div></div>
+<div class="stat"><div class="k">Had a positive excursion</div><div class="v">75.0%</div>
+<div class="small">given up by blocking</div></div>
+<div class="stat"><div class="k">Mean end / unit</div><div class="v down">-2.24</div></div>
+<div class="stat"><div class="k">Mean MFE / MAE</div><div class="v">9.66 / -11.37</div></div>
+</div></div><h2>4 · Rejected candidate examples</h2><p class='small'>The ten worst forward outcomes among blocked candidates — the cases where the block helped most.</p><div class='tw'><table style='min-width:900px'><thead><tr><th>When</th><th>Market</th><th>Contract</th><th>Verdict</th><th class='n'>Entry ASK</th><th class='n'>MFE</th><th class='n'>MAE</th><th class='n'>End</th><th>Reason</th></tr></thead><tbody><tr><td>2026-09-24 15:13</td><td>SENSEX</td><td>PE 73,700</td><td>CONTRADICTED</td><td class='n'>128.95</td><td class='n up'>19.65</td><td class='n down'>-53.05</td><td class='n down'>-53.05</td><td class='wrap small'>Price action contradicts the candidate: volume is not confirming the move&#x27;s direction. HIGHER HIGH → LOWER LOW → BELOW VWAP → VOLUME DECLINING</td></tr><tr><td>2026-08-31 10:07</td><td>SENSEX</td><td>CE 77,000</td><td>PARTIAL</td><td class='n'>366.40</td><td class='n down'>-10.05</td><td class='n down'>-37.15</td><td class='n down'>-37.15</td><td class='wrap small'>Partial: LOWER HIGH → LOWER LOW → HIGH BREAK at 76,924.1 → NO FOLLOW-THROUGH YET → CROSSING VWAP → VOLUME SPIKE</td></tr><tr><td>2026-08-06 15:04</td><td>SENSEX</td><td>PE 78,800</td><td>PARTIAL</td><td class='n'>240.65</td><td class='n down'>-6.00</td><td class='n down'>-41.25</td><td class='n down'>-36.10</td><td class='wrap small'>Partial: LOWER HIGH → LOWER LOW → LOW BREAK at 78,755.1 → NO FOLLOW-THROUGH YET → REJECTED VWAP → AT VAL → VOLUME SPIKE</td></tr><tr><td>2026-09-08 10:51</td><td>SENSEX</td><td>CE 75,900</td><td>CONTRADICTED</td><td class='n'>313.20</td><td class='n down'>-0.60</td><td class='n down'>-34.50</td><td class='n down'>-34.50</td><td class='wrap small'>Price action contradicts the candidate: structure reads trending down. LOWER HIGH → LOWER LOW → CROSSING VWAP → AT VAH → VOLUME SPIKE</td></tr><tr><td>2026-07-30 12:42</td><td>SENSEX</td><td>CE 77,800</td><td>CONTRADICTED</td><td class='n'>134.35</td><td class='n down'>-0.25</td><td class='n down'>-34.45</td><td class='n down'>-34.40</td><td class='wrap small'>Price action contradicts the candidate: volume is not confirming the move&#x27;s direction. HIGHER HIGH → HIGHER LOW → ABOVE VWAP → ACCEPTANCE ABOVE VAH → VOLUME DECLINING</td></tr><tr><td>2026-09-10 10:08</td><td>SENSEX</td><td>PE 74,700</td><td>CONTRADICTED</td><td class='n'>157.15</td><td class='n up'>8.70</td><td class='n down'>-31.05</td><td class='n down'>-31.05</td><td class='wrap small'>Price action contradicts the candidate: structure reads trending up. HIGHER HIGH → HIGHER LOW → CROSSING VWAP → VOLUME SPIKE</td></tr><tr><td>2026-08-31 14:52</td><td>SENSEX</td><td>CE 77,300</td><td>CONTRADICTED</td><td class='n'>380.85</td><td class='n up'>16.15</td><td class='n down'>-42.85</td><td class='n down'>-26.10</td><td class='wrap small'>Price action contradicts the candidate: volume is not confirming the move&#x27;s direction. HIGHER HIGH → HIGHER LOW → ABOVE VWAP → AT VAH → VOLUME DECLINING</td></tr><tr><td>2026-08-11 11:10</td><td>SENSEX</td><td>PE 78,100</td><td>PARTIAL</td><td class='n'>335.90</td><td class='n down'>-8.55</td><td class='n down'>-24.65</td><td class='n down'>-18.50</td><td class='wrap small'>Partial: LOWER HIGH → LOWER LOW → LOW BREAK at 78,110.0 → NO FOLLOW-THROUGH YET → BELOW VWAP → ACCEPTANCE BELOW VAL → VOLUME SPIKE</td></tr><tr><td>2026-07-31 15:09</td><td>SENSEX</td><td>CE 78,200</td><td>PARTIAL</td><td class='n'>398.25</td><td class='n down'>-1.80</td><td class='n down'>-21.15</td><td class='n down'>-17.20</td><td class='wrap small'>Partial: LOWER HIGH → LOWER LOW → HIGH BREAK at 78,118.7 → NO FOLLOW-THROUGH YET → ABOVE VWAP → VOLUME DECLINING</td></tr><tr><td>2026-09-18 11:58</td><td>SENSEX</td><td>CE 74,600</td><td>NO_SETUP</td><td class='n'>429.95</td><td class='n up'>8.45</td><td class='n down'>-20.00</td><td class='n down'>-14.90</td><td class='wrap small'>Bullish candidate with no clean setup: No break of 74,497.9. HIGHER HIGH → CROSSING VWAP → AT VAH → VOLUME SPIKE</td></tr></tbody></table></div><h2>5 · Accepted candidate examples</h2><div class='tw'><table><thead><tr><th>When</th><th>Contract</th><th>Q</th><th class='n'>Entry ASK</th><th class='n'>Exit BID</th><th>Exit</th><th class='n'>Hold</th><th class='n'>P&amp;L</th></tr></thead><tbody><tr><td>2026-09-07 09:25</td><td>NIFTY 23850 PE</td><td>B</td><td class='n'>72.80</td><td class='n'>73.55</td><td>SIGNAL_FLIP</td><td class='n'>8m</td><td class='n up'>₹48.75</td></tr><tr><td>2026-09-10 09:31</td><td>NIFTY 23450 PE</td><td>B</td><td class='n'>106.50</td><td class='n'>100.25</td><td>SIGNAL_FLIP</td><td class='n'>11m</td><td class='n down'>₹-406.25</td></tr></tbody></table></div><h2>6 · Price-action classifications</h2><h3>Confirmation verdicts</h3><div class='tw'><table><thead><tr><th>State</th><th class='n'>Count</th></tr></thead><tbody><tr><td>PARTIAL</td><td class='n'>31</td></tr><tr><td>CONTRADICTED</td><td class='n'>21</td></tr><tr><td>NO SETUP</td><td class='n'>4</td></tr><tr><td>UNKNOWN</td><td class='n'>2</td></tr></tbody></table></div><h3>Structure</h3><div class='tw'><table><thead><tr><th>State</th><th class='n'>Count</th></tr></thead><tbody><tr><td>BREAKDOWN</td><td class='n'>22</td></tr><tr><td>BREAKOUT UP</td><td class='n'>15</td></tr><tr><td>TRENDING UP</td><td class='n'>7</td></tr><tr><td>TRENDING DOWN</td><td class='n'>6</td></tr><tr><td>RANGE</td><td class='n'>3</td></tr><tr><td>MIXED</td><td class='n'>2</td></tr><tr><td>INSUFFICIENT DATA</td><td class='n'>2</td></tr><tr><td>REVERSING UP</td><td class='n'>1</td></tr></tbody></table></div><h3>Break quality</h3><div class='tw'><table><thead><tr><th>State</th><th class='n'>Count</th></tr></thead><tbody><tr><td>CLEAN BREAK</td><td class='n'>30</td></tr><tr><td>NO BREAK</td><td class='n'>24</td></tr><tr><td>INSUFFICIENT DATA</td><td class='n'>2</td></tr><tr><td>CLEAN BREAK WITH FOLLOW THROUGH</td><td class='n'>1</td></tr><tr><td>EXHAUSTED BREAK</td><td class='n'>1</td></tr></tbody></table></div><h3>Setup type</h3><div class='tw'><table><thead><tr><th>State</th><th class='n'>Count</th></tr></thead><tbody><tr><td>BREAKOUT CONTINUATION</td><td class='n'>31</td></tr><tr><td>PULLBACK IN TREND</td><td class='n'>12</td></tr><tr><td>NO CLEAR SETUP</td><td class='n'>11</td></tr><tr><td>RANGE ROTATION</td><td class='n'>3</td></tr><tr><td>EXTENDED MOVE</td><td class='n'>1</td></tr></tbody></table></div><h3>VWAP context</h3><div class='tw'><table><thead><tr><th>State</th><th class='n'>Count</th></tr></thead><tbody><tr><td>BELOW VWAP</td><td class='n'>22</td></tr><tr><td>ABOVE VWAP</td><td class='n'>17</td></tr><tr><td>CROSSING VWAP</td><td class='n'>11</td></tr><tr><td>REJECTED VWAP</td><td class='n'>5</td></tr><tr><td>UNKNOWN</td><td class='n'>2</td></tr><tr><td>DISTANT FROM VWAP</td><td class='n'>1</td></tr></tbody></table></div><h3>Volume-profile context</h3><div class='tw'><table><thead><tr><th>State</th><th class='n'>Count</th></tr></thead><tbody><tr><td>ACCEPTANCE BELOW VAL</td><td class='n'>14</td></tr><tr><td>ACCEPTANCE ABOVE VAH</td><td class='n'>11</td></tr><tr><td>AT VAL</td><td class='n'>11</td></tr><tr><td>INSIDE VALUE</td><td class='n'>10</td></tr><tr><td>AT VAH</td><td class='n'>7</td></tr><tr><td>AT POC</td><td class='n'>3</td></tr><tr><td>UNKNOWN</td><td class='n'>2</td></tr></tbody></table></div><h3>Volume</h3><div class='tw'><table><thead><tr><th>State</th><th class='n'>Count</th></tr></thead><tbody><tr><td>VOLUME DECLINING</td><td class='n'>19</td></tr><tr><td>VOLUME NORMAL</td><td class='n'>17</td></tr><tr><td>VOLUME EXPANDING</td><td class='n'>13</td></tr><tr><td>VOLUME SPIKE</td><td class='n'>7</td></tr><tr><td>UNKNOWN</td><td class='n'>2</td></tr></tbody></table></div><h2>7 · Leakage audit</h2><div class='tw'><table><thead><tr><th>Symbol</th><th class='n'>Candidates</th><th class='n'>Fields</th><th class='n'>Mismatches</th><th class='n'>Future-bar uses</th><th>Result</th></tr></thead><tbody><tr><td>NIFTY</td><td class='n'>40</td><td class='n'>18</td><td class='n'>0</td><td class='n'>0</td><td><span class=pass>PASS</span></td></tr><tr><td>SENSEX</td><td class='n'>40</td><td class='n'>18</td><td class='n'>0</td><td class='n'>0</td><td><span class=pass>PASS</span></td></tr></tbody></table></div><div class="panel"><p style="margin-bottom:0">Two things are proved here.
+Every feature is recomputed with all bars from the signal minute onward deleted and compared
+field by field. Separately, the audit asserts the newest bar 13B consulted is stamped
+<em>before</em> the signal minute — a 1-minute bar stamped 09:30 is not complete until 09:31, and
+using it would be reading one minute into the future.</p></div><h2>8 · Data-quality limitations</h2><ul>
+<li>Blocked candidates with no forward option data to score: <b>0</b>.</li>
+<li>13A buys that produced no price-action verdict at all: <b>0</b>.</li>
+<li>UNKNOWN verdicts (insufficient completed bars, typically early session): <b>2</b>.</li>
+<li>Volume-profile levels come from <code>levels_snapshots</code>; where a level is absent the
+context is reported UNKNOWN rather than substituted.</li>
+<li>Index volume is exchange-reported per 1-minute bar; it is used only as a relative ratio
+against its own trailing average, never as an absolute claim about participation.</li>
+</ul><h2>9 · Does the price-action layer materially change behaviour?</h2><div class="callout bad">
+<b>Yes, in selectivity — but its trade quality is not yet measurable</b>
+13B removes <b>96.5%</b> of 13A's buys, so it certainly changes behaviour. Whether it
+removes the <em>right</em> ones is a different question: 57.1% of blocked
+candidates went on to move adversely, but 75.0% had a positive excursion
+that blocking gave up. With 2 surviving trades, the win-rate and drawdown comparisons
+carry no weight.</div><footer>13B-price-action-v1 · config <code>a538763a3281f74b</code> ·
+paper / advisory only. 13A, 12E, 12D, 12C, 12B, 12A and 11D are unmodified; 13B can only remove
+a trade, never create one. No threshold here was tuned against this report.
+</footer></div></body></html>
