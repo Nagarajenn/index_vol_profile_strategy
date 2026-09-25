@@ -97,3 +97,19 @@ class PriceActionConfig:
 
 
 DEFAULT = PriceActionConfig()
+
+
+# ---------------------------------------------------------------- the PARTIAL experiment
+EXPERIMENT_VERSION = "13B-price-action-v1-exp-allow-partial"
+
+EXPERIMENT_ALLOW_PARTIAL = PriceActionConfig(block_on_partial=False)
+"""13B-EXP-1. The ONLY difference from DEFAULT is that a PARTIAL price-action read no longer
+blocks the 13A buy; CONTRADICTED and NO_SETUP still do.
+
+Motivated by the committed 45-session replay, where PARTIAL blocks (31 of 56) had a mean
+forward outcome of +1.89/unit and 45.2% moved favourably, while CONTRADICTED (-7.86/unit) and
+NO_SETUP (-4.74/unit) were genuinely discriminating.
+
+Kept as a SEPARATE config object rather than a changed default, so the baseline it is being
+measured against cannot drift underneath it. Every other threshold is identical -- the two
+configs differ in exactly one boolean, which `tests/test_partial_experiment_13b.py` asserts."""

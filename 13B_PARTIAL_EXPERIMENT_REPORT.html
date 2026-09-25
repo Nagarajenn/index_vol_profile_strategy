@@ -1,0 +1,74 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13B PARTIAL Experiment</title><style>
+:root{--bg:#f7f7f5;--panel:#fff;--ink:#1b1b19;--muted:#6b6b66;--line:#e2e2dd;--up:#2e7d32;
+--down:#c62828;--warn:#b26a00;--chip:#f0f0ec}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14140f;--panel:#1c1c18;
+--ink:#ecece6;--muted:#9a9a92;--line:#2e2e28;--up:#7bc47f;--down:#ef8d86;--warn:#e0a34a;--chip:#26262040}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-sans-serif,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1140px;margin:0 auto;padding:40px 16px 80px}
+header{border-bottom:2px solid var(--ink);padding-bottom:18px;margin-bottom:30px}
+h1{font-size:27px;margin:0 0 6px;letter-spacing:-.02em}
+h2{font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:42px 0 12px;
+padding-bottom:7px;border-bottom:1px solid var(--line)}
+h3{font-size:15px;margin:22px 0 8px}
+.sub{color:var(--muted);font-size:14px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.chip{background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 11px;
+font-size:12px;color:var(--muted);white-space:nowrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0}
+.callout{border-left:4px solid var(--warn);background:var(--panel);border-radius:0 8px 8px 0;padding:13px 17px;margin:16px 0}
+.callout.bad{border-left-color:var(--down)}.callout.good{border-left-color:var(--up)}
+.callout b{display:block;margin-bottom:4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:13px;margin:16px 0}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:13px}
+.stat .k{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-size:21px;font-weight:650;margin-top:3px;letter-spacing:-.02em}
+.tw{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:12px 0}
+table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:480px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:600}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+td.wrap{white-space:normal;min-width:320px}
+.up{color:var(--up)}.down{color:var(--down)}.small{font-size:12.5px;color:var(--muted)}
+.pass{color:var(--up);font-weight:700}.fail{color:var(--down);font-weight:700}
+.tag{display:inline-block;font-size:10.5px;padding:1px 6px;border-radius:4px;background:var(--chip);
+border:1px solid var(--line);color:var(--muted)}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9em;background:var(--chip);padding:1px 5px;border-radius:4px}
+ul{margin:0 0 14px;padding-left:20px}li{margin-bottom:6px}
+footer{margin-top:54px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px}
+@media (max-width:640px){h1{font-size:22px}.wrap{padding:26px 16px 60px}}
+</style></head><body><div class="wrap">
+<header><h1>13B — the PARTIAL experiment</h1>
+<div class="sub">One isolated change: a PARTIAL price-action read no longer blocks the 13A buy.
+CONTRADICTED and NO_SETUP still do.</div>
+<div class="meta"><span class="chip">13B-price-action-v1-exp-allow-partial</span>
+<span class="chip">baseline a538763a3281f74b</span>
+<span class="chip">experiment 432899bf554d2e3e</span>
+<span class="chip">45 sessions</span>
+<span class="chip">Paper / advisory only</span></div></header><div class="panel"><b>The only difference</b>
+<p style="margin-bottom:0"><code>block_on_partial: True -&gt; False</code> — verified by comparing the two
+config objects field by field. Structure, break, VWAP, volume-profile, volume, 13A rules, the
+risk brake, spread, economics, timing, stop loss and position simulation are all identical.</p>
+</div><div class="callout"><b>Why the candidate counts differ between paths</b>
+PATH A saw <b>57</b> candidate minutes, the default path <b>58</b>, the
+experiment <b>57</b>. These are not inconsistent: blocking a trade frees capacity,
+so a minute that PATH A refused as <code>POSITION_OPEN</code> can become a real candidate in a
+path that blocked the earlier entry. A filtering percentage is therefore only meaningful
+<em>within</em> a path, never across them.</div><h2>1 · Three paths, identical inputs</h2><div class='tw'><table><thead><tr><th>Path</th><th class='n'>Trades</th><th class='n'>Win %</th><th class='n'>Total</th><th class='n'>Mean</th><th class='n'>Median</th><th class='n'>Max DD</th><th class='n'>Max cons. loss</th><th class='n'>Hold</th><th class='n'>MFE/u</th><th class='n'>MAE/u</th><th class='n'>Stop/Flip/End</th></tr></thead><tbody><tr><td><b>13A alone (baseline)</b></td><td class='n'>57</td><td class='n'>36.8%</td><td class='n up'>2,084</td><td class='n'>36.55</td><td class='n'>-124.00</td><td class='n down'>-5,500</td><td class='n'>8</td><td class='n'>12.0</td><td class='n'>13.60</td><td class='n'>-6.64</td><td class='n'>5/51/1</td></tr><tr><td><b>13B default — block PARTIAL</b> <span class='tag'>small N</span></td><td class='n'>2</td><td class='n'>50.0%</td><td class='n down'>-358</td><td class='n'>-178.75</td><td class='n'>-178.75</td><td class='n down'>-406</td><td class='n'>1</td><td class='n'>9.5</td><td class='n'>2.95</td><td class='n'>-3.75</td><td class='n'>0/2/0</td></tr><tr><td><b>13B experiment — allow PARTIAL</b></td><td class='n'>32</td><td class='n'>43.8%</td><td class='n up'>3,736</td><td class='n'>116.74</td><td class='n'>-77.38</td><td class='n down'>-2,240</td><td class='n'>5</td><td class='n'>12.6</td><td class='n'>18.13</td><td class='n'>-6.04</td><td class='n'>2/30/0</td></tr></tbody></table></div><div class="grid">
+<div class="stat"><div class="k">Filtering, default</div><div class="v">96.6%</div>
+<div class="small">56 blocked</div></div>
+<div class="stat"><div class="k">Filtering, experiment</div><div class="v">43.9%</div>
+<div class="small">25 blocked</div></div>
+<div class="stat"><div class="k">PARTIAL trades allowed</div><div class="v">30</div></div>
+<div class="stat"><div class="k">Trades: default → experiment</div><div class="v">2 → 32</div></div>
+</div><h2>2 · Forward movement by price-action verdict</h2><p class='small'>All outcome figures are PER UNIT so the two kinds of row are comparable. Blocked rows carry a 10-minute forward path priced on the BID against the entry ASK; allowed rows are realised holdings. A blocked candidate was never sized, so it has no cash column.</p><h3>Default configuration</h3><div class='tw'><table><thead><tr><th>Verdict</th><th class='n'>N</th><th class='n'>Adverse</th><th class='n'>Favourable</th><th class='n'>Mean outcome/u</th><th class='n'>Mean cash</th><th class='n'>Mean MFE/u</th><th class='n'>Mean MAE/u</th></tr></thead><tbody><tr><td>PARTIAL (blocked)</td><td class='n'>31</td><td class='n'>54.8%</td><td class='n'>45.2%</td><td class='n up'>1.89</td><td class='n '>–</td><td class='n'>11.40</td><td class='n'>-8.30</td></tr><tr><td>CONTRADICTED (blocked)</td><td class='n'>21</td><td class='n'>57.1%</td><td class='n'>42.9%</td><td class='n down'>-7.86</td><td class='n '>–</td><td class='n'>8.16</td><td class='n'>-16.46</td></tr><tr><td>NO_SETUP (blocked)</td><td class='n'>4</td><td class='n'>75.0%</td><td class='n'>25.0%</td><td class='n down'>-4.74</td><td class='n '>–</td><td class='n'>3.99</td><td class='n'>-8.47</td></tr></tbody></table></div><h3>Experiment configuration</h3><div class='tw'><table><thead><tr><th>Verdict</th><th class='n'>N</th><th class='n'>Adverse</th><th class='n'>Favourable</th><th class='n'>Mean outcome/u</th><th class='n'>Mean cash</th><th class='n'>Mean MFE/u</th><th class='n'>Mean MAE/u</th></tr></thead><tbody><tr><td>PARTIAL (allowed, realised)</td><td class='n'>30</td><td class='n'>56.7%</td><td class='n'>43.3%</td><td class='n up'>6.46</td><td class='n up'>136.44</td><td class='n'>19.14</td><td class='n'>-6.19</td></tr><tr><td>CONTRADICTED (blocked)</td><td class='n'>21</td><td class='n'>57.1%</td><td class='n'>42.9%</td><td class='n down'>-7.86</td><td class='n '>–</td><td class='n'>8.16</td><td class='n'>-16.46</td></tr><tr><td>NO_SETUP (blocked)</td><td class='n'>4</td><td class='n'>75.0%</td><td class='n'>25.0%</td><td class='n down'>-4.38</td><td class='n '>–</td><td class='n'>3.99</td><td class='n'>-8.47</td></tr><tr><td>UNKNOWN (allowed, realised)</td><td class='n'>2</td><td class='n'>50.0%</td><td class='n'>50.0%</td><td class='n down'>-2.75</td><td class='n down'>-178.75</td><td class='n'>2.95</td><td class='n'>-3.75</td></tr></tbody></table></div><h2>3 · Verdict distribution</h2><div class='tw'><table><thead><tr><th>Verdict</th><th class='n'>Default path</th><th class='n'>Experiment path</th></tr></thead><tbody><tr><td>CONTRADICTED</td><td class='n'>21</td><td class='n'>21</td></tr><tr><td>NO_SETUP</td><td class='n'>4</td><td class='n'>4</td></tr><tr><td>PARTIAL</td><td class='n'>31</td><td class='n'>30</td></tr><tr><td>UNKNOWN</td><td class='n'>2</td><td class='n'>2</td></tr></tbody></table></div><h2>4 · Today, both paths side by side</h2><div class='tw'><table style='min-width:980px'><thead><tr><th>Time</th><th>Symbol</th><th>13A</th><th>Price action</th><th>Final (exp)</th><th>Contract</th><th class='n'>Entry ASK</th><th class='n'>Exit BID</th><th class='n'>P&amp;L (13A)</th><th class='n'>P&amp;L (exp)</th><th class='n'>MFE</th><th class='n'>MAE</th><th>Exit</th></tr></thead><tbody><tr><td>10:09</td><td>NIFTY</td><td>BUY_CE</td><td>PARTIAL</td><td>BUY_CE</td><td>NIFTY 23150 CE</td><td class='n'>102.10</td><td class='n'>102.30</td><td class='n up'>13.00</td><td class='n up'>13.00</td><td class='n'>5.30</td><td class='n'>-0.75</td><td>SIGNAL_FLIP</td></tr><tr><td>12:43</td><td>NIFTY</td><td>BUY_PE</td><td>NO_SETUP</td><td>WAIT</td><td>NIFTY 23100 PE</td><td class='n'>106.40</td><td class='n'>–</td><td class='n up'>269.75</td><td class='n '>–</td><td class='n'>–</td><td class='n'>–</td><td>SIGNAL_FLIP</td></tr><tr><td>12:44</td><td>SENSEX</td><td>BUY_PE</td><td>PARTIAL</td><td>BUY_PE</td><td>SENSEX 73800 PE</td><td class='n'>447.15</td><td class='n'>476.20</td><td class='n up'>581.00</td><td class='n up'>581.00</td><td class='n'>77.75</td><td class='n'>5.85</td><td>SIGNAL_FLIP</td></tr></tbody></table></div><h2>5 · Leakage audit (experiment config)</h2><div class='tw'><table><thead><tr><th>Symbol</th><th class='n'>Candidates</th><th class='n'>Fields</th><th class='n'>Mismatches</th><th class='n'>Future-bar uses</th><th>Result</th></tr></thead><tbody><tr><td>NIFTY</td><td class='n'>40</td><td class='n'>18</td><td class='n'>0</td><td class='n'>0</td><td><span class=pass>PASS</span></td></tr><tr><td>SENSEX</td><td class='n'>40</td><td class='n'>18</td><td class='n'>0</td><td class='n'>0</td><td><span class=pass>PASS</span></td></tr></tbody></table></div><h2>6 · The five questions</h2><div class='tw'><table style='min-width:640px'><thead><tr><th>Question</th><th>Answer</th></tr></thead><tbody><tr><td class='wrap'>1. Does allowing PARTIAL produce a reasonable number of additional paper trades?</td><td class='wrap small'>Trades go from <b>2</b> to <b>32</b> across 45 sessions (30 of them PARTIAL). Enough to begin comparing, though still a small sample.</td></tr><tr><td class='wrap'>2. Do those trades have materially different MFE/MAE from the blocked PARTIAL candidates?</td><td class='wrap small'>Allowed PARTIAL realised MFE/MAE per unit vs the blocked PARTIAL forward path — see section 2. The two are measured differently (a realised holding vs a fixed 10-minute window) and should not be read as a like-for-like difference.</td></tr><tr><td class='wrap'>3. Does allowing PARTIAL reduce the excessive filtering?</td><td class='wrap small'>Filtering falls from <b>96.6%</b> to <b>43.9%</b> within each path.</td></tr><tr><td class='wrap'>4. Does it preserve protection against genuinely contradicted setups?</td><td class='wrap small'>Yes by construction — CONTRADICTED and NO_SETUP still block, and section 2 shows their forward outcomes remain the adverse ones.</td></tr><tr><td class='wrap'>5. Does the live screen become more useful without removing the risk brake?</td><td class='wrap small'>The risk brake is untouched: same daily loss limit, consecutive-loss and trade-count locks, and allocated capital still reported separately. PARTIAL is surfaced as an explicit early-setup warning, never as equivalent to CONFIRMED.</td></tr></tbody></table></div><div class="callout bad"><b>What this does not show</b>
+With <b>32</b> surviving trades in the experiment path, the win rate, drawdown and
+median comparisons carry no statistical weight. No threshold was tuned against these results and
+the committed 13B default is unchanged. This is a measurement of one flag, not a validation of a
+strategy, and nothing here is evidence of profitability.</div><footer>13B-price-action-v1-exp-allow-partial · baseline
+<code>a538763a3281f74b</code> · experiment
+<code>432899bf554d2e3e</code> · paper / advisory only. 13A and the
+committed 13B default are unmodified; no broker API is reachable from this package.
+</footer></div></body></html>

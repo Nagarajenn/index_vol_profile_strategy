@@ -172,6 +172,13 @@ function PriceAction({ d }: { d: LiveScalpingDTO }) {
       <Typography variant="body2" sx={{ mt: 0.75 }}>
         <b>Reason:</b> {pa.reason}
       </Typography>
+      {pa.confirmation === "PARTIAL" && pa.is_candidate !== false && (
+        <Alert severity="warning" sx={{ mt: 1, py: 0.25 }}>
+          <b>EARLY / PARTIAL PRICE-ACTION CONFIRMATION.</b> A level broke, but follow-through or
+          full structural agreement is not yet there. This is <i>not</i> the same as CONFIRMED —
+          treat it as an early entry with less evidence behind it.
+        </Alert>
+      )}
     </Box>
   );
 }

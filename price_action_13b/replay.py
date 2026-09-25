@@ -28,6 +28,9 @@ from price_action_13b.config import DEFAULT
 
 SESSION_LAST = "15:30"
 
+# populated per _run call so a stored position can report the verdict that let it through
+_PA_BY_KEY: dict = {}
+
 
 def _excursions(series, minute, side, strike, entry_ask, horizon=10) -> dict:
     """What the option did AFTER the candidate minute. Used only to score outcomes, never to
@@ -53,15 +56,19 @@ def replay_session(conn, symbol: str, d: date, cfg=DEFAULT) -> dict:
     levels_by_min = RP13A.levels_for(conn, symbol, d)
     base = RP13A.base_decisions(symbol, d, series, cmap, levels_by_min)
 
-    out = dict(symbol=symbol, session_date=str(d), a=_run(series, cmap, levels_by_min, base,
-                                                          symbol, d, None, cfg),
-               b=_run(series, cmap, levels_by_min, base, symbol, d, cfg, cfg))
-    return out
+    from price_action_13b.config import EXPERIMENT_ALLOW_PARTIAL
+    # All three paths are replayed from the SAME series, cmap, levels and 12C stream, so the
+    # only thing that differs between them is the integration rule under test.
+    return dict(symbol=symbol, session_date=str(d),
+                a=_run(series, cmap, levels_by_min, base, symbol, d, None, cfg),
+                b=_run(series, cmap, levels_by_min, base, symbol, d, cfg, cfg),
+                c=_run(series, cmap, levels_by_min, base, symbol, d, EXPERIMENT_ALLOW_PARTIAL, cfg))
 
 
 def _run(series, cmap, levels_by_min, base, symbol, d, pa_cfg, cfg) -> dict:
     """One engine pass. `pa_cfg=None` runs plain 13A; otherwise 13B vetoes as well."""
     risk = RB.RiskState()
+    _PA_BY_KEY.clear()
     positions, blocked, decisions, open_pos, cur_levels = [], [], [], None, None
 
     for row in base:
@@ -118,6 +125,7 @@ def _run(series, cmap, levels_by_min, base, symbol, d, pa_cfg, cfg) -> dict:
             if p is not None:
                 p.price_action = (pa or {}).get("confirmation")
                 open_pos = p
+                _PA_BY_KEY[(symbol, str(d), m)] = (pa or {}).get("confirmation")
 
     if open_pos is not None:
         last = max(series)
@@ -129,6 +137,7 @@ def _run(series, cmap, levels_by_min, base, symbol, d, pa_cfg, cfg) -> dict:
 
     for p in positions:
         p["market"] = symbol
+        p["price_action"] = _PA_BY_KEY.get((symbol, p["session_date"], p["signal_minute"]))
     return dict(positions=positions, blocked=blocked, decisions=decisions)
 
 

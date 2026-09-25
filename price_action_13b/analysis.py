@@ -155,3 +155,79 @@ def verdict(cmp: dict, min_sample: int = 20) -> dict:
                    f"adversely in the next 10 minutes and {bl['pct_had_positive_mfe']}% had a "
                    f"positive excursion that was given up."),
     )
+
+
+# ---------------------------------------------------------------- the PARTIAL experiment
+def forward_by_verdict(blocked: list[dict], allowed: list[dict]) -> dict:
+    """Forward movement split by price-action verdict (the experiment's core question).
+
+    `blocked` rows carry their own 10-minute forward path. `allowed` rows are realised trades,
+    so their MFE/MAE come from the position itself -- the two are reported separately and never
+    averaged together, because one is a hypothetical path and the other an actual holding."""
+    out = {}
+    by_v = {}
+    for b in blocked:
+        by_v.setdefault(b.get("confirmation"), []).append(b)
+    for v, rows in by_v.items():
+        ends = _num([r.get("end") for r in rows])
+        mfes = _num([r.get("mfe") for r in rows])
+        maes = _num([r.get("mae") for r in rows])
+        out[f"{v} (blocked)"] = dict(
+            n=len(rows), measurable=len(ends),
+            adverse=sum(1 for e in ends if e < 0),
+            favourable=sum(1 for e in ends if e > 0),
+            pct_adverse=round(sum(1 for e in ends if e < 0) / len(ends) * 100, 1) if ends else None,
+            pct_favourable=round(sum(1 for e in ends if e > 0) / len(ends) * 100, 1) if ends else None,
+            mean_end=round(st.fmean(ends), 2) if ends else None,
+            mean_cash=None,          # a blocked candidate was never sized, so it has no cash result
+            mean_mfe=round(st.fmean(mfes), 2) if mfes else None,
+            mean_mae=round(st.fmean(maes), 2) if maes else None)
+    by_a = {}
+    for p in allowed:
+        by_a.setdefault(p.get("price_action"), []).append(p)
+    for v, rows in by_a.items():
+        # PER UNIT, to match the blocked rows. Cash P&L is reported in its own column --
+        # averaging a per-unit forward path against a cash result would be meaningless.
+        per_unit = _num([r.get("realised_pnl_per_unit") for r in rows])
+        cash = _num([r.get("realised_pnl") for r in rows])
+        mfes = _num([r.get("mfe_per_unit") for r in rows])
+        maes = _num([r.get("mae_per_unit") for r in rows])
+        out[f"{v} (allowed, realised)"] = dict(
+            n=len(rows), measurable=len(per_unit),
+            adverse=sum(1 for e in per_unit if e <= 0),
+            favourable=sum(1 for e in per_unit if e > 0),
+            pct_adverse=round(sum(1 for e in per_unit if e <= 0) / len(per_unit) * 100, 1) if per_unit else None,
+            pct_favourable=round(sum(1 for e in per_unit if e > 0) / len(per_unit) * 100, 1) if per_unit else None,
+            mean_end=round(st.fmean(per_unit), 2) if per_unit else None,
+            mean_cash=round(st.fmean(cash), 2) if cash else None,
+            mean_mfe=round(st.fmean(mfes), 2) if mfes else None,
+            mean_mae=round(st.fmean(maes), 2) if maes else None)
+    return out
+
+
+def three_way(a_pos, b_pos, c_pos, a_dec, b_dec, c_dec, b_blocked, c_blocked,
+              min_sample: int = 20) -> dict:
+    """13A baseline vs 13B default vs 13B experiment, on identical inputs."""
+    def cands(dec, key):
+        return sum(1 for d in dec if d[key] in ("BUY_CE", "BUY_PE"))
+    return dict(
+        baseline=summarise(a_pos, "13A", min_sample),
+        default=summarise(b_pos, "13B default", min_sample),
+        experiment=summarise(c_pos, "13B allow-PARTIAL", min_sample),
+        candidate_minutes=dict(
+            path_a=cands(a_dec, "thirteen_a"),
+            path_b=sum(1 for d in b_dec if d.get("price_action")),
+            path_c=sum(1 for d in c_dec if d.get("price_action"))),
+        verdicts_default=dict(Counter(d["price_action"] for d in b_dec if d.get("price_action"))),
+        verdicts_experiment=dict(Counter(d["price_action"] for d in c_dec if d.get("price_action"))),
+        blocked_default=len(b_blocked), blocked_experiment=len(c_blocked),
+        filtering_default=round(len(b_blocked) / max(sum(1 for d in b_dec if d.get("price_action")), 1) * 100, 1),
+        filtering_experiment=round(len(c_blocked) / max(sum(1 for d in c_dec if d.get("price_action")), 1) * 100, 1),
+        partial_allowed=sum(1 for p in c_pos if p.get("price_action") == "PARTIAL"),
+        forward_default=forward_by_verdict(b_blocked, b_pos),
+        forward_experiment=forward_by_verdict(c_blocked, c_pos),
+        note=("PATH A, B and C are replayed from identical inputs, but blocking a trade frees "
+              "capacity for later ones, so the three paths do NOT see the same number of "
+              "candidate minutes. That is why candidate counts differ between paths and why a "
+              "simple 'X% filtered' ratio must be read within a path, never across paths."),
+    )
